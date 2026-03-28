@@ -271,6 +271,8 @@ function deriveCharacterHub(storyBible) {
       arc_end: character.arc_end,
       secret: character.secret,
       notes: "",
+      archetype: character.archetype ?? "",
+      traits: list(character.traits),
       status: "active",
       linked_plot_ids: []
     })),
@@ -616,7 +618,8 @@ export function ensurePlotDrivenProject(sourceProject) {
     core_conflict: project.story_bible.core_conflict || "",
     central_question: project.project.theme_question || "",
     emotional_promise: project.project.tone || "",
-    theme_statement: project.intent_anchor.theme || ""
+    theme_statement: project.intent_anchor.theme || "",
+    ending_direction: ""
   });
   project.genre_profile = clone(project.genre_profile, {
     primary_genre: project.project.genre[0] ?? "",

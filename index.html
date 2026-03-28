@@ -8,6 +8,9 @@
       name="description"
       content="以幕、剧情卡和场为主链，支持角色、类型约束与锁定层联动的编剧工作台。"
     />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Serif+SC:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="./app.css" />
   </head>
   <body>
@@ -16,44 +19,17 @@
         <div class="hero__copy">
           <p id="hero-eyebrow" class="eyebrow">项目中心</p>
           <h1 id="hero-title">项目中心</h1>
-          <p id="hero-description" class="hero__text">这里只显示项目列表。</p>
-        </div>
-        <div id="hero-stepper-nav" class="hero-stepper-nav" hidden></div>
-        <div class="hero__side">
-          <div class="hero__actions">
-            <div id="toolbar-mode-group" class="toolbar-mode-group" hidden>
-              <button id="toolbar-density-button" class="button button--ghost button--tiny" type="button" data-action="toggle-toolbar-density">展开</button>
-              <button id="toolbar-hide-button" class="button button--ghost button--tiny" type="button" data-action="hide-toolbar">隐藏</button>
-            </div>
-            <button id="save-button" class="button button--primary" type="button">立即保存</button>
-            <button id="page-project-button" class="button button--ghost button--tiny" type="button">项目中心</button>
-            <button id="open-settings-button" class="button button--ghost button--tiny" type="button">设置</button>
-            <button id="page-workflow-button" class="button button--ghost button--tiny" type="button" hidden>
-              创作页
-            </button>
-          </div>
-          <div id="runtime-status" class="summary-strip summary-strip--hero"></div>
-        </div>
-      </header>
-      <button id="toolbar-reveal-button" class="toolbar-reveal" type="button" data-action="show-toolbar" hidden>显示工作栏</button>
-
-      <section id="wizard-shell" class="wizard-shell" data-page="workflow">
-        <div class="wizard-shell__head">
-          <div>
-            <p class="panel__eyebrow">创作流程</p>
-            <h2 id="step-title">结构页</h2>
-            <p id="step-description" class="hero__text"></p>
-          </div>
-          <div class="wizard-shell__meta">
-            <span id="step-count-chip" class="chip chip--soft">1 / 6</span>
-          </div>
         </div>
         <div id="stepper-nav" class="stepper-nav" aria-label="创作步骤"></div>
-        <div class="wizard-actions" hidden>
-          <button id="step-prev-button" class="button button--ghost" type="button">上一步</button>
-          <button id="step-next-button" class="button button--primary" type="button">下一步</button>
+        <div class="hero__side">
+          <div class="hero__actions">
+            <button id="save-button" class="button button--primary button--small" type="button">保存</button>
+            <button id="page-project-button" class="button button--ghost button--small" type="button">项目中心</button>
+            <button id="page-creation-button" class="button button--ghost button--small" type="button">AI 创作流程</button>
+            <button id="open-settings-button" class="button button--ghost button--small" type="button">⚙</button>
+          </div>
         </div>
-      </section>
+      </header>
 
       <main class="workspace">
         <section id="panel-projects" class="panel panel--projects" data-page="project">
@@ -66,22 +42,10 @@
           data-page="workflow"
           data-step-group="structure"
         >
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">结构层</p>
-              <h2>结构页</h2>
-            </div>
-          </div>
           <div id="structure-content"></div>
         </section>
 
         <section id="panel-plots" class="panel panel--workflow" data-page="workflow" data-step-group="plots">
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">剧情层</p>
-              <h2>剧情板</h2>
-            </div>
-          </div>
           <div id="plots-content"></div>
         </section>
 
@@ -91,12 +55,6 @@
           data-page="workflow"
           data-step-group="characters"
         >
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">角色层</p>
-              <h2>角色台</h2>
-            </div>
-          </div>
           <div id="characters-content"></div>
         </section>
 
@@ -106,19 +64,13 @@
           data-page="workflow"
           data-step-group="relationships"
         >
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">关系层</p>
-              <h2>关系台账</h2>
-            </div>
-          </div>
           <div id="relationships-content"></div>
         </section>
 
-        <section id="panel-genres" class="panel panel--workflow" data-page="workflow" data-step-group="genres">
+        <section id="panel-genres" class="panel panel--workflow" data-page="workflow" data-step-group="genres-deprecated" hidden>
           <div class="panel__header">
             <div>
-              <p class="panel__eyebrow">类型层</p>
+              <p class="panel__eyebrow">第五步</p>
               <h2>类型约束</h2>
             </div>
           </div>
@@ -126,23 +78,16 @@
         </section>
 
         <section id="panel-locks" class="panel panel--workflow" data-page="workflow" data-step-group="locks">
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">锁定层</p>
-              <h2>锁定层</h2>
-            </div>
-          </div>
           <div id="locks-content"></div>
         </section>
 
         <section id="panel-scenes" class="panel panel--workflow" data-page="workflow" data-step-group="scenes">
-          <div class="panel__header">
-            <div>
-              <p class="panel__eyebrow">脚本层</p>
-              <h2>场景页</h2>
-            </div>
-          </div>
           <div id="scenes-content"></div>
+        </section>
+
+        <!-- AI 创作流程面板（追加） -->
+        <section id="panel-creation" class="panel panel--workflow" data-page="creation">
+          <div id="creationContent"></div>
         </section>
       </main>
 
@@ -162,6 +107,7 @@
             <div id="project-create-form" class="form-grid"></div>
             <div class="wizard-actions">
               <button id="cancel-create-project-button" class="button button--ghost" type="button">取消</button>
+              <button id="prev-create-project-button" class="button button--ghost" type="button">上一步</button>
               <button id="confirm-create-project-button" class="button button--primary" type="button">
                 创建并进入创作
               </button>
@@ -169,6 +115,22 @@
           </div>
         </section>
       </div>
+    </div>
+
+    <div id="structure-library-dialog" class="dialog-backdrop" hidden>
+      <section class="dialog-panel dialog-panel--library">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">29类通用结构</p>
+            <h2>结构参考库</h2>
+            <p class="hero__text">选择一个结构套用到当前项目，或仅作参考。套用后可继续在结构骨架页自由编辑。</p>
+          </div>
+        </div>
+        <div id="structure-library-content"></div>
+        <div class="wizard-actions">
+          <button id="close-library-button" class="button button--ghost" type="button">关闭</button>
+        </div>
+      </section>
     </div>
 
     <div id="settings-dialog" class="dialog-backdrop" hidden>
@@ -181,8 +143,11 @@
           </div>
         </div>
         <div id="settings-form"></div>
+        <div class="settings-danger-zone">
+          <button id="reset-button" class="button button--danger button--tiny" type="button">重置当前项目</button>
+          <div id="reset-confirm-area"></div>
+        </div>
         <div class="wizard-actions">
-          <button id="reset-button" class="button button--ghost" type="button">重置当前项目</button>
           <button id="close-settings-button" class="button button--ghost" type="button">关闭</button>
         </div>
       </section>
