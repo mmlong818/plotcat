@@ -355,13 +355,7 @@ async function handleApi(request, response, pathname) {
         json(response, 400, { error: "缺少 step 参数" });
         return true;
       }
-      const apiKey = process.env.ANTHROPIC_API_KEY;
-      if (!apiKey) {
-        const mock = getMockData(step, options);
-        json(response, 200, { ...mock, mock: true });
-        return true;
-      }
-      const result = await generateContent(step, projectContext, options, apiKey);
+      const result = await generateContent(step, projectContext, options);
       json(response, 200, result);
     } catch (error) {
       const mock = getMockData("fallback", {});

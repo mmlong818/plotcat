@@ -1,3 +1,4 @@
+import { spawn } from 'child_process';
 import {
   buildLoglinePrompt,
   buildTreatmentPrompt,
@@ -25,9 +26,6 @@ try {
   // 知识库文件尚未创建，使用空对象
 }
 
-const API_URL = 'https://api.anthropic.com/v1/messages';
-const MODEL = 'claude-sonnet-4-6';
-const MAX_TOKENS = 4096;
 const TIMEOUT_MS = 90_000;
 
 function makeId() {
@@ -45,38 +43,43 @@ function getBeatData(template) {
   return BEAT_SHEET_LIBRARY[template] ?? null;
 }
 
-async function callClaude(system, user, apiKey) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+function callClaude(system, user) {
+  return new Promise((resolve, reject) => {
+    const fullPrompt = `${system}\n\n---\n\n${user}`;
+    const proc = spawn('claude', ['-p', '--output-format', 'text'], {
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+    proc.stdout.setEncoding('utf8');
+    proc.stderr.setEncoding('utf8');
+    proc.stdin.setDefaultEncoding('utf8');
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        max_tokens: MAX_TOKENS,
-        system,
-        messages: [{ role: 'user', content: user }]
-      }),
-      signal: controller.signal
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      proc.kill();
+      reject(new Error('claude CLI 超时'));
+    }, TIMEOUT_MS);
+
+    proc.stdout.on('data', (d) => { stdout += d; });
+    proc.stderr.on('data', (d) => { stderr += d; });
+
+    proc.stdin.write(fullPrompt, 'utf8');
+    proc.stdin.end();
+
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code !== 0) {
+        reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 300)}`));
+      } else {
+        resolve(parseJsonFromText(stdout));
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => '');
-      throw new Error(`API错误 ${response.status}: ${errorText}`);
-    }
-
-    const data = await response.json();
-    const text = data.content?.[0]?.text ?? '';
-    return parseJsonFromText(text);
-  } finally {
-    clearTimeout(timer);
-  }
+    proc.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
 }
 
 function parseJsonFromText(text) {
@@ -215,7 +218,7 @@ export async function generateContent(step, projectContext, options, apiKey) {
   const beatData = options?.template ? getBeatData(options.template) : null;
 
   const { system, user } = builder(projectContext, options, genreData, beatData);
-  const parsed = await callClaude(system, user, apiKey);
+  const parsed = await callClaude(system, user);
 
   const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);
   const choices = formatter(parsed);
