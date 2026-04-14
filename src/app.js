@@ -3273,7 +3273,7 @@ async function handleGenerateAct(actKey) {
   renderCreationPage();
 }
 
-function handleFinalizeNewCreation() {
+async function handleFinalizeNewCreation() {
   const c = appState.creation;
   const draft = c.draft ?? {};
   const template = draft.structure_template ?? "feature_film";
@@ -3319,12 +3319,20 @@ function handleFinalizeNewCreation() {
   }));
   proj.character_hub = { characters: chars };
 
-  appState.projects.push(proj);
-  appState.selectedProjectId = proj.id;
-  appState.view = "project";
+  // Set as current project and save to server
+  appState.project = ensurePlotDrivenProject(proj);
+  normalizeProject();
   appState.creation = null;
-  saveLocalSnapshot();
-  render();
+
+  try {
+    await saveProjectToServer();
+  } catch (err) {
+    // Save failed - still navigate but warn
+    console.warn("项目保存失败:", err.message);
+  }
+
+  setCurrentPage("workflow");
+  setCurrentStep("structure");
 }
 
 async function handleGenerateConcept() {
@@ -3732,6 +3740,21 @@ async function handleOneClickGenerate() {
 // ── Creation input handler ────────────────────────────────────────────────────
 
 function handleCreationInput(action, target) {
+  if (action === "cf-set-draft-field") {
+    const c = appState.creation;
+    if (!c) return true;
+    const field = target.dataset.field ?? "";
+    const value = target.value ?? "";
+    if (!c.draft) c.draft = {};
+    c.draft[field] = value;
+    if (field === "format") {
+      const recs = { feature: "feature_film", pilot: "pilot_episode", series: "series_season", short: "short_form", micro_drama: "micro_drama_serial" };
+      c.draft.structure_template = recs[value] ?? "feature_film";
+    }
+    // Re-render only to update button state (canProceed changes with logline length)
+    renderCreationPage();
+    return true;
+  }
   if (action === "pro-anchor-input") {
     appState.proCreation.anchor = target.value;
     return true;
