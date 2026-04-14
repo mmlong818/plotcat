@@ -221,6 +221,57 @@ export const setupStatusLabels = {
   closed: "已回收"
 };
 
+export const NODE_TOOLTIPS = {
+  opening_image:    "【开场印象】前60秒建立故事情感基调。成功标准：观众知道「这是什么感受的故事」。常见失误：堆砌信息，忘记放情感。结尾印象必须与此镜像呼应。",
+  setup:            "【世界与缺口】展示主角「普通世界」里的内在缺口——他缺少什么，不知道自己缺少什么。成功标准：观众感受到主角的不完整。常见失误：把铺陈做成说明书。",
+  catalyst:         "【诱发事件】打破主角平衡的外力事件，主角不得不做出反应。McKee：价值从+翻-（或-翻+）。成功标准：故事世界的规则发生不可逆改变。",
+  lock_in:          "【主线锁定】主角主动选择踏入「冒险世界」，退路关闭。Field：第一幕转折点。成功标准：主角从被动反应变为主动行动。常见失误：主角被事件推着走，没有做出选择。",
+  promise:          "【故事承诺兑现】给观众他们「买票」期待的内容——类型该有的场景在此段落集中出现。成功标准：观众获得满足感并愿意投入。",
+  midpoint:         "【中点翻转】主角行动性质从被动转主动，故事重心不可逆移位。Snyder：假胜利或假失败。成功标准：观众感受到「之后无法回头」。常见失误：把高潮提前放在中点导致后劲不足。",
+  reversal:         "【局势反扑】反派/命运的最强反击，主角陷入最深困境，全部看似失去。成功标准：观众认为主角已无路可走。",
+  collapse:         "【崩塌时刻】主角灵魂的黑暗时刻——所有外部支撑消失，必须直面内心缺口。McKee：此处必须做出真实选择，而非依赖运气。",
+  final_choice:     "【最终选择】主角用行动（而非语言）证明自己真正改变了。成功标准：观众看到角色弧光完成。常见失误：主角靠外部帮助解决，而非内在转变。",
+  finale:           "【终局行动】执行最终选择，高潮戏剧冲突解决。成功标准：所有伏线回收，冲突有明确结果。",
+  aftershock:       "【余波落点】展示「新世界」状态，与开场印象形成镜像对比，印证主角的蜕变。",
+  break_into_two:   "【进入第二幕】主角越过「普通世界」边界，进入「冒险世界」，规则已变。成功标准：画面或场景能看出世界已变。",
+  b_story:          "【副线启动】副线角色往往是主线主题的镜子，负责输送主题信息。常见失误：副线与主线无主题联系。",
+  pressure_wave:    "【压力推进】持续累积压力，让主角没有喘息空间，选项越来越少。成功标准：每场戏结束时代价比上一场更高。",
+  crisis:           "【危机时刻】所有选项都不好时，主角被迫做出最痛的选择。成功标准：观众能感受到选择的真实代价。",
+  break_into_three: "【进入第三幕】主角完成内在转变，做好最终行动的准备。成功标准：观众能感受到主角「准备好了」。",
+  final_image:      "【结尾印象】与开场印象对称呼应，展示故事对主角造成的真实改变。",
+  cold_open:        "【冷开场钩子】前90秒必须建立剧集气质并抛出无法忽视的悬念。成功标准：观众决定继续看。",
+  series_premise:   "【剧集前提建立】建立剧集「引擎」——驱动整季叙事的持续冲突或问题。成功标准：观众明白「这部剧是关于什么的持续问题」。",
+  protagonist_problem: "【主角问题抛出】本集主角的具体问题，同时暗示季长线。成功标准：问题既能在本集推进，又留有更大伏笔。",
+  world_expansion:  "【世界扩张】把剧集世界的规则、人物关系网和长期冲突源推出来。成功标准：观众看到「可以持续追看的世界」。",
+  midpoint_hook:    "【中段钩子】强化追看动力，引入新变量或反转，阻止观众在中途放弃。",
+  escalation:       "【关系与危机升级】人物关系发生不可逆变化，危机升级到本集高潮前的最高点。",
+  episode_climax:   "【本集高潮】本集核心冲突的最高点，必须有明确的结果（暂时性解决或失败）。",
+  season_hook:      "【尾钩与续看承诺】本集/本季结尾的钩子，让观众无法不看下一集/下一季。",
+  season_engine:    "【季引擎建立】确立整季的核心驱动冲突（人物关系、外部压力或世界难题）。",
+  cast_network:     "【人物群关系网】建立所有主要人物的关系拓扑和初始站位，以便后续碰撞重组。",
+  line_split:       "【多线展开】把季引擎分裂为多条并行推进的故事线，彼此之间有主题联系。",
+  midseason_shift:  "【季中转向】半季时发生不可逆的格局重组，让剩余各集有新的驱动力。",
+  line_collision:   "【线索碰撞】各条故事线开始交叉碰撞，推向季终的收束。",
+  endgame_push:     "【终局推进】把所有主要人物推到最高风险位置，为季终高潮做最后准备。",
+  season_climax:    "【季终高潮】季度核心冲突的最高点，多条线在此汇聚并分出胜负。",
+  next_season_hook: "【下一季钩子】在季终兑现后留下新问题或新威胁，保证观众期待下一季。",
+  hook:             "【起手钩子】短片必须在前15秒抓住观众注意力。成功标准：观众有「这是什么」的好奇。",
+  core_turn:        "【核心转折】短片的唯一关键转折，所有铺垫都指向这一刻。成功标准：转折既在意料之外又在情理之中。",
+  payoff:           "【落点回收】回收开场的意象、问题或情感，给短片一个完整的感受闭环。",
+  episode_hook:     "【前几集起钩】用前三集快速建立爽点、主角魅力和追更钩子，锁定观众。",
+  identity_flip:    "【身份/关系反转】主角身份或核心关系发生翻转，制造最强烈的戏剧冲击。",
+  cliff_loop:       "【追更钩子循环】每集结尾必须有让人无法停止的钩子——悬念、反转或情感高峰。",
+  stage_peak:       "【阶段爆点】全剧中的几次大型爆点，重置人物关系和阵营站位。",
+  final_payoff:     "【大结局回收】回收所有主线伏笔，给观众最终的情感和戏剧满足。",
+  reaction:         "【反应段】主角在第一转折后的反应期——被动应对，摸索规则，代价持续累积。",
+  attack:           "【主动进攻】主角主动出击，看似接近目标，但实际在走向崩塌。",
+  setup_nodes:      "【基础铺陈】建立主角的「普通世界」和内在缺口，为转变埋下根基。",
+  midpoint_turn:    "【中点翻转】主角从被动转主动，故事不可逆转。",
+  segment_1:        "【开端段落】快速建立故事世界、主角和核心问题。",
+  segment_2:        "【中间段落】推进冲突，让主角面对越来越高的代价。",
+  segment_3:        "【收束段落】完成最终选择并落点。"
+};
+
 export const structurePresets = {
   feature_film: {
     acts: [
@@ -531,5 +582,29 @@ export const appState = {
   },
   draggedPlotCardId: null,
   saveTimer: null,
-  resetConfirmPending: false
+  resetConfirmPending: false,
+  creation: null,
+  createModePickerOpen: false,
+  proCreation: {
+    step: "anchor",
+    anchor: "",
+    anchorAnalysis: null,
+    activeWb: "theme",
+    genres: [],
+    workbenches: {
+      theme:     { questions: [], loading: false, done: false },
+      character: { questions: [], loading: false, done: false },
+      scene:     { questions: [], loading: false, done: false }
+    },
+    loading: false,
+    error: null
+  },
+  evalRulesModalOpen: false,
+  evalRules: {
+    concept:       { passScore: 80, maxRetry: 2 },
+    synopsis:      { passScore: 80, maxRetry: 2 },
+    characters:    { passScore: 70, maxRetry: 1 },
+    key_scenes:    { passScore: 70, maxRetry: 1 },
+    act_structure: { passScore: 70, maxRetry: 1 },
+  }
 };
