@@ -1,4 +1,40 @@
 import { buildExpertOutput } from "../logic/experts.js";
+import { spawn } from "child_process";
+
+const CLAUDE_TIMEOUT_MS = 300_000;
+
+function callClaudeSubprocess(prompt) {
+  return new Promise((resolve, reject) => {
+    const proc = spawn("claude", ["-p", "--output-format", "text"], {
+      stdio: ["pipe", "pipe", "pipe"]
+    });
+    proc.stdout.setEncoding("utf8");
+    proc.stderr.setEncoding("utf8");
+    proc.stdin.setDefaultEncoding("utf8");
+
+    let stdout = "";
+    let stderr = "";
+    const timer = setTimeout(() => { proc.kill(); reject(new Error("claude CLI 超时")); }, CLAUDE_TIMEOUT_MS);
+
+    proc.stdout.on("data", (d) => { stdout += d; });
+    proc.stderr.on("data", (d) => { stderr += d; });
+    proc.stdin.write(prompt, "utf8");
+    proc.stdin.end();
+
+    proc.on("close", (code) => {
+      clearTimeout(timer);
+      if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 300)}`));
+      else resolve(stdout);
+    });
+    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+  });
+}
+
+function parseJsonFromClaude(text) {
+  const m = text.match(/```json\s*([\s\S]*?)```/) ?? text.match(/(\{[\s\S]*\})/);
+  const raw = m ? (m[1] ?? m[0]) : text;
+  return JSON.parse(raw.trim());
+}
 
 const defaultProvider = process.env.OPENAI_API_KEY
   ? "openai"
@@ -547,12 +583,11 @@ ${JSON.stringify(draft, null, 2)}
 }
 
 function getAiStatus() {
-  const configured = Boolean(runtimeConfig.apiKey);
   return {
-    configured,
-    provider: runtimeConfig.provider,
-    model: configured ? runtimeConfig.model : "",
-    source: runtimeConfig.source
+    configured: true,
+    provider: "claude",
+    model: "claude (订阅)",
+    source: "subscription"
   };
 }
 
@@ -997,93 +1032,24 @@ function fallbackConceptOptions(draftInput, warning = "") {
 }
 
 async function generateExpertResponse({ expertId, project, selectedScene, issues }) {
-  if (!runtimeConfig.apiKey) {
-    return fallbackExpertResponse(expertId, project, selectedScene, issues);
-  }
-
   try {
-    const output = await requestStructuredOutput({
-      prompt: buildExpertPrompt(expertId, project, selectedScene, issues),
-      name: "expert_response",
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          title: { type: "string" },
-          intro: { type: "string" },
-          sections: {
-            type: "array",
-            items: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                title: { type: "string" },
-                bullets: {
-                  type: "array",
-                  items: { type: "string" }
-                }
-              },
-              required: ["title", "bullets"]
-            }
-          },
-          next_actions: {
-            type: "array",
-            items: { type: "string" }
-          }
-        },
-        required: ["title", "intro", "sections", "next_actions"]
-      }
-    });
-
-    return {
-      mode: "ai",
-      provider: runtimeConfig.provider,
-      model: runtimeConfig.model,
-      output
-    };
+    const text = await callClaudeSubprocess(buildExpertPrompt(expertId, project, selectedScene, issues));
+    const output = parseJsonFromClaude(text);
+    return { mode: "ai", provider: "claude", model: "claude", output };
   } catch (error) {
     return fallbackExpertResponse(expertId, project, selectedScene, issues, error.message);
   }
 }
 
 async function generateCreateWizardConceptOptions({ draft }) {
-  if (!runtimeConfig.apiKey) {
-    return fallbackConceptOptions(draft);
-  }
-
   try {
     const safeDraft = sanitizeWizardDraft(draft);
-    const output = await requestStructuredOutput({
-      prompt: buildConceptOptionsPrompt(safeDraft),
-      name: "wizard_concept_options",
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          options: {
-            type: "array",
-            minItems: 3,
-            maxItems: 3,
-            items: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                label: { type: "string" },
-                logline: { type: "string" },
-                core_conflict: { type: "string" }
-              },
-              required: ["label", "logline", "core_conflict"]
-            }
-          }
-        },
-        required: ["options"]
-      }
-    });
-
+    const text = await callClaudeSubprocess(buildConceptOptionsPrompt(safeDraft));
+    const output = parseJsonFromClaude(text);
     return {
       mode: "ai",
-      provider: runtimeConfig.provider,
-      model: runtimeConfig.model,
+      provider: "claude",
+      model: "claude",
       options: list(output.options).slice(0, 3).map((option, index) => ({
         id: `concept_${index + 1}`,
         label: trimText(option.label) || `方向 ${index + 1}`,
@@ -1098,22 +1064,14 @@ async function generateCreateWizardConceptOptions({ draft }) {
 
 async function generateCreateWizardStep({ stepId, draft }) {
   const safeStepId = Object.prototype.hasOwnProperty.call(wizardStepFieldMap, stepId) ? stepId : "blueprint";
-  if (!runtimeConfig.apiKey) {
-    return fallbackWizardStep(safeStepId, draft);
-  }
-
   try {
     const safeDraft = sanitizeWizardDraft(draft);
-    const output = await requestStructuredOutput({
-      prompt: buildWizardStepPrompt(safeStepId, safeDraft),
-      name: `wizard_step_${safeStepId}`,
-      schema: getWizardStepSchema(safeStepId, safeDraft)
-    });
-
+    const text = await callClaudeSubprocess(buildWizardStepPrompt(safeStepId, safeDraft));
+    const output = parseJsonFromClaude(text);
     return {
       mode: "ai",
-      provider: runtimeConfig.provider,
-      model: runtimeConfig.model,
+      provider: "claude",
+      model: "claude",
       fields: pickWizardStepFields(safeStepId, normalizeWizardPatch(output, safeDraft))
     };
   } catch (error) {
@@ -1123,29 +1081,14 @@ async function generateCreateWizardStep({ stepId, draft }) {
 
 async function regenerateCreateWizardField({ field, draft }) {
   const safeField = Object.prototype.hasOwnProperty.call(wizardFieldLabels, field) ? field : "logline";
-  if (!runtimeConfig.apiKey) {
-    return fallbackWizardField(safeField, draft);
-  }
-
   try {
     const safeDraft = sanitizeWizardDraft(draft);
-    const output = await requestStructuredOutput({
-      prompt: buildWizardFieldPrompt(safeField, safeDraft),
-      name: `wizard_field_${safeField}`,
-      schema: {
-        type: "object",
-        additionalProperties: false,
-        properties: {
-          value: { type: "string" }
-        },
-        required: ["value"]
-      }
-    });
-
+    const text = await callClaudeSubprocess(buildWizardFieldPrompt(safeField, safeDraft));
+    const output = parseJsonFromClaude(text);
     return {
       mode: "ai",
-      provider: runtimeConfig.provider,
-      model: runtimeConfig.model,
+      provider: "claude",
+      model: "claude",
       field: safeField,
       value: trimText(output.value)
     };
@@ -1154,7 +1097,16 @@ async function regenerateCreateWizardField({ field, draft }) {
   }
 }
 
+async function generateActNodes({ projectCtx, actTitle, actPurpose, nodes }) {
+  const { buildActNodesPrompt } = await import("../ai/prompts.js");
+  const { system, user } = buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes);
+  const fullPrompt = `<system>\n${system}\n</system>\n\n${user}`;
+  const raw = await callClaudeSubprocess(fullPrompt);
+  return parseJsonFromClaude(raw);
+}
+
 export {
+  generateActNodes,
   generateCreateWizardConceptOptions,
   generateCreateWizardStep,
   generateExpertResponse,

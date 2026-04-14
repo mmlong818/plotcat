@@ -22,6 +22,7 @@ import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } fr
 import { renderStructureLibraryDialog } from "./render/structureLibrary.js";
 import { STORY_STRUCTURE_LIBRARY } from "./data/storyStructureLibrary.js";
 import { renderCreationFlowPage } from "./render/creationFlow.js";
+import { renderProCreationPage } from "./render/proCreationFlow.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
@@ -500,10 +501,33 @@ function normalizeProject() {
   }
 }
 
+function serializeCreation(creation) {
+  if (!creation) return null;
+  return {
+    ...creation,
+    selectedSceneIds: [...(creation.selectedSceneIds ?? new Set())],
+    autoGen: null
+  };
+}
+
+function deserializeCreation(raw) {
+  if (!raw) return null;
+  return {
+    ...raw,
+    selectedSceneIds: new Set(raw.selectedSceneIds ?? [])
+  };
+}
+
 function saveLocalSnapshot() {
   localStorage.setItem(
     STORAGE_KEY,
-    JSON.stringify({ project: appState.project, projectList: appState.projectList })
+    JSON.stringify({
+      project: appState.project,
+      projectList: appState.projectList,
+      creation: serializeCreation(appState.creation),
+      currentPage: appState.currentPage,
+      evalRules: appState.evalRules
+    })
   );
 }
 
@@ -539,6 +563,10 @@ async function loadProjectFromServer(projectId) {
   appState.project = ensurePlotDrivenProject(payload.project);
   appState.projectList = payload.projects ?? appState.projectList;
   normalizeProject();
+  const firstChar = list(appState.project.character_hub?.characters)[0];
+  if (firstChar && !appState.selection.characterId) {
+    appState.selection.characterId = firstChar.id;
+  }
 }
 
 async function saveProjectToServer() {
@@ -590,6 +618,7 @@ function markDirty() {
 function setCurrentPage(pageId) {
   appState.currentPage = pageId;
   if (pageId !== "project") appState.createDialogOpen = false;
+  saveLocalSnapshot();
   render();
 }
 
@@ -938,7 +967,10 @@ function formatCreateAssistantErrorCurrent(error) {
 }
 
 function aiProviderLabel(value) {
-  return value === "gemini" ? "Gemini" : value === "openai" ? "OpenAI" : "本地建议";
+  if (value === "gemini") return "Gemini";
+  if (value === "openai") return "OpenAI";
+  if (value === "claude") return "Claude";
+  return "本地建议";
 }
 
 async function requestCreateStepSuggestionCurrent(stepId = getProjectCreateStep().id) {
@@ -1249,12 +1281,26 @@ function renderStepperNav() {
 
 function renderHero() {
   const step = getStep();
+  // 暗色模式切换：创作流程页使用暗色背景
+  document.body.dataset.mode = appState.currentPage === "creation" ? "creation" : "";
+
   dom.hero.hidden = false;
   if (appState.currentPage === "project") {
     dom.hero.classList.remove("is-compact", "is-topbar");
-    dom.heroSide.hidden = true;
+    dom.heroSide.hidden = false;
+    dom.heroSide.querySelector(".hero__actions").hidden = true;
     dom.heroEyebrow.textContent = "原点编剧系统";
     dom.heroTitle.textContent = "项目中心";
+    dom.saveButton.hidden = true;
+    dom.resetButton.hidden = true;
+    return;
+  }
+  dom.heroSide.querySelector(".hero__actions").hidden = false;
+  if (appState.currentPage === "creation") {
+    dom.hero.classList.add("is-topbar", "is-compact");
+    dom.heroSide.hidden = false;
+    dom.heroEyebrow.textContent = "";
+    dom.heroTitle.textContent = "";
     dom.saveButton.hidden = true;
     dom.resetButton.hidden = true;
     return;
@@ -1443,6 +1489,7 @@ function render() {
   renderRelationshipsPage(dom, appState, relationshipGetters);
   renderLocksPage(dom, appState, lockGetters);
   renderScenesPage(dom, appState, sceneGetters);
+  if (appState.creation) renderCreationPage();
   renderPageVisibility();
   schedulePlotInspectorLeadSync();
 }
@@ -1473,6 +1520,79 @@ function handleClick(event) {
   if (action === "fetch-ai-models") { fetchAiModelOptionsCurrentV2(); return; }
   if (action === "save-ai-config") { saveAiConfigDraftCurrentV2(); return; }
   if (action === "disconnect-ai-config") { disconnectAiConfigDraftCurrentV2(); return; }
+  if (action === "open-creation-flow") {
+    appState.currentPage = "creation";
+    appState.createDialogOpen = false;
+    if (!appState.creation) {
+      appState.creation = {
+        currentStep: 1,
+        genres: [],
+        era: "",
+        conceptHint: "",
+        conceptChoices: [],
+        selectedConceptIdx: -1,
+        selectedConcept: null,
+        conceptCustom: "",
+        conceptCustomOpen: false,
+        synopsisChoices: [],
+        selectedSynopsisIdx: -1,
+        selectedSynopsis: null,
+        synopsisCustom: "",
+        synopsisCustomOpen: false,
+        characterProposals: [],
+        confirmedCharacters: [],
+        sceneProposals: [],
+        selectedSceneIds: new Set(),
+        selectedStructure: { primary: null, devices: [], lens: [] },
+        actStructure: null,
+        actStructureChoice: null,
+        loadingStep: -1,
+        aiError: "",
+        lastReasoning: "",
+        reasoningPanelOpen: false,
+        autoGen: null
+      };
+    }
+    saveLocalSnapshot();
+    render();
+    renderCreationPage();
+    return;
+  }
+  if (action === "new-creation-flow") {
+    appState.currentPage = "creation";
+    appState.createDialogOpen = false;
+    appState.creation = {
+      currentStep: 1,
+      genres: [],
+      era: "",
+      conceptHint: "",
+      conceptChoices: [],
+      selectedConceptIdx: -1,
+      selectedConcept: null,
+      conceptCustom: "",
+      conceptCustomOpen: false,
+      synopsisChoices: [],
+      selectedSynopsisIdx: -1,
+      selectedSynopsis: null,
+      synopsisCustom: "",
+      synopsisCustomOpen: false,
+      characterProposals: [],
+      confirmedCharacters: [],
+      sceneProposals: [],
+      selectedSceneIds: new Set(),
+      selectedStructureId: null,
+      actStructure: null,
+      actStructureChoice: null,
+      loadingStep: -1,
+      aiError: "",
+      lastReasoning: "",
+      reasoningPanelOpen: false
+    };
+    saveLocalSnapshot();
+    render();
+    renderCreationPage();
+    return;
+  }
   if (action === "open-create-dialog") {
     resetProjectCreateWizard();
     appState.createDialogOpen = true;
@@ -1972,6 +2092,18 @@ function handleChange(event) {
 // ── Bootstrap ─────────────────────────────────────────────────────────────────
 
 async function bootstrap() {
+  // 无论服务器是否可用，先从本地恢复 creation 状态和页面
+  const localSnapshot = loadLocalSnapshot();
+  if (localSnapshot?.creation) {
+    appState.creation = deserializeCreation(localSnapshot.creation);
+    if (localSnapshot.currentPage === "creation") {
+      appState.currentPage = "creation";
+    }
+  }
+  if (localSnapshot?.evalRules) {
+    appState.evalRules = { ...appState.evalRules, ...localSnapshot.evalRules };
+  }
+
   try {
     const status = await fetchJson("/api/status");
     appState.runtime.serverAvailable = status.server === "ok";
@@ -1984,7 +2116,7 @@ async function bootstrap() {
     await loadProjectsFromServer();
     if (appState.projectList[0]?.id) await loadProjectFromServer(appState.projectList[0].id);
   } catch (error) {
-    const snapshot = loadLocalSnapshot();
+    const snapshot = localSnapshot;
     if (snapshot?.project) {
       appState.project = ensurePlotDrivenProject(snapshot.project);
       appState.projectList = list(snapshot.projectList);
@@ -2007,9 +2139,30 @@ async function bootstrap() {
   render();
 }
 
+// ── Theme toggle ──────────────────────────────────────────────────────────────
+
+(function initTheme() {
+  const saved = localStorage.getItem("theme") || "light";
+  document.documentElement.dataset.theme = saved;
+  const btn = document.querySelector("#theme-toggle-button");
+  if (btn) btn.textContent = saved === "dark" ? "☀" : "🌙";
+})();
+
+document.querySelector("#theme-toggle-button")?.addEventListener("click", () => {
+  const isDark = document.documentElement.dataset.theme === "dark";
+  const next = isDark ? "light" : "dark";
+  document.documentElement.dataset.theme = next;
+  localStorage.setItem("theme", next);
+  const btn = document.querySelector("#theme-toggle-button");
+  if (btn) btn.textContent = next === "dark" ? "☀" : "🌙";
+});
+
 // ── Event listener registration ───────────────────────────────────────────────
 
-dom.pageProjectButton.addEventListener("click", () => setCurrentPage("project"));
+dom.pageProjectButton.addEventListener("click", () => {
+  if (appState.currentPage === "creation") appState.creation = null;
+  setCurrentPage("project");
+});
 dom.openSettingsButton.addEventListener("click", () => {
   appState.createAssistant.message = "";
   appState.createAssistant.warning = "";
@@ -2132,41 +2285,104 @@ bootstrap();
 
 // ── AI 创作流程（追加，不改已有代码）────────────────────────────────────────
 
-// 初始化 appState.creation
-if (!appState.creation) {
-  appState.creation = {
-    currentStep: 1,
-    genre: "",
-    styleKeywords: "",
-    taboos: "",
-    loglineChoices: [],
-    selectedLoglineIdx: -1,
-    selectedLogline: null,
-    endingTone: "",
-    moods: [],
-    treatment: null,
-    treatmentLocked: false,
-    characterCount: 3,
-    characterDrafts: [],
-    characters: [],
-    beatFramework: "save_the_cat",
-    beatSheet: [],
-    sceneCards: [],
-    lastReasoning: "",
-    reasoningPanelOpen: false,
-    loadingStep: 0,
-    loadingSceneIdx: null,
-    aiError: ""
-  };
-}
-
 // DOM ref for creation panel
 dom.creationContent = document.querySelector("#creationContent");
 
-// 渲染创作流程页
+// 渲染创作流程页（快速版 or 精品版）
 function renderCreationPage() {
   if (!dom.creationContent) return;
-  renderCreationFlowPage(dom, appState);
+  saveLocalSnapshot();
+  if (appState.proCreation?.active) {
+    renderProCreationPage(dom, appState);
+  } else {
+    renderCreationFlowPage(dom, appState);
+  }
+}
+
+// ── 精品创作 API calls ──────────────────────────────────────────────────────
+
+async function handleProAnalyzeAnchor() {
+  const pc = appState.proCreation;
+  if (!pc.anchor.trim()) {
+    pc.error = "请先输入你的创作起点";
+    renderCreationPage();
+    return;
+  }
+  pc.loading = true;
+  pc.error = null;
+  renderCreationPage();
+  try {
+    const res = await fetch("/api/pro/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ anchor: pc.anchor, genres: pc.genres })
+    });
+    const data = await res.json();
+    pc.anchorAnalysis = data;
+    pc.activeWb = data.first_wb ?? "theme";
+    pc.step = "workbenches";
+    pc.loading = false;
+    renderCreationPage();
+    handleProGenQuestions(pc.activeWb);
+  } catch (err) {
+    pc.loading = false;
+    pc.error = `分析失败：${err.message}`;
+    renderCreationPage();
+  }
+}
+
+async function handleProGenQuestions(wb) {
+  const pc = appState.proCreation;
+  const wbState = pc.workbenches[wb];
+  wbState.loading = true;
+  renderCreationPage();
+  try {
+    const res = await fetch("/api/pro/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ wb, context: pc.anchorAnalysis?.context ?? {}, anchor: pc.anchor, genres: pc.genres })
+    });
+    const data = await res.json();
+    wbState.questions = data.questions ?? [];
+    wbState.loading = false;
+    renderCreationPage();
+  } catch (err) {
+    wbState.loading = false;
+    wbState.questions = [];
+    renderCreationPage();
+  }
+}
+
+async function handleProAssemble() {
+  const pc = appState.proCreation;
+  pc.step = "assembling";
+  pc.loading = true;
+  renderCreationPage();
+  try {
+    const res = await fetch("/api/pro/assemble", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        anchor: pc.anchor,
+        genres: pc.genres,
+        theme: { questions: pc.workbenches.theme.questions },
+        character: { questions: pc.workbenches.character.questions },
+        scene: { questions: pc.workbenches.scene.questions }
+      })
+    });
+    const data = await res.json();
+    if (data.projectId) {
+      appState.proCreation.active = false;
+      await loadProjectFromServer(data.projectId);
+      setCurrentPage("workflow");
+      setCurrentStep("structure");
+    }
+  } catch (err) {
+    pc.step = "workbenches";
+    pc.loading = false;
+    pc.error = `组装失败：${err.message}`;
+    renderCreationPage();
+  }
 }
 
 // ── Creation API call ─────────────────────────────────────────────────────────
@@ -2181,6 +2397,46 @@ async function callGenerateAPI(step, projectContext, options) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
+    return { choices: [], reasoning: "", warnings: [], error: error.message };
+  }
+}
+
+// 流式调用：边生成边展示，onChunk(text) 实时回调，resolve 最终 result
+let _cfAbortController = null;
+
+async function callGenerateAPIStream(step, projectContext, options, onChunk) {
+  _cfAbortController?.abort();
+  const controller = new AbortController();
+  _cfAbortController = controller;
+  try {
+    const response = await fetch("/api/generate/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, projectContext, options }),
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split("\n");
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        let evt;
+        try { evt = JSON.parse(line.slice(6)); } catch { continue; }
+        if (evt.type === "chunk") onChunk?.(evt.text);
+        if (evt.type === "done") return evt;
+        if (evt.type === "error") return { choices: [], reasoning: "", warnings: [], error: evt.message };
+      }
+    }
+    return { choices: [], reasoning: "", warnings: [], error: "流式响应未正常结束" };
+  } catch (error) {
+    if (error.name === "AbortError") return { choices: [], reasoning: "", warnings: [], cancelled: true };
     return { choices: [], reasoning: "", warnings: [], error: error.message };
   }
 }
@@ -2281,8 +2537,145 @@ function getMockBeatSheet(framework) {
 // ── Creation action handlers ──────────────────────────────────────────────────
 
 function handleCreationClick(action, target) {
+  // ── 模式选择 & 精品创作 ──────────────────────────────────────
+  if (action === "open-create-mode-picker") {
+    appState.createModePickerOpen = true;
+    render();
+    return true;
+  }
+  if (action === "close-create-mode-picker") {
+    appState.createModePickerOpen = false;
+    render();
+    return true;
+  }
+  if (action === "open-quick-creation") {
+    appState.createModePickerOpen = false;
+    appState.proCreation.active = false;
+    appState.currentPage = "creation";
+    appState.createDialogOpen = false;
+    if (!appState.creation) {
+      appState.creation = {
+        currentStep: 1, genres: [], era: "", conceptHint: "",
+        conceptChoices: [], selectedConceptIdx: -1, selectedConcept: null,
+        conceptCustom: "", conceptCustomOpen: false,
+        synopsisChoices: [], selectedSynopsisIdx: -1, selectedSynopsis: null,
+        synopsisCustom: "", synopsisCustomOpen: false,
+        characterProposals: [], confirmedCharacters: [],
+        sceneProposals: [], selectedSceneIds: new Set(),
+        selectedStructure: { primary: null, devices: [], lens: [] },
+        actStructure: null, actStructureChoice: null,
+        loadingStep: -1, aiError: "", lastReasoning: "",
+        reasoningPanelOpen: false, autoGen: null
+      };
+    }
+    saveLocalSnapshot();
+    render();
+    renderCreationPage();
+    return true;
+  }
+  if (action === "open-pro-creation") {
+    appState.createModePickerOpen = false;
+    appState.proCreation = {
+      active: true, step: "anchor", anchor: "",
+      anchorAnalysis: null, activeWb: "theme", genres: [],
+      workbenches: {
+        theme:     { questions: [], loading: false, done: false },
+        character: { questions: [], loading: false, done: false },
+        scene:     { questions: [], loading: false, done: false }
+      },
+      loading: false, error: null
+    };
+    appState.currentPage = "creation";
+    appState.createDialogOpen = false;
+    saveLocalSnapshot();
+    render();
+    renderCreationPage();
+    return true;
+  }
+  if (action === "back-to-projects") {
+    appState.currentPage = "project";
+    appState.proCreation.active = false;
+    render();
+    return true;
+  }
+  if (action === "pro-back-to-anchor") {
+    appState.proCreation.step = "anchor";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "pro-analyze-anchor") {
+    handleProAnalyzeAnchor();
+    return true;
+  }
+  if (action === "pro-gen-questions") {
+    handleProGenQuestions(target.dataset.wb);
+    return true;
+  }
+  if (action === "pro-switch-wb") {
+    const wb = target.dataset.wb;
+    appState.proCreation.activeWb = wb;
+    if (appState.proCreation.workbenches[wb].questions.length === 0 && !appState.proCreation.workbenches[wb].loading) {
+      handleProGenQuestions(wb);
+    } else {
+      renderCreationPage();
+    }
+    return true;
+  }
+  if (action === "pro-mark-wb-done") {
+    const wb = target.dataset.wb;
+    appState.proCreation.workbenches[wb].done = !appState.proCreation.workbenches[wb].done;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "pro-assemble") {
+    handleProAssemble();
+    return true;
+  }
+  if (action === "pro-toggle-genre") {
+    const g = target.dataset.value;
+    const genres = appState.proCreation.genres;
+    const idx = genres.indexOf(g);
+    if (idx >= 0) genres.splice(idx, 1); else genres.push(g);
+    renderCreationPage();
+    return true;
+  }
+
   const c = appState.creation;
 
+  if (action === "pulse-set-mode") {
+    c.pulseMode = target.dataset.value ?? "经典";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "pulse-set-genre") {
+    c.pulseGenre = c.pulseGenre === (target.dataset.value ?? "") ? "" : (target.dataset.value ?? "");
+    renderCreationPage();
+    return true;
+  }
+  if (action === "select-pulse-seed") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && idx < (c.pulseSeeds ?? []).length) {
+      c.selectedPulseSeedIdx = idx;
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "proceed-from-pulse") {
+    const seed = (c.pulseSeeds ?? [])[c.selectedPulseSeedIdx];
+    if (seed) {
+      c.genre = c.pulseGenre || "";
+      c.styleKeywords = seed.hook ?? "";
+      c.pulseSeedContext = seed;
+    }
+    c.currentStep = 1;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "ai-generate-pulse") {
+    handleGeneratePulse();
+    return true;
+  }
   if (action === "creation-set-genre") {
     c.genre = target.dataset.value ?? "";
     c.aiError = "";
@@ -2313,7 +2706,9 @@ function handleCreationClick(action, target) {
   }
   if (action === "goto-creation-step") {
     const step = Number(target.dataset.step ?? 1);
-    if (step < c.currentStep) { c.currentStep = step; renderCreationPage(); }
+    c.currentStep = step;
+    c.aiError = "";
+    renderCreationPage();
     return true;
   }
   if (action === "next-creation-step") {
@@ -2393,10 +2788,329 @@ function handleCreationClick(action, target) {
     handleGenerateScene(target.dataset.sceneId ?? "");
     return true;
   }
+
+  // ── Long-film creation flow actions ────────────────────────────────────
+  if (action === "cf-go-to-concepts") {
+    c.currentStep = 2;
+    c.aiError = "";
+    renderCreationPage();
+    if ((c.conceptChoices ?? []).length === 0 && c.loadingStep !== 2) {
+      handleGenerateConcept();
+    }
+    return true;
+  }
+  if (action === "cf-go-to-synopsis") {
+    c.currentStep = 3;
+    c.aiError = "";
+    renderCreationPage();
+    if ((c.synopsisChoices ?? []).length === 0 && c.loadingStep !== 3) {
+      handleGenerateSynopsis();
+    }
+    return true;
+  }
+
+  // ── New 5-step creation flow actions ────────────────────────────────────
+
+  if (action === "cf-set-draft-field") {
+    const field = target.dataset.field ?? "";
+    const value = target.value ?? "";
+    if (!c.draft) c.draft = {};
+    c.draft[field] = value;
+    if (field === "format") {
+      const recs = { feature: "feature_film", pilot: "pilot_episode", series: "series_season", short: "short_form", micro_drama: "micro_drama_serial" };
+      c.draft.structure_template = recs[value] ?? "feature_film";
+    }
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-step1-next") {
+    c.currentStep = 2;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-step2-next") {
+    const template = c.draft?.structure_template ?? "feature_film";
+    c._structurePreset = structurePresets[template] ?? null;
+    c.currentStep = 3;
+    c.aiError = "";
+    if ((c.characterProposals ?? []).length === 0) handleGenerateCharactersCF();
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-step3-next") {
+    c.currentStep = 4;
+    c.currentActIdx = 0;
+    c.actResults = c.actResults ?? {};
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-generate-act") {
+    const actKey = target.dataset.actKey ?? "";
+    handleGenerateAct(actKey);
+    return true;
+  }
+
+  if (action === "cf-advance-act") {
+    c.currentActIdx = (c.currentActIdx ?? 0) + 1;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-step4-finish") {
+    c.currentStep = 5;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-finalize-new") {
+    handleFinalizeNewCreation();
+    return true;
+  }
+
+  if (action === "cf-add-custom-genre") {
+    const val = (c.customGenreInput ?? "").trim();
+    if (val && !(c.customGenres ?? []).includes(val)) {
+      c.customGenres = [...(c.customGenres ?? []), val];
+    }
+    c.customGenreInput = "";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-toggle-genre") {
+    const val = target.dataset.value ?? "";
+    const genres = c.genres ?? [];
+    if (genres.includes(val)) {
+      c.genres = genres.filter((g) => g !== val);
+    } else if (genres.length < 4) {
+      c.genres = [...genres, val];
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-set-era") {
+    c.era = target.dataset.value ?? c.era ?? "";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-toggle-concept-custom") {
+    c.conceptCustomOpen = !c.conceptCustomOpen;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-toggle-synopsis-custom") {
+    c.synopsisCustomOpen = !c.synopsisCustomOpen;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "select-concept") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && idx < (c.conceptChoices ?? []).length) {
+      c.selectedConceptIdx = idx;
+      c.selectedConcept = c.conceptChoices[idx];
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "use-concept-custom") {
+    const text = (c.conceptCustom ?? "").trim();
+    if (text) {
+      c.selectedConcept = { title: "自定义点子", hook: text, core_conflict: "", unique_angle: "" };
+      c.selectedConceptIdx = -1;
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "select-synopsis") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && idx < (c.synopsisChoices ?? []).length) {
+      c.selectedSynopsisIdx = idx;
+      c.selectedSynopsis = c.synopsisChoices[idx];
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "use-synopsis-custom") {
+    const text = (c.synopsisCustom ?? "").trim();
+    if (text) {
+      c.selectedSynopsis = { version_label: "自定义梗概", summary: text, narrative_angle: "" };
+      c.selectedSynopsisIdx = -1;
+    }
+    renderCreationPage();
+    return true;
+  }
+  if (action === "confirm-character") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && (c.characterProposals ?? [])[idx]) c.characterProposals[idx]._status = "confirmed";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "skip-character") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && (c.characterProposals ?? [])[idx]) c.characterProposals[idx]._status = "skipped";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "edit-character") {
+    c.editingCharIdx = Number(target.dataset.idx ?? -1);
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cancel-edit-character") {
+    c.editingCharIdx = -1;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "save-character-edit") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0 && (c.characterProposals ?? [])[idx]) {
+      const card = target.closest(".cf-char-card");
+      if (card) {
+        card.querySelectorAll("[data-char-field]").forEach((input) => {
+          const field = input.dataset.charField;
+          if (field) c.characterProposals[idx][field] = input.value;
+        });
+        c.characterProposals[idx]._status = "pending";
+      }
+    }
+    c.editingCharIdx = -1;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "regen-single-character") {
+    const idx = Number(target.dataset.idx ?? -1);
+    if (idx >= 0) handleRegenSingleCharacter(idx);
+    return true;
+  }
+  if (action === "toggle-scene") {
+    const sid = target.dataset.sceneId ?? "";
+    if (!sid) return true;
+    const ids = c.selectedSceneIds ?? new Set();
+    if (ids.has(sid)) { ids.delete(sid); } else { ids.add(sid); }
+    c.selectedSceneIds = ids;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "select-structure") {
+    const zone = target.dataset.structZone ?? "primary";
+    const id = target.dataset.structId ?? null;
+    if (!id) return true;
+    c.selectedStructure = c.selectedStructure ?? { primary: null, devices: [], lens: [] };
+    const sel = c.selectedStructure;
+    if (zone === "primary") {
+      sel.primary = sel.primary === id ? null : id;
+    } else if (zone === "device") {
+      const idx = (sel.devices ?? []).indexOf(id);
+      if (idx >= 0) { sel.devices = sel.devices.filter((d) => d !== id); }
+      else if ((sel.devices ?? []).length < 2) { sel.devices = [...(sel.devices ?? []), id]; }
+    } else if (zone === "lens") {
+      const idx = (sel.lens ?? []).indexOf(id);
+      if (idx >= 0) { sel.lens = sel.lens.filter((l) => l !== id); }
+      else { sel.lens = [...(sel.lens ?? []), id]; }
+    }
+    saveLocalSnapshot();
+    renderCreationPage();
+    return true;
+  }
+  if (action === "confirm-act-structure") {
+    c.actStructure = c.actStructureChoice;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "finalize-creation") {
+    callCreationFinalizeAPI();
+    return true;
+  }
+  if (action === "ai-generate-concept") {
+    handleGenerateConcept();
+    return true;
+  }
+  if (action === "ai-generate-synopsis") {
+    handleGenerateSynopsis();
+    return true;
+  }
+  if (action === "ai-generate-characters-cf") {
+    handleGenerateCharactersCF();
+    return true;
+  }
+  if (action === "ai-generate-key-scenes") {
+    handleGenerateKeyScenes();
+    return true;
+  }
+  if (action === "ai-generate-act-structure") {
+    handleGenerateActStructure();
+    return true;
+  }
+  if (action === "cancel-cf-ai") {
+    _cfAbortController?.abort();
+    appState.creation.loadingStep = -1;
+    appState.creation.streamPreview = "";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "go-to-project") {
+    appState.creation = null;
+    setCurrentPage("project");
+    return true;
+  }
+  if (action === "one-click-generate") {
+    handleOneClickGenerate();
+    return true;
+  }
+  if (action === "cancel-auto-gen") {
+    _autoGenCancelled = true;
+    _cfAbortController?.abort();
+    if (appState.creation) {
+      appState.creation.autoGen = null;
+      renderCreationPage();
+    }
+    return true;
+  }
+  if (action === "open-eval-rules") {
+    appState.evalRulesModalOpen = true;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "close-eval-rules") {
+    appState.evalRulesModalOpen = false;
+    renderCreationPage();
+    return true;
+  }
   return false;
 }
 
 // ── Async AI handlers ─────────────────────────────────────────────────────────
+
+async function handleGeneratePulse() {
+  const c = appState.creation;
+  c.loadingStep = 0;
+  c.aiError = "";
+  c.pulseSeeds = [];
+  c.selectedPulseSeedIdx = -1;
+  renderCreationPage();
+
+  const result = await callGenerateAPI("pulse", {}, {
+    creativeTarget: c.pulseTarget ?? "",
+    mode: c.pulseMode ?? "经典",
+    genre: c.pulseGenre ?? ""
+  });
+
+  c.loadingStep = -1;
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    c.pulseSeeds = (result.choices ?? []).map((ch) => ch.data ?? ch);
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
 
 async function handleGenerateLogline() {
   const c = appState.creation;
@@ -2507,10 +3221,534 @@ async function handleGenerateScene(sceneId) {
   renderCreationPage();
 }
 
+// ── Long-film creation flow async handlers ────────────────────────────────────
+
+function streamingOnChunk(c, text) {
+  c.streamPreview = (c.streamPreview ?? "") + text;
+  renderCreationPage();
+}
+
+async function handleGenerateAct(actKey) {
+  const c = appState.creation;
+  const preset = c._structurePreset;
+  if (!preset) return;
+
+  const act = (preset.acts ?? []).find(a => a.key === actKey);
+  if (!act) return;
+
+  const nodes = (preset.nodes ?? []).filter(n => n[1] === actKey);
+  if (nodes.length === 0) return;
+
+  c.loadingStep = 4;
+  c.aiError = "";
+  renderCreationPage();
+
+  try {
+    const res = await fetch("/api/ai/generate-act-nodes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        projectCtx: {
+          project: { project: c.draft, logline: c.draft?.logline },
+          story_core: { premise: c.draft?.logline, core_conflict: c.draft?.core_conflict },
+          intent_anchor: { protagonist: c.draft?.protagonist }
+        },
+        actTitle: act.title,
+        actPurpose: act.purpose,
+        nodes
+      })
+    });
+    const json = await res.json();
+    if (json.ok && json.data?.nodes) {
+      if (!c.actResults) c.actResults = {};
+      c.actResults[actKey] = { nodes: json.data.nodes };
+    } else {
+      c.aiError = json.error ?? "生成失败，请重试";
+    }
+  } catch (err) {
+    c.aiError = err.message;
+  }
+
+  c.loadingStep = -1;
+  renderCreationPage();
+}
+
+function handleFinalizeNewCreation() {
+  const c = appState.creation;
+  const draft = c.draft ?? {};
+  const template = draft.structure_template ?? "feature_film";
+  const preset = structurePresets[template] ?? buildCustomStructurePreset(2);
+
+  const proj = createEmptyProject();
+  proj.project.title = draft.title || "未命名项目";
+  proj.project.format = draft.format ?? "feature";
+  proj.project.logline = draft.logline ?? "";
+  proj.story_core.premise = draft.logline ?? "";
+  proj.story_core.core_conflict = draft.core_conflict ?? "";
+  proj.intent_anchor = proj.intent_anchor ?? {};
+  proj.intent_anchor.protagonist = draft.protagonist ?? "";
+
+  const acts = (preset.acts ?? []).map((a, i) => ({
+    id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
+    range_label: a.range_label, order_index: i
+  }));
+  const actMap = new Map(acts.map(a => [a.key, a.id]));
+  const nodes = (preset.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
+    id: createId("node"), node_type: nodeType, title: nodeTitle, required,
+    act_id: actMap.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
+  }));
+  proj.structure_profile = { template, acts, nodes };
+
+  const actResults = c.actResults ?? {};
+  const cards = [];
+  for (const node of nodes) {
+    const actKey = (preset.nodes ?? []).find(n => n[0] === node.node_type)?.[1];
+    const result = actKey ? actResults[actKey] : null;
+    const nodeData = result?.nodes?.[node.node_type];
+    if (nodeData) {
+      const cardId = createId("card");
+      cards.push({ id: cardId, node_id: node.id, title: nodeData.key_event ?? "", summary: nodeData.summary ?? "", value_shift: nodeData.value_shift ?? "", status: "draft" });
+      node.card_ids = [cardId];
+    }
+  }
+  proj.plot_board = { cards };
+
+  const chars = (c.characterProposals ?? []).filter(p => p._status === "confirmed").map(ch => ({
+    id: createId("char"), name: ch.name ?? "", story_role: ch.story_role ?? "supporting",
+    desire: ch.desire ?? "", wound: ch.wound ?? "", arc_start: ch.arc_start ?? "", arc_end: ch.arc_end ?? ""
+  }));
+  proj.character_hub = { characters: chars };
+
+  appState.projects.push(proj);
+  appState.selectedProjectId = proj.id;
+  appState.view = "project";
+  appState.creation = null;
+  saveLocalSnapshot();
+  render();
+}
+
+async function handleGenerateConcept() {
+  const c = appState.creation;
+  c.loadingStep = 2;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.conceptChoices = [];
+  c.selectedConceptIdx = -1;
+  c.selectedConcept = null;
+  renderCreationPage();
+
+  const result = await callGenerateAPIStream("concept", {}, {
+    genres: c.genres ?? [],
+    conceptHint: c.conceptHint ?? "",
+    era: c.era ?? ""
+  }, (text) => streamingOnChunk(c, text));
+
+  if (result.cancelled) { return; }
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    c.conceptChoices = (result.choices ?? []).map((ch) => ch.data ?? ch);
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
+
+async function handleGenerateSynopsis() {
+  const c = appState.creation;
+  c.loadingStep = 3;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.synopsisChoices = [];
+  c.selectedSynopsisIdx = -1;
+  c.selectedSynopsis = null;
+  renderCreationPage();
+
+  const result = await callGenerateAPIStream("synopsis", {
+    genres: c.genres ?? [],
+    concept: c.selectedConcept ?? {}
+  }, {}, (text) => streamingOnChunk(c, text));
+
+  if (result.cancelled) { return; }
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    c.synopsisChoices = (result.choices ?? []).map((ch) => ch.data ?? ch);
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
+
+async function handleGenerateCharactersCF() {
+  const c = appState.creation;
+  c.loadingStep = 4;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.characterProposals = [];
+  renderCreationPage();
+
+  const synopsis = c.selectedSynopsis ?? {};
+  const ctx = {
+    project: {
+      project: { genre: c.genres ?? [], logline: synopsis.summary ?? "" },
+      story_core: { premise: synopsis.summary ?? "" }
+    }
+  };
+  const result = await callGenerateAPIStream("characters", ctx, { count: 4 },
+    (text) => streamingOnChunk(c, text));
+
+  if (result.cancelled) { return; }
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    const chars = result.choices?.[0]?.data?.characters ?? [];
+    c.characterProposals = chars.map((ch) => ({ ...ch, _status: "pending" }));
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
+
+async function handleRegenSingleCharacter(idx) {
+  const c = appState.creation;
+  const char = c.characterProposals?.[idx];
+  if (!char) return;
+  const storyRole = char.story_role ?? char.role ?? "supporting";
+  const others = (c.characterProposals ?? []).filter((_, i) => i !== idx);
+  const ctx = { genres: c.genres ?? [], concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {} };
+
+  c.regenCharIdx = idx;
+  c.aiError = "";
+  renderCreationPage();
+
+  const result = await callGenerateAPIStream("single_character", ctx,
+    { storyRole, existingChars: others },
+    (text) => { c.streamPreview = text; });
+
+  c.regenCharIdx = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    const newChar = result.choices?.[0]?.data?.character ?? null;
+    if (newChar) {
+      c.characterProposals[idx] = { ...newChar, _status: "pending" };
+    }
+  }
+  renderCreationPage();
+}
+
+async function handleGenerateKeyScenes() {
+  const c = appState.creation;
+  c.loadingStep = 5;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.sceneProposals = [];
+  c.selectedSceneIds = new Set();
+  renderCreationPage();
+
+  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
+  const result = await callGenerateAPIStream("key_scenes", {
+    genres: c.genres ?? [],
+    concept: c.selectedConcept ?? {},
+    synopsis: c.selectedSynopsis ?? {},
+    characters: confirmedChars
+  }, {}, (text) => streamingOnChunk(c, text));
+
+  if (result.cancelled) { return; }
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    c.sceneProposals = (result.choices ?? []).map((ch) => ch.data ?? ch);
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
+
+async function handleGenerateActStructure() {
+  const c = appState.creation;
+  c.loadingStep = 6;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.actStructureChoice = null;
+  c.actStructure = null;
+  renderCreationPage();
+
+  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
+  const selectedScenes = (c.sceneProposals ?? []).filter((s) => {
+    const sid = s.id ?? s.title ?? "";
+    return (c.selectedSceneIds ?? new Set()).has(sid);
+  });
+  const result = await callGenerateAPIStream("act_structure", {
+    genres: c.genres ?? [],
+    concept: c.selectedConcept ?? {},
+    synopsis: c.selectedSynopsis ?? {},
+    characters: confirmedChars,
+    scenes: selectedScenes
+  }, {}, (text) => streamingOnChunk(c, text));
+
+  if (result.cancelled) { return; }
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    const choice = result.choices?.[0];
+    c.actStructureChoice = choice?.data ?? choice ?? null;
+    c.lastReasoning = result.reasoning ?? "";
+  }
+  renderCreationPage();
+}
+
+async function callCreationFinalizeAPI() {
+  const c = appState.creation;
+  c.loadingStep = 99;
+  c.aiError = "";
+  renderCreationPage();
+
+  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
+  const selectedScenes = (c.sceneProposals ?? []).filter((s) => {
+    const sid = s.id ?? s.title ?? "";
+    return (c.selectedSceneIds ?? new Set()).has(sid);
+  });
+
+  try {
+    const response = await fetch("/api/creation-flow/finalize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        genres: c.genres ?? [],
+        concept: c.selectedConcept ?? {},
+        synopsis: c.selectedSynopsis ?? {},
+        characters: confirmedChars,
+        scenes: selectedScenes,
+        structure: c.selectedStructure ?? { primary: null, devices: [], lens: [] }
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    c.loadingStep = -1;
+    if (data.projectId) {
+      await loadProjectFromServer(data.projectId);
+      appState.creation = null;
+      saveLocalSnapshot();
+      setCurrentPage("workflow");
+      setCurrentStep("structure");
+      render();
+    } else {
+      c.aiError = data.error ?? "创建失败";
+      renderCreationPage();
+    }
+  } catch (err) {
+    c.loadingStep = -1;
+    c.aiError = err.message;
+    renderCreationPage();
+  }
+}
+
+// ── 一键生成 ──────────────────────────────────────────────────────────────────
+
+async function callEvaluateAPI(step, content, context) {
+  try {
+    const response = await fetch("/api/evaluate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, content, context })
+    });
+    if (!response.ok) return { score: 0, error: `HTTP ${response.status}` };
+    const data = await response.json();
+    // 如果服务器返回 raw_output 说明 Claude 输出无法解析，在控制台记录
+    if (data.raw_output) {
+      console.warn(`[evaluate] ${step} Claude 输出解析失败，原始：`, data.raw_output.slice(0, 200));
+    }
+    return { score: 0, ...data };
+  } catch (err) {
+    return { score: 0, error: err.message };
+  }
+}
+
+let _autoGenCancelled = false;
+
+async function handleOneClickGenerate() {
+  const c = appState.creation;
+  _autoGenCancelled = false;
+
+  c.autoGen = { active: true, phase: "generating", stepIdx: 0, stepName: "概念", retry: 0, log: [], score: null, preview: "", error: "" };
+  c.loadingStep = -1;
+  renderCreationPage();
+
+  const check = () => !_autoGenCancelled && !!c.autoGen?.active;
+
+  const setPhase = (phase, extra = {}) => {
+    if (!c.autoGen) return;
+    Object.assign(c.autoGen, { phase, ...extra });
+    renderCreationPage();
+  };
+
+  const addLog = (msg) => {
+    if (!c.autoGen) return;
+    c.autoGen.log.push(msg);
+    renderCreationPage();
+  };
+
+  async function runStep(stepIdx, stepName, generate, evaluate, select, passScore = 80, maxRetry = 2) {
+    if (!check()) return false;
+    Object.assign(c.autoGen, { stepIdx, stepName, retry: 0, score: null });
+
+    let bestResult = null;
+    let bestScore = -1;
+    let bestEval = null;
+
+    for (let attempt = 0; attempt <= maxRetry; attempt++) {
+      if (!check()) return false;
+      setPhase("generating", { retry: attempt, score: null, preview: "" });
+
+      const genResult = await generate();
+      if (!check()) return false;
+      if (genResult.cancelled) return false;
+      if (genResult.error) {
+        if (attempt < maxRetry) { addLog(`${stepName}生成出错，重试…`); continue; }
+        break;
+      }
+
+      setPhase("evaluating", { score: null });
+      const evalResult = await evaluate(genResult);
+      if (!check()) return false;
+
+      const score = typeof evalResult.score === "number" ? evalResult.score : 0;
+      const fb = evalResult.feedback ? `「${evalResult.feedback}」` : "";
+      const evalFailed = evalResult.raw_output || (score === 0 && evalResult.error);
+      setPhase("evaluating", { score: evalFailed ? "?" : score });
+
+      if (score > bestScore) { bestScore = score; bestResult = genResult; bestEval = evalResult; }
+
+      if (evalFailed) {
+        addLog(`⚠ ${stepName}评分失败（${evalResult.error ?? "解析异常"}），跳过此次评估`);
+        // 评估失败时跳过不计入重试，直接选用本次结果
+        select(genResult, evalResult);
+        addLog(`✓ ${stepName}完成（评估跳过）`);
+        return true;
+      }
+
+      if (score >= passScore) {
+        select(genResult, evalResult);
+        addLog(`✓ ${stepName}完成（${score}分${fb}）${attempt > 0 ? `，第${attempt + 1}次` : ''}`);
+        return true;
+      }
+      if (attempt < maxRetry) addLog(`${stepName}${score}分${fb}（需${passScore}+），重新生成…`);
+    }
+
+    if (bestResult) {
+      select(bestResult, bestEval);
+      addLog(`✓ ${stepName}完成（${bestScore}分，已取最佳）`);
+      return true;
+    }
+    return false;
+  }
+
+  const chunkHandler = (text) => { if (c.autoGen) c.autoGen.preview = ((c.autoGen.preview ?? "").slice(-600)) + text; };
+
+  const rules = appState.evalRules;
+
+  // ── 概念 ──────────────────────────────────────────────────────────
+  const ok0 = await runStep(0, "概念",
+    () => callGenerateAPIStream("concept", {}, { genres: c.genres ?? [], conceptHint: c.conceptHint ?? "", era: c.era ?? "", count: 6 }, chunkHandler),
+    (result) => callEvaluateAPI("concepts", (result.choices ?? []).map(ch => ch.data ?? ch), { genres: c.genres ?? [], conceptHint: c.conceptHint ?? "" }),
+    (result, evalResult) => {
+      const concepts = (result.choices ?? []).map(ch => ch.data ?? ch);
+      const idx = Math.min(evalResult?.best_idx ?? 0, concepts.length - 1);
+      c.conceptChoices = concepts;
+      c.selectedConceptIdx = idx;
+      c.selectedConcept = concepts[idx] ?? concepts[0];
+    },
+    rules.concept.passScore, rules.concept.maxRetry
+  );
+  if (!ok0) { setPhase("error", { error: "概念步骤失败" }); return; }
+
+  // ── 梗概 ──────────────────────────────────────────────────────────
+  const ok1 = await runStep(1, "梗概",
+    () => callGenerateAPIStream("synopsis", { genres: c.genres ?? [], concept: c.selectedConcept ?? {} }, { count: 6 }, chunkHandler),
+    (result) => callEvaluateAPI("synopsis", (result.choices ?? []).map(ch => ch.data ?? ch), { genres: c.genres ?? [], concept: c.selectedConcept ?? {} }),
+    (result, evalResult) => {
+      const synopses = (result.choices ?? []).map(ch => ch.data ?? ch);
+      const idx = Math.min(evalResult?.best_idx ?? 0, synopses.length - 1);
+      c.synopsisChoices = synopses;
+      c.selectedSynopsisIdx = idx;
+      c.selectedSynopsis = synopses[idx] ?? synopses[0];
+    },
+    rules.synopsis.passScore, rules.synopsis.maxRetry
+  );
+  if (!ok1) { setPhase("error", { error: "梗概步骤失败" }); return; }
+
+  // ── 角色 ──────────────────────────────────────────────────────────
+  const synopsis = c.selectedSynopsis ?? {};
+  const charCtx = { project: { project: { genre: c.genres ?? [], logline: synopsis.summary ?? "" }, story_core: { premise: synopsis.summary ?? "" } } };
+  const ok2 = await runStep(2, "角色",
+    () => callGenerateAPIStream("characters", charCtx, { count: 4 }, chunkHandler),
+    (result) => callEvaluateAPI("characters", result.choices?.[0]?.data?.characters ?? [], { genres: c.genres ?? [], synopsis }),
+    (result) => { c.characterProposals = (result.choices?.[0]?.data?.characters ?? []).map(ch => ({ ...ch, _status: "confirmed" })); },
+    rules.characters.passScore, rules.characters.maxRetry
+  );
+  if (!ok2) { setPhase("error", { error: "角色步骤失败" }); return; }
+
+  // ── 剧情点 ────────────────────────────────────────────────────────
+  const ok3 = await runStep(3, "剧情点",
+    () => callGenerateAPIStream("key_scenes", { genres: c.genres ?? [], concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {}, characters: c.characterProposals ?? [] }, {}, chunkHandler),
+    (result) => callEvaluateAPI("key_scenes", (result.choices ?? []).map(ch => ch.data ?? ch), { synopsis: c.selectedSynopsis ?? {} }),
+    (result) => {
+      const scenes = (result.choices ?? []).map(ch => ch.data ?? ch);
+      c.sceneProposals = scenes;
+      c.selectedSceneIds = new Set(scenes.map((s, i) => s.id ?? s.title ?? String(i)));
+    },
+    rules.key_scenes.passScore, rules.key_scenes.maxRetry
+  );
+  if (!ok3) { setPhase("error", { error: "剧情点步骤失败" }); return; }
+
+  // ── 幕结构 ────────────────────────────────────────────────────────
+  const ok4 = await runStep(4, "幕结构",
+    () => callGenerateAPIStream("act_structure", { genres: c.genres ?? [], concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {}, characters: c.characterProposals ?? [], scenes: c.sceneProposals ?? [] }, {}, chunkHandler),
+    (result) => callEvaluateAPI("act_structure", result.choices?.[0]?.data ?? result.choices?.[0] ?? {}, { concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {} }),
+    (result) => { c.actStructureChoice = result.choices?.[0]?.data ?? result.choices?.[0] ?? null; },
+    rules.act_structure.passScore, rules.act_structure.maxRetry
+  );
+  if (!ok4) { setPhase("error", { error: "幕结构步骤失败" }); return; }
+
+  // ── 创建项目 ──────────────────────────────────────────────────────
+  if (!check()) return;
+  setPhase("finalizing", { stepIdx: 5, stepName: "创建项目" });
+  await callCreationFinalizeAPI();
+  // Success navigates away; if still here, finalize failed
+  if (c.autoGen) {
+    setPhase("error", { error: c.aiError || "创建项目失败" });
+  }
+}
+
 // ── Creation input handler ────────────────────────────────────────────────────
 
 function handleCreationInput(action, target) {
+  if (action === "pro-anchor-input") {
+    appState.proCreation.anchor = target.value;
+    return true;
+  }
+  if (action === "pro-set-answer") {
+    const wb = target.dataset.wb;
+    const qid = target.dataset.qid;
+    const q = appState.proCreation.workbenches[wb]?.questions.find((item) => item.id === qid);
+    if (q) q.answer = target.value;
+    return true;
+  }
+
   const c = appState.creation;
+  if (action === "pulse-set-target") {
+    c.pulseTarget = target.value;
+    return true;
+  }
   if (action === "creation-set-style-keywords") {
     c.styleKeywords = target.value;
     return true;
@@ -2521,6 +3759,43 @@ function handleCreationInput(action, target) {
   }
   if (action === "creation-set-treatment") {
     c.treatment = target.value;
+    return true;
+  }
+  if (action === "cf-set-concept-hint") {
+    c.conceptHint = target.value;
+    // 直接更新按钮状态，避免重渲染导致输入框失焦
+    const btn = document.querySelector('[data-action="one-click-generate"]');
+    if (btn) btn.disabled = !(c.genres ?? []).length || !target.value.trim();
+    const hint = document.querySelector('.cf-one-click-hint');
+    if (hint) hint.style.display = (c.genres ?? []).length && !target.value.trim() ? '' : 'none';
+    return true;
+  }
+  if (action === "cf-set-custom-genre-input") {
+    c.customGenreInput = target.value;
+    return true;
+  }
+  if (action === "cf-set-era") {
+    c.era = target.value;
+    return true;
+  }
+  if (action === "cf-set-concept-custom") {
+    c.conceptCustom = target.value;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-set-synopsis-custom") {
+    c.synopsisCustom = target.value;
+    renderCreationPage();
+    return true;
+  }
+  if (action === "update-eval-rule") {
+    const step = target.dataset.step;
+    const field = target.dataset.field;
+    const value = Number(target.value);
+    if (step && field && appState.evalRules[step] && !isNaN(value)) {
+      appState.evalRules[step][field] = value;
+      saveLocalSnapshot();
+    }
     return true;
   }
   return false;

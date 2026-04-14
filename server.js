@@ -3,6 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  generateActNodes,
   generateCreateWizardConceptOptions,
   generateCreateWizardStep,
   generateExpertResponse,
@@ -25,7 +26,10 @@ import {
   touchProject
 } from "./src/server/repository.js";
 import { computeIssues, summarizeIssues } from "./src/logic/rules.js";
-import { generateContent } from "./src/ai/generator.js";
+import { createId } from "./src/shared/projectFactory.js";
+import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
+import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
+import { spawn } from "node:child_process";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = 4173;
@@ -377,6 +381,412 @@ async function handleApi(request, response, pathname) {
       "Access-Control-Allow-Headers": "Content-Type"
     });
     response.end();
+    return true;
+  }
+
+  // ── 流式生成端点（SSE）────────────────────────────────────────────────────
+  if (pathname === "/api/generate/stream" && request.method === "POST") {
+    let body;
+    try { body = await readJsonBody(request); } catch { body = {}; }
+    const { step, projectContext, options } = body;
+    if (!step) { json(response, 400, { error: "缺少 step 参数" }); return true; }
+
+    response.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+      "Access-Control-Allow-Origin": "*"
+    });
+
+    let prompt;
+    try { prompt = buildPromptForStep(step, projectContext, options); }
+    catch (e) { response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`); response.end(); return true; }
+
+    const proc = spawn("claude", ["-p", "--output-format", "text"], { stdio: ["pipe", "pipe", "pipe"] });
+    proc.stdout.setEncoding("utf8");
+    proc.stderr.setEncoding("utf8");
+    proc.stdin.setDefaultEncoding("utf8");
+    proc.stdin.write(prompt, "utf8");
+    proc.stdin.end();
+
+    let fullText = "";
+    let ended = false;
+    const streamTimeout = setTimeout(() => {
+      if (!ended) { proc.kill(); }
+    }, 120_000);
+
+    proc.stdout.on("data", (chunk) => {
+      fullText += chunk;
+      response.write(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`);
+    });
+
+    proc.on("close", (code) => {
+      ended = true;
+      clearTimeout(streamTimeout);
+      if (code !== 0) {
+        response.write(`data: ${JSON.stringify({ type: "error", message: "claude CLI 异常退出" })}\n\n`);
+      } else {
+        try {
+          const parsed = parseJsonFromText(fullText);
+          const result = formatStepResult(step, parsed);
+          response.write(`data: ${JSON.stringify({ type: "done", ...result })}\n\n`);
+        } catch (e) {
+          response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`);
+        }
+      }
+      response.end();
+    });
+
+    proc.on("error", (err) => {
+      ended = true;
+      clearTimeout(streamTimeout);
+      response.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
+      response.end();
+    });
+
+    request.on("close", () => { ended = true; clearTimeout(streamTimeout); proc.kill(); });
+    return true;
+  }
+
+  // ── Linda Seger 评分端点 ────────────────────────────────────────────────────
+  if (pathname === "/api/evaluate" && request.method === "POST") {
+    let body;
+    try { body = await readJsonBody(request); } catch { body = {}; }
+    const { step, content, context } = body;
+    if (!step) { json(response, 400, { error: "缺少 step 参数" }); return true; }
+
+    try {
+      const prompt = buildEvaluatePromptForStep(step, content, context ?? {});
+      const result = await new Promise((resolve, reject) => {
+        const proc = spawn("claude", ["-p", "--output-format", "text"], { stdio: ["pipe", "pipe", "pipe"] });
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
+        proc.stdin.setDefaultEncoding("utf8");
+        let stdout = "";
+        let stderr = "";
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("评估超时")); }, 150_000);
+        proc.stdout.on("data", (d) => { stdout += d; });
+        proc.stderr.on("data", (d) => { stderr += d; });
+        proc.stdin.write(prompt, "utf8");
+        proc.stdin.end();
+        proc.on("close", (code) => {
+          clearTimeout(timer);
+          if (stderr) console.error(`[evaluate] stderr:`, stderr.slice(0, 400));
+          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
+          else resolve({ stdout, stderr });
+        });
+        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+      });
+      const parsed = parseJsonFromText(result.stdout);
+      if (parsed.raw) {
+        console.error(`[evaluate] ${step} 解析失败，原始输出：`, result.stdout.slice(0, 300));
+      }
+      const score = typeof parsed.score === "number" ? parsed.score : 0;
+      const dimensions = parsed.dimensions ?? {
+        d1: parsed.d1, d2: parsed.d2, d3: parsed.d3, d4: parsed.d4
+      };
+      const debugStderr = result.stderr ? result.stderr.slice(0, 200) : null;
+      json(response, 200, { score, best_idx: parsed.best_idx ?? 0, dimensions, feedback: parsed.feedback ?? "", raw_output: parsed.raw ?? null, debug_stderr: debugStderr });
+    } catch (err) {
+      console.error(`[evaluate] ${step} 评估异常：`, err.message);
+      json(response, 200, { score: 0, best_idx: 0, feedback: `评估失败：${err.message}`, error: err.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/creation-flow/finalize" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const { genres, concept, synopsis, characters, scenes, structure } = body;
+      const title = concept?.title ?? synopsis?.version_label ?? "新长片项目";
+      const logline = concept?.hook ?? synopsis?.summary ?? "";
+      const genreList = Array.isArray(genres) ? genres : [];
+
+      // 从幕数推断结构模板（act_structure 不返回 primary 字段时的 fallback）
+      const actCount = Array.isArray(structure?.acts) ? structure.acts.length : 0;
+      const primaryStructure = structure?.primary
+        ?? (actCount === 4 ? "four_act" : actCount === 5 ? "feature_film" : "three_act");
+
+      // 1. 创建基础项目
+      const projectData = createProject({ title, format: "feature_film", genre: genreList, logline });
+
+      // 2. 填充故事核心（central_question / emotional_promise 不复用 hook）
+      projectData.story_core = {
+        ...(projectData.story_core ?? {}),
+        premise:           synopsis?.summary ?? concept?.hook ?? "",
+        core_conflict:     concept?.core_conflict ?? "",
+        central_question:  "",
+        emotional_promise: concept?.unique_angle ?? "",
+        theme_statement:   ""
+      };
+
+      // 3. 填充角色
+      if (Array.isArray(characters) && characters.length > 0) {
+        projectData.story_bible.characters = characters.map((c) => ({
+          id: createId("char"),
+          name: c.name ?? "角色",
+          story_role: c.story_role ?? "supporting",
+          external_want: c.desire ?? c.external_want ?? "",
+          internal_need: c.need ?? c.internal_need ?? "",
+          psychological_flaw: c.psychological_flaw ?? "",
+          moral_flaw: c.moral_flaw ?? "",
+          public_mask: c.public_mask ?? "",
+          core_fear: c.core_fear ?? "",
+          wound: c.wound ?? "",
+          arc_start: c.arc_start ?? "",
+          arc_end: c.arc_end ?? "",
+          voice_rules: [],
+          secret: c.secret ?? ""
+        }));
+      }
+
+      // 4. 填充关键剧情点 → scene_cards（保留 conflict/turn）+ beats（链接到 scene_cards）
+      if (Array.isArray(scenes) && scenes.length > 0) {
+        const firstCharId = projectData.story_bible.characters[0]?.id ?? "";
+        const sceneCards = scenes.map((s, i) => ({
+          id: createId("scene"),
+          order_index: i + 1,
+          title: s.title ?? `场景 ${i + 1}`,
+          pov_character_id: firstCharId,
+          location: "待定",
+          time_of_day: "待定",
+          goal: s.goal ?? s.scene_goal ?? "",
+          obstacle: s.conflict ?? "",
+          tactic: "",
+          turn: s.turn ?? "",
+          value_shift: "",
+          new_information: [],
+          input_state: "",
+          output_state: "",
+          production_tags: [],
+          dialogue_seed: "",
+          emotion_stage: ""
+        }));
+        projectData.story_bible.scene_cards = sceneCards;
+        projectData.story_bible.beats = scenes.map((s, i) => ({
+          id: createId("beat"),
+          framework: primaryStructure,
+          slot: s.act_position ?? "setup",
+          purpose: s.title ?? s.goal ?? s.scene_goal ?? `剧情点 ${i + 1}`,
+          linked_scene_ids: [sceneCards[i].id]
+        }));
+      }
+
+      // 5. 填充意图锚点
+      projectData.intent_anchor = {
+        ...projectData.intent_anchor,
+        core_idea: synopsis?.summary ?? concept?.hook ?? "",
+        theme: concept?.title ?? "",
+        protagonist: Array.isArray(characters) && characters.length > 0 ? (characters[0]?.name ?? "") : ""
+      };
+
+      // 6. 保留结构模板，清空其余派生缓存（由 saveProject→ensurePlotDrivenProject 重建）
+      projectData.character_hub = null;
+      projectData.structure_profile = { template: primaryStructure };
+      projectData.plot_board = null;
+      projectData.scene_workbench = null;
+
+      const saved = saveProject(projectData);
+      const projectId = saved.project?.id ?? saved.id;
+      json(response, 200, { projectId, success: true });
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/ai/generate-act-nodes" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      const { projectCtx, actTitle, actPurpose, nodes } = body;
+      const data = await generateActNodes({ projectCtx, actTitle, actPurpose, nodes });
+      json(response, 200, { ok: true, data });
+    } catch (error) {
+      json(response, 500, { ok: false, error: error.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/pro/analyze" && request.method === "POST") {
+    let body;
+    try { body = await readJsonBody(request); } catch { body = {}; }
+    const { anchor, genres = [] } = body;
+    if (!anchor) { json(response, 400, { error: "缺少 anchor 参数" }); return true; }
+
+    try {
+      const { system, user } = buildAnalyzeAnchorPrompt(anchor, genres);
+      const fullPrompt = `${system}\n\n---\n\n${user}`;
+      const result = await new Promise((resolve, reject) => {
+        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
+        proc.stdin.setDefaultEncoding("utf8");
+        let stdout = "";
+        let stderr = "";
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("analyze 超时")); }, 60_000);
+        proc.stdout.on("data", (d) => { stdout += d; });
+        proc.stderr.on("data", (d) => { stderr += d; });
+        proc.stdin.write(fullPrompt, "utf8");
+        proc.stdin.end();
+        proc.on("close", (code) => {
+          clearTimeout(timer);
+          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
+          else resolve(stdout);
+        });
+        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+      });
+      const parsed = parseJsonFromText(result);
+      json(response, 200, parsed);
+    } catch (err) {
+      json(response, 500, { error: err.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/pro/questions" && request.method === "POST") {
+    let body;
+    try { body = await readJsonBody(request); } catch { body = {}; }
+    const { wb, context = {}, anchor = "", genres = [] } = body;
+    if (!wb) { json(response, 400, { error: "缺少 wb 参数" }); return true; }
+
+    try {
+      const { system, user } = buildWorkbenchQuestionsPrompt(wb, context, anchor, genres);
+      const fullPrompt = `${system}\n\n---\n\n${user}`;
+      const result = await new Promise((resolve, reject) => {
+        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
+        proc.stdin.setDefaultEncoding("utf8");
+        let stdout = "";
+        let stderr = "";
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("questions 超时")); }, 60_000);
+        proc.stdout.on("data", (d) => { stdout += d; });
+        proc.stderr.on("data", (d) => { stderr += d; });
+        proc.stdin.write(fullPrompt, "utf8");
+        proc.stdin.end();
+        proc.on("close", (code) => {
+          clearTimeout(timer);
+          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
+          else resolve(stdout);
+        });
+        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+      });
+      const parsed = parseJsonFromText(result);
+      json(response, 200, parsed);
+    } catch (err) {
+      json(response, 500, { error: err.message });
+    }
+    return true;
+  }
+
+  if (pathname === "/api/pro/assemble" && request.method === "POST") {
+    let body;
+    try { body = await readJsonBody(request); } catch { body = {}; }
+    const { anchor = "", genres = [], theme = {}, character = {}, scene = {} } = body;
+
+    try {
+      const { system, user } = buildAssemblePrompt(
+        anchor, genres,
+        theme.questions ?? [],
+        character.questions ?? [],
+        scene.questions ?? []
+      );
+      const fullPrompt = `${system}\n\n---\n\n${user}`;
+      const result = await new Promise((resolve, reject) => {
+        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        proc.stdout.setEncoding("utf8");
+        proc.stderr.setEncoding("utf8");
+        proc.stdin.setDefaultEncoding("utf8");
+        let stdout = "";
+        let stderr = "";
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("assemble 超时")); }, 240_000);
+        proc.stdout.on("data", (d) => { stdout += d; });
+        proc.stderr.on("data", (d) => { stderr += d; });
+        proc.stdin.write(fullPrompt, "utf8");
+        proc.stdin.end();
+        proc.on("close", (code) => {
+          clearTimeout(timer);
+          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
+          else resolve(stdout);
+        });
+        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+      });
+
+      const assembled = parseJsonFromText(result);
+      const title = assembled.story_core?.premise?.slice(0, 30) ?? anchor.slice(0, 30) ?? "精品项目";
+      const logline = assembled.story_core?.premise ?? "";
+      const genreList = Array.isArray(genres) ? genres : [];
+
+      const projectData = createProject({ title, format: "feature_film", genre: genreList, logline });
+      projectData.story_core = { ...assembled.story_core };
+      projectData.intent_anchor = {
+        ...projectData.intent_anchor,
+        core_idea: assembled.story_core?.premise ?? "",
+        theme: assembled.story_core?.theme_statement ?? ""
+      };
+
+      if (Array.isArray(assembled.characters) && assembled.characters.length > 0) {
+        projectData.story_bible.characters = assembled.characters.map((c) => ({
+          id: createId("char"),
+          name: c.name ?? "角色",
+          story_role: c.story_role ?? "protagonist",
+          external_want: c.desire ?? "",
+          internal_need: c.need ?? "",
+          wound: c.wound ?? "",
+          arc_start: c.arc_start ?? "",
+          arc_end: c.arc_end ?? "",
+          psychological_flaw: c.contradiction ?? "",
+          notes: c.notes ?? "",
+          public_mask: "",
+          core_fear: "",
+          moral_flaw: "",
+          voice_rules: [],
+          secret: ""
+        }));
+      }
+
+      if (Array.isArray(assembled.scenes) && assembled.scenes.length > 0) {
+        const firstCharId = projectData.story_bible.characters[0]?.id ?? "";
+        const sceneCards = assembled.scenes.map((s, i) => ({
+          id: createId("scene"),
+          order_index: i + 1,
+          title: s.title ?? `场景 ${i + 1}`,
+          pov_character_id: firstCharId,
+          location: "待定",
+          time_of_day: "待定",
+          goal: s.goal ?? "",
+          obstacle: s.conflict ?? "",
+          tactic: "",
+          turn: s.turn ?? "",
+          value_shift: "",
+          new_information: [],
+          input_state: "",
+          output_state: "",
+          production_tags: [],
+          dialogue_seed: "",
+          emotion_stage: ""
+        }));
+        projectData.story_bible.scene_cards = sceneCards;
+        projectData.story_bible.beats = assembled.scenes.map((s, i) => ({
+          id: createId("beat"),
+          framework: "three_act",
+          slot: s.act_position ?? "setup",
+          purpose: s.title ?? "",
+          linked_scene_ids: [sceneCards[i].id]
+        }));
+      }
+
+      projectData.character_hub = null;
+      projectData.structure_profile = { template: "three_act" };
+      projectData.plot_board = null;
+      projectData.scene_workbench = null;
+
+      const saved = saveProject(projectData);
+      const projectId = saved.project?.id ?? saved.id;
+      json(response, 200, { projectId, success: true });
+    } catch (err) {
+      json(response, 500, { error: err.message });
+    }
     return true;
   }
 
