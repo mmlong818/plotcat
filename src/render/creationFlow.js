@@ -8,40 +8,6 @@ const CREATION_STEPS = [
   { id: 5, label: "确认" }
 ];
 
-const STORY_STRUCTURES = [
-  // ── 骨架层 (primary) ─────────────────────────────────────────────────────
-  { id: "three_act",    zone: "primary", name: "三幕式结构",       desc: "设定→对抗升级→高潮解决，最经典的通用范式",               tags: ["通用", "经典"] },
-  { id: "four_act",     zone: "primary", name: "四幕式结构",       desc: "在三幕基础上细分中段，节奏更均衡",                       tags: ["通用", "经典"] },
-  { id: "five_act",     zone: "primary", name: "五幕结构",         desc: "暴露→上升→高潮→下降→结局，莎士比亚式舞台结构",          tags: ["戏剧", "经典"] },
-  { id: "sequence",     zone: "primary", name: "序列法",           desc: "8个序列各自有独立目标，适合剧集拆集",                    tags: ["剧集", "通用"] },
-  { id: "event_driven", zone: "primary", name: "事件驱动结构",     desc: "由大事件串联，每个事件推动故事进入下一阶段",              tags: ["动作", "灾难"] },
-  { id: "real_time",    zone: "primary", name: "实时/24小时结构",  desc: "故事在极短时间内发生，每分钟推进新事件",                  tags: ["惊悚", "动作"] },
-  { id: "looping",      zone: "primary", name: "循环往复结构",     desc: "主角反复回到同一起点，每次循环带来微小变化直至破圈",      tags: ["科幻", "奇幻"] },
-  { id: "anthology",    zone: "primary", name: "短片集/章节式",    desc: "独立短片或章节串联，主题在末尾收束",                     tags: ["剧集", "群像"] },
-  { id: "mystery",      zone: "primary", name: "线性解谜结构",     desc: "案件→嫌疑线索→调查→推理高潮→真相揭晓",                  tags: ["悬疑", "侦探"] },
-  { id: "musical",      zone: "primary", name: "音乐剧结构",       desc: "每首歌与剧情节点重合，情感靠音乐推进",                   tags: ["音乐剧", "歌舞"] },
-  { id: "fragmented",   zone: "primary", name: "开放/片段式结构",  desc: "意象与场景碎片拼贴，观众自行拼接意义",                   tags: ["实验", "先锋"] },
-
-  // ── 叙事装置层 (device) ──────────────────────────────────────────────────
-  { id: "hero_journey",  zone: "device", name: "英雄之旅",         desc: "12阶段神话原型旅程，平凡世界→冒险→回归新生",              tags: ["冒险", "成长", "神话"] },
-  { id: "save_the_cat",  zone: "device", name: "救猫咪节拍表",     desc: "Blake Snyder 15节拍，精准控制商业片节奏",                 tags: ["商业", "通用"] },
-  { id: "story_circle",  zone: "device", name: "故事圆环",         desc: "Dan Harmon 8步圆环：舒适区→离开→付出代价→成长回归",      tags: ["通用", "角色弧"] },
-  { id: "three_turn",    zone: "device", name: "三点转折法",       desc: "设定→第一转折→第二转折→结局，简洁有力",                   tags: ["通用", "简洁"] },
-  { id: "propp",         zone: "device", name: "普罗普故事功能",   desc: "民间故事功能节点组合：任务→考验→奖励→归来",               tags: ["童话", "神话", "传统"] },
-  { id: "quest",         zone: "device", name: "任务型结构",       desc: "接受任务→组队→困难重重→达成/失败，人物随任务成长",        tags: ["冒险", "动作"] },
-  { id: "parallel",      zone: "device", name: "并行蒙太奇",       desc: "两条故事线同步推进，交错对照，最终汇聚共振",               tags: ["剧集", "通用"] },
-  { id: "nonlinear",     zone: "device", name: "环状/非线性",      desc: "跳时空、多视角重叠，回溯与前后呼应",                      tags: ["悬疑", "文艺"] },
-  { id: "multiline",     zone: "device", name: "多线嵌套",         desc: "多条主线并行推进，在交点处融合碰撞",                      tags: ["群戏", "剧集"] },
-  { id: "nested_dream",  zone: "device", name: "嵌套梦境/多重现实", desc: "现实层与梦境层交替穿插，真假交错多重结局",               tags: ["科幻", "悬疑"] },
-  { id: "diary",         zone: "device", name: "日记体/第一人称",  desc: "叙述者自白贯穿始终，事件与情感交织呈现",                  tags: ["文艺", "传记"] },
-  { id: "fractal",       zone: "device", name: "分形/嵌套结构",    desc: "主线与副线层层嵌套，每个子结构自成起承转合",               tags: ["史诗", "复杂"] },
-  { id: "montage",       zone: "device", name: "片段拼贴/意象流",  desc: "独立意象跨越时空拼贴，氛围大于线性逻辑",                  tags: ["先锋", "诗性"] },
-
-  // ── 主题镜头层 (lens) ────────────────────────────────────────────────────
-  { id: "character_arc", zone: "lens",   name: "角色弧驱动",       desc: "以角色内心成长为主轴，外部事件服务于内在转变",             tags: ["文艺", "成长"] },
-  { id: "emotional_arc", zone: "lens",   name: "情感曲线",         desc: "以角色情绪波动为主线，低谷与高峰交替推进",                tags: ["爱情", "文艺"] },
-  { id: "poetic",        zone: "lens",   name: "诗性结构",         desc: "主题母题反复强化，情感与意象优先于情节逻辑",               tags: ["文艺", "实验"] },
-];
 
 const ROLE_GROUPS = [
   { key: "protagonist",   label: "主角" },
