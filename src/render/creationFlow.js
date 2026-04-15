@@ -390,12 +390,20 @@ function renderStep3New(creation) {
         <div class="cf-actions">
           <button class="cf-deco-btn" type="button"
             data-action="cf-step3-next"
-            ${!hasAnyConfirmed ? "disabled" : ""}>
+            ${isLoading ? "disabled" : ""}>
             下一步：节点填充 <span class="cf-arrow">→</span>
           </button>
-          ${!hasAnyConfirmed && !isLoading ? `<span class="cf-next-hint">至少确认一个角色才能继续</span>` : ""}
+          ${!hasAnyConfirmed && !isLoading ? `<span class="cf-next-hint">可直接跳过角色步骤</span>` : ""}
         </div>
-      ` : ""}
+      ` : `
+        <div class="cf-actions">
+          <button class="cf-deco-btn" type="button"
+            data-action="cf-step3-next"
+            ${isLoading ? "disabled" : ""}>
+            ${isLoading ? loadingDots("生成中") : "跳过，直接填充节点"} <span class="cf-arrow">→</span>
+          </button>
+        </div>
+      `}
 
       ${proposals.length > 0 && creation.lastReasoning ? `
         <button class="cf-reasoning-btn" type="button" data-action="show-ai-reasoning">为什么是这些角色？</button>

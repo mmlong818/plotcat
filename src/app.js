@@ -3398,11 +3398,16 @@ async function handleGenerateCharactersCF() {
   c.characterProposals = [];
   renderCreationPage();
 
+  // 新5步流程用 draft 数据；旧流程用 selectedSynopsis
+  const draft = c.draft ?? {};
   const synopsis = c.selectedSynopsis ?? {};
+  const logline = draft.logline || synopsis.summary || "";
+  const protagonist = draft.protagonist || "";
   const ctx = {
     project: {
-      project: { genre: c.genres ?? [], logline: synopsis.summary ?? "" },
-      story_core: { premise: synopsis.summary ?? "" }
+      project: { genre: c.genres ?? [], logline },
+      story_core: { premise: logline },
+      intent_anchor: { protagonist }
     }
   };
   const result = await callGenerateAPIStream("characters", ctx, { count: 4 },
@@ -3415,8 +3420,12 @@ async function handleGenerateCharactersCF() {
     c.aiError = result.error;
   } else {
     const chars = result.choices?.[0]?.data?.characters ?? [];
-    c.characterProposals = chars.map((ch) => ({ ...ch, _status: "pending" }));
-    c.lastReasoning = result.reasoning ?? "";
+    if (chars.length === 0) {
+      c.aiError = "AI 未返回角色数据，请重试";
+    } else {
+      c.characterProposals = chars.map((ch) => ({ ...ch, _status: "pending" }));
+      c.lastReasoning = result.reasoning ?? "";
+    }
   }
   renderCreationPage();
 }
