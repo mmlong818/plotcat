@@ -413,7 +413,7 @@ async function handleApi(request, response, pathname) {
     let ended = false;
     const streamTimeout = setTimeout(() => {
       if (!ended) { proc.kill(); }
-    }, 120_000);
+    }, 300_000);
 
     proc.stdout.on("data", (chunk) => {
       fullText += chunk;

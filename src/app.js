@@ -3392,7 +3392,7 @@ async function handleGenerateSynopsis() {
 
 async function handleGenerateCharactersCF() {
   const c = appState.creation;
-  c.loadingStep = 4;
+  c.loadingStep = 3;
   c.aiError = "";
   c.streamPreview = "";
   c.characterProposals = [];

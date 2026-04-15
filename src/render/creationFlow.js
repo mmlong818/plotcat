@@ -672,6 +672,7 @@ function renderAutoProgress(autoGen) {
 
 export function renderCreationFlowPage(dom, appState) {
   const creation = appState.creation;
+  if (!creation) return;
   const step = creation.currentStep ?? 1;
 
   let mainContent = "";
