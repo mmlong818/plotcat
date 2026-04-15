@@ -6,7 +6,18 @@ import {
   buildBeatSheetPrompt,
   buildSceneOutlinePrompt,
   buildSceneWeavePrompt,
-  buildDiagnosisPrompt
+  buildDiagnosisPrompt,
+  buildPulsePrompt,
+  buildConceptPrompt,
+  buildSynopsisPrompt,
+  buildKeyScenesPrompt,
+  buildActStructurePrompt,
+  buildSingleCharacterPrompt,
+  buildEvaluateConceptsPrompt,
+  buildEvaluateSynopsisPrompt,
+  buildEvaluateCharactersPrompt,
+  buildEvaluateKeyScenesPrompt,
+  buildEvaluateActStructurePrompt
 } from './prompts.js';
 
 let GENRE_LIBRARY = {};
@@ -26,7 +37,7 @@ try {
   // 知识库文件尚未创建，使用空对象
 }
 
-const TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 300_000;
 
 function makeId() {
   return `choice_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
@@ -46,6 +57,7 @@ function getBeatData(template) {
 function callClaude(system, user) {
   return new Promise((resolve, reject) => {
     const fullPrompt = `${system}\n\n---\n\n${user}`;
+
     const proc = spawn('claude', ['-p', '--output-format', 'text'], {
       stdio: ['pipe', 'pipe', 'pipe']
     });
@@ -82,13 +94,33 @@ function callClaude(system, user) {
   });
 }
 
-function parseJsonFromText(text) {
-  const jsonMatch = text.match(/```json\s*([\s\S]*?)```/) ?? text.match(/\{[\s\S]*\}/);
-  const raw = jsonMatch ? (jsonMatch[1] ?? jsonMatch[0]) : text;
+export function parseJsonFromText(text) {
+  const codeBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
+  let raw;
+  if (codeBlockMatch) {
+    raw = codeBlockMatch[1];
+  } else {
+    // 提取最后一个完整 {...} 块，避免贪婪匹配到错误位置
+    const lastBrace = text.lastIndexOf('{');
+    raw = lastBrace !== -1 ? text.slice(lastBrace) : text;
+    // 只取到最后一个 } 结束
+    const lastEnd = raw.lastIndexOf('}');
+    raw = lastEnd !== -1 ? raw.slice(0, lastEnd + 1) : raw;
+  }
+  const trimmed = raw.trim();
   try {
-    return JSON.parse(raw.trim());
+    return JSON.parse(trimmed);
   } catch {
-    return { raw: text };
+    // 尝试修复：把字符串值内的未转义英文双引号替换为中文引号
+    try {
+      const fixed = trimmed.replace(/"((?:[^"\\]|\\.)*)"/g, (_, inner) => {
+        const repaired = inner.replace(/(?<!\\)"/g, '\\"');
+        return `"${repaired}"`;
+      });
+      return JSON.parse(fixed);
+    } catch {
+      return { raw: text };
+    }
   }
 }
 
@@ -163,6 +195,20 @@ function formatSceneWeaveChoices(parsed) {
   }];
 }
 
+function formatPulseChoices(parsed) {
+  const seeds = parsed.seeds ?? [];
+  if (seeds.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? '', data: parsed }];
+  }
+  const labels = ['种子A', '种子B', '种子C'];
+  return seeds.map((s, i) => ({
+    id: makeId(),
+    label: labels[i] ?? `种子${i + 1}`,
+    content: `【${s.title ?? ''}】\n${s.hook ?? ''}\n\n冲突：${s.core_conflict ?? ''}\n置换：${s.twist ?? ''}\n风险：${s.weakness ?? ''}`,
+    data: s
+  }));
+}
+
 function formatDiagnosisChoices(parsed) {
   const scores = parsed.scores ?? {};
   const lines = Object.entries(scores).map(([key, val]) => {
@@ -190,25 +236,105 @@ function formatDiagnosisChoices(parsed) {
   return [{ id: makeId(), label: '诊断报告', content, data: parsed }];
 }
 
+function formatConceptChoices(parsed) {
+  const concepts = parsed.concepts ?? [];
+  if (concepts.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? JSON.stringify(parsed), data: parsed }];
+  }
+  const labels = ['方案A', '方案B', '方案C'];
+  return concepts.map((item, i) => ({
+    id: makeId(),
+    label: labels[i] ?? `方案${i + 1}`,
+    content: `【${item.title ?? ''}】\n${item.hook ?? ''}\n\n核心冲突：${item.core_conflict ?? ''}\n独特视角：${item.unique_angle ?? ''}`,
+    data: item
+  }));
+}
+
+function formatSynopsisChoices(parsed) {
+  const synopses = parsed.synopses ?? [];
+  if (synopses.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? '', data: parsed }];
+  }
+  return synopses.map((s, i) => ({
+    id: makeId(),
+    label: s.version_label ?? `版本${i + 1}`,
+    content: s.summary ?? '',
+    data: s
+  }));
+}
+
+function formatKeyScenesChoices(parsed) {
+  const scenes = parsed.scenes ?? [];
+  if (scenes.length === 0) {
+    return [{ id: makeId(), label: '场景A', content: parsed.raw ?? '', data: parsed }];
+  }
+  return scenes.map((s, i) => ({
+    id: makeId(),
+    label: s.title ?? `场景${i + 1}`,
+    content: `${s.title ?? ''}\n目标：${s.goal ?? ''}\n冲突：${s.conflict ?? ''}\n转折：${s.turn ?? ''}\n位置：${s.act_position ?? ''}`,
+    data: s
+  }));
+}
+
+function formatActStructureChoices(parsed) {
+  const acts = parsed.acts ?? [];
+  return [{
+    id: makeId(),
+    label: '三幕结构',
+    content: acts.map((a) => `【${a.act_name ?? ''}】${a.percentage_range ?? ''}\n${(a.beats ?? []).map((b) => `  · ${b.name ?? ''}（${b.timing ?? ''}）：${b.description ?? ''}`).join('\n')}`).join('\n\n'),
+    data: { acts, reasoning: parsed.reasoning ?? '' }
+  }];
+}
+
 const FORMATTERS = {
+  pulse: formatPulseChoices,
   logline: formatLoglineChoices,
   treatment: formatTreatmentChoices,
   characters: formatCharactersChoices,
   beat_sheet: formatBeatSheetChoices,
   scene_outline: formatSceneOutlineChoices,
   scene_weave: formatSceneWeaveChoices,
-  diagnosis: formatDiagnosisChoices
+  diagnosis: formatDiagnosisChoices,
+  concept: formatConceptChoices,
+  synopsis: formatSynopsisChoices,
+  key_scenes: formatKeyScenesChoices,
+  act_structure: formatActStructureChoices,
+  single_character: (parsed) => [{ id: makeId(), label: '角色', content: parsed.character?.name ?? '', data: parsed }]
 };
 
 const PROMPT_BUILDERS = {
+  pulse: (_ctx, opts) => buildPulsePrompt(opts),
   logline: (ctx, opts, gd) => buildLoglinePrompt(ctx, opts, gd),
   treatment: (ctx, opts) => buildTreatmentPrompt(ctx, opts),
   characters: (ctx, opts, gd) => buildCharactersPrompt(ctx, opts, gd),
   beat_sheet: (ctx, opts, gd, bd) => buildBeatSheetPrompt(ctx, opts, gd, bd),
   scene_outline: (ctx, opts) => buildSceneOutlinePrompt(ctx, opts),
   scene_weave: (ctx, opts) => buildSceneWeavePrompt(ctx, opts),
-  diagnosis: (ctx) => buildDiagnosisPrompt(ctx)
+  diagnosis: (ctx) => buildDiagnosisPrompt(ctx),
+  concept: (_ctx, opts) => buildConceptPrompt(opts),
+  synopsis: (ctx, opts) => buildSynopsisPrompt(ctx, opts),
+  key_scenes: (ctx) => buildKeyScenesPrompt(ctx),
+  act_structure: (ctx) => buildActStructurePrompt(ctx),
+  single_character: (ctx, opts) => buildSingleCharacterPrompt(ctx, opts?.existingChars ?? [], opts?.storyRole ?? "supporting")
 };
+
+export function buildPromptForStep(step, projectContext, options) {
+  const builder = PROMPT_BUILDERS[step];
+  if (!builder) throw new Error(`未知的生成步骤: ${step}`);
+  const genreData = getGenreData(projectContext);
+  const beatData = options?.template ? getBeatData(options.template) : null;
+  const { system, user } = builder(projectContext, options, genreData, beatData);
+  return `${system}\n\n---\n\n${user}`;
+}
+
+export function formatStepResult(step, parsed) {
+  const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);
+  return {
+    choices: formatter(parsed),
+    reasoning: parsed.reasoning ?? '',
+    warnings: parsed.warnings ?? []
+  };
+}
 
 export async function generateContent(step, projectContext, options, apiKey) {
   const builder = PROMPT_BUILDERS[step];
@@ -228,4 +354,19 @@ export async function generateContent(step, projectContext, options, apiKey) {
     reasoning: parsed.reasoning ?? '',
     warnings: parsed.warnings ?? []
   };
+}
+
+const EVALUATE_BUILDERS = {
+  concepts:      (content, ctx) => buildEvaluateConceptsPrompt(content, ctx),
+  synopsis:      (content, ctx) => buildEvaluateSynopsisPrompt(content, ctx),
+  characters:    (content, ctx) => buildEvaluateCharactersPrompt(content, ctx),
+  key_scenes:    (content, ctx) => buildEvaluateKeyScenesPrompt(content, ctx),
+  act_structure: (content, ctx) => buildEvaluateActStructurePrompt(content, ctx),
+};
+
+export function buildEvaluatePromptForStep(step, content, context) {
+  const builder = EVALUATE_BUILDERS[step];
+  if (!builder) throw new Error(`未知评估步骤: ${step}`);
+  const { system, user } = builder(content, context ?? {});
+  return `${system}\n\n---\n\n${user}`;
 }
