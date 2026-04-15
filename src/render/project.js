@@ -49,10 +49,9 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
   const recentProjects = sortedProjects.slice(0, 3);
   const oldProjects = sortedProjects.slice(3);
   const renderProjectCard = (item) => {
-    const active = item.id === appState.project.project.id;
     const safeTitle = isBrokenPlaceholderText(item.title) ? "未命名项目" : item.title;
     return `
-      <article class="summary-card project-card ${active ? "is-active" : ""}">
+      <article class="summary-card project-card">
         <div class="project-card__top">
           <div>
             <h3>${escapeHtml(safeTitle)}</h3>
@@ -75,23 +74,20 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
       </article>
     `;
   };
-  const createCard = `
-    <button class="summary-card project-card project-card--create" type="button" data-action="open-create-dialog">
-      <span class="project-card__plus">+</span>
-      <strong>新增项目</strong>
-      <span>创建后再进入创作</span>
-    </button>
-  `;
-
   dom.projectList.innerHTML = `
     <section class="project-group">
-      <div class="project-group__head">
-        <h3>最近项目</h3>
-        <p>这里只保留最近打开的三个项目。</p>
+      <div class="project-group__head project-group__head--row">
+        <div>
+          <h3>最近项目</h3>
+          <p>最近打开的三个项目。</p>
+        </div>
+        <button class="button project-create-btn" type="button" data-action="open-create-mode-picker">
+          <span class="project-card__plus">+</span>
+          <span>新建项目</span>
+        </button>
       </div>
       <div class="project-list project-list--wide">
-        ${createCard}
-        ${recentProjects.map(renderProjectCard).join("")}
+        ${recentProjects.length ? recentProjects.map(renderProjectCard).join("") : `<p class="project-list__empty">还没有项目，点击「新建项目」开始创作。</p>`}
       </div>
     </section>
     ${
@@ -109,6 +105,27 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
           </section>
         `
     }
+    ${appState.createModePickerOpen ? `
+      <div class="mode-picker-backdrop" data-action="close-create-mode-picker">
+        <div class="mode-picker-panel" onclick="event.stopPropagation()">
+          <p class="mode-picker-title">选择创作方式</p>
+          <div class="mode-picker-cards">
+            <button class="mode-card" type="button" data-action="open-quick-creation">
+              <div class="mode-card__icon">⚡</div>
+              <h3>快速创作</h3>
+              <p>选定类型和创意，AI 完成全部步骤。适合快速出框架。</p>
+              <span class="mode-card__tag">约 3 分钟</span>
+            </button>
+            <button class="mode-card mode-card--pro" type="button" data-action="open-pro-creation">
+              <div class="mode-card__icon">✦</div>
+              <h3>精品创作</h3>
+              <p>从任意起点出发，与 AI 深入对话，逐步挖掘故事质感。</p>
+              <span class="mode-card__tag">深度模式</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    ` : ""}
   `;
 }
 
@@ -178,6 +195,9 @@ function createDraftSelectField(appState, label, fieldName, value, choices, opti
 }
 
 function createAssistantStatusTextCurrent(appState) {
+  if (appState.ai.provider === "claude") {
+    return "当前使用 Claude 订阅，可以直接生成建议。";
+  }
   if (appState.ai.configured) {
     const provider = appState.ai.provider === "gemini" ? "Gemini" : "OpenAI";
     return `当前使用 ${provider} · ${appState.ai.model || "默认模型"}，可以直接生成建议。`;

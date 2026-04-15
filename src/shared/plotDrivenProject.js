@@ -270,7 +270,7 @@ function deriveCharacterHub(storyBible) {
       arc_start: character.arc_start,
       arc_end: character.arc_end,
       secret: character.secret,
-      notes: "",
+      notes: character.notes ?? "",
       archetype: character.archetype ?? "",
       traits: list(character.traits),
       status: "active",
