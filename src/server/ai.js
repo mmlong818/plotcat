@@ -31,9 +31,31 @@ function callClaudeSubprocess(prompt) {
 }
 
 function parseJsonFromClaude(text) {
-  const m = text.match(/```json\s*([\s\S]*?)```/) ?? text.match(/(\{[\s\S]*\})/);
-  const raw = m ? (m[1] ?? m[0]) : text;
-  return JSON.parse(raw.trim());
+  const codeBlock = text.match(/```json\s*([\s\S]*?)```/);
+  let raw;
+  if (codeBlock) {
+    raw = codeBlock[1];
+  } else {
+    const lastBrace = text.lastIndexOf('{');
+    raw = lastBrace !== -1 ? text.slice(lastBrace) : text;
+    const lastEnd = raw.lastIndexOf('}');
+    raw = lastEnd !== -1 ? raw.slice(0, lastEnd + 1) : raw;
+  }
+  const trimmed = raw.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    // 修复：字符串值内的未转义双引号（常见于中文内容）
+    try {
+      const fixed = trimmed.replace(/"((?:[^"\\]|\\.)*)"/g, (_, inner) => {
+        const repaired = inner.replace(/(?<!\\)"/g, '\\"');
+        return `"${repaired}"`;
+      });
+      return JSON.parse(fixed);
+    } catch {
+      throw new Error(`JSON parse failed: ${text.slice(0, 300)}`);
+    }
+  }
 }
 
 const defaultProvider = process.env.OPENAI_API_KEY
