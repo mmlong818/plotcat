@@ -623,7 +623,7 @@ async function handleApi(request, response, pathname) {
         proc.stdin.setDefaultEncoding("utf8");
         let stdout = "";
         let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("analyze 超时")); }, 60_000);
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("analyze 超时")); }, 180_000);
         proc.stdout.on("data", (d) => { stdout += d; });
         proc.stderr.on("data", (d) => { stderr += d; });
         proc.stdin.write(fullPrompt, "utf8");
@@ -659,7 +659,7 @@ async function handleApi(request, response, pathname) {
         proc.stdin.setDefaultEncoding("utf8");
         let stdout = "";
         let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("questions 超时")); }, 60_000);
+        const timer = setTimeout(() => { proc.kill(); reject(new Error("questions 超时")); }, 180_000);
         proc.stdout.on("data", (d) => { stdout += d; });
         proc.stderr.on("data", (d) => { stderr += d; });
         proc.stdin.write(fullPrompt, "utf8");
