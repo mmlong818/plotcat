@@ -3300,9 +3300,10 @@ async function handleFinalizeNewCreation() {
   proj.structure_profile = { template, acts, nodes };
 
   const actResults = c.actResults ?? {};
+  const actIdToKey = new Map(acts.map(a => [a.id, a.key]));
   const cards = [];
   for (const node of nodes) {
-    const actKey = (preset.nodes ?? []).find(n => n[0] === node.node_type)?.[1];
+    const actKey = actIdToKey.get(node.act_id);
     const result = actKey ? actResults[actKey] : null;
     const nodeData = result?.nodes?.[node.node_type];
     if (nodeData) {
@@ -3313,7 +3314,7 @@ async function handleFinalizeNewCreation() {
   }
   proj.plot_board = { cards };
 
-  const chars = (c.characterProposals ?? []).filter(p => p._status === "confirmed").map(ch => ({
+  const chars = (c.characterProposals ?? []).filter(p => p._status !== "skipped").map(ch => ({
     id: createId("char"), name: ch.name ?? "", story_role: ch.story_role ?? "supporting",
     desire: ch.desire ?? "", wound: ch.wound ?? "", arc_start: ch.arc_start ?? "", arc_end: ch.arc_end ?? ""
   }));

@@ -27,6 +27,7 @@ import {
 } from "./src/server/repository.js";
 import { computeIssues, summarizeIssues } from "./src/logic/rules.js";
 import { createId } from "./src/shared/projectFactory.js";
+import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
 import { spawn } from "node:child_process";
@@ -580,9 +581,25 @@ async function handleApi(request, response, pathname) {
         protagonist: Array.isArray(characters) && characters.length > 0 ? (characters[0]?.name ?? "") : ""
       };
 
-      // 6. 保留结构模板，清空其余派生缓存（由 saveProject→ensurePlotDrivenProject 重建）
-      projectData.character_hub = null;
-      projectData.structure_profile = { template: primaryStructure };
+      // 6. 填充 structure_profile（acts + nodes）和 character_hub
+      const _preset1 = structurePresets[primaryStructure];
+      if (_preset1) {
+        const _acts1 = (_preset1.acts ?? []).map((a, i) => ({
+          id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
+          range_label: a.range_label, order_index: i
+        }));
+        const _actMap1 = new Map(_acts1.map(a => [a.key, a.id]));
+        const _nodes1 = (_preset1.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
+          id: createId("node"), node_type: nodeType, title: nodeTitle, required,
+          act_id: _actMap1.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
+        }));
+        projectData.structure_profile = { template: primaryStructure, acts: _acts1, nodes: _nodes1 };
+      } else {
+        projectData.structure_profile = { template: primaryStructure };
+      }
+      projectData.character_hub = Array.isArray(characters) && characters.length > 0 ? {
+        characters: projectData.story_bible.characters ?? []
+      } : { characters: [] };
       projectData.plot_board = null;
       projectData.scene_workbench = null;
 
@@ -776,8 +793,25 @@ async function handleApi(request, response, pathname) {
         }));
       }
 
-      projectData.character_hub = null;
-      projectData.structure_profile = { template: "three_act" };
+      // 填充 structure_profile（acts + nodes）和 character_hub
+      const _preset2 = structurePresets["three_act"];
+      if (_preset2) {
+        const _acts2 = (_preset2.acts ?? []).map((a, i) => ({
+          id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
+          range_label: a.range_label, order_index: i
+        }));
+        const _actMap2 = new Map(_acts2.map(a => [a.key, a.id]));
+        const _nodes2 = (_preset2.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
+          id: createId("node"), node_type: nodeType, title: nodeTitle, required,
+          act_id: _actMap2.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
+        }));
+        projectData.structure_profile = { template: "three_act", acts: _acts2, nodes: _nodes2 };
+      } else {
+        projectData.structure_profile = { template: "three_act" };
+      }
+      projectData.character_hub = Array.isArray(assembled.characters) && assembled.characters.length > 0 ? {
+        characters: projectData.story_bible.characters ?? []
+      } : { characters: [] };
       projectData.plot_board = null;
       projectData.scene_workbench = null;
 
