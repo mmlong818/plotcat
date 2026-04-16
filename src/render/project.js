@@ -55,13 +55,13 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
         <div class="project-card__top">
           <div>
             <h3>${escapeHtml(safeTitle)}</h3>
-            <p>${escapeHtml(formatLabels[item.format] ?? item.format)} 路 ${escapeHtml(projectStatusLabels[item.status] ?? item.status)}</p>
+            <p>${escapeHtml(formatLabels[item.format] ?? item.format)} · ${escapeHtml(projectStatusLabels[item.status] ?? item.status)}</p>
           </div>
           <button class="button button--ghost button--tiny" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">
-            进入创作
+            继续创作
           </button>
         </div>
-        <p class="project-card__logline">${escapeHtml(item.logline || "还没有一句话概念。")}</p>
+        <p class="project-card__logline ${!item.logline ? "project-card__logline--empty" : ""}">${escapeHtml(item.logline || "点击进入，开始定义这个故事的核心。")}</p>
         <div class="tag-row">
           ${list(item.genre).map((genre) => `<span class="tag">${escapeHtml(genre)}</span>`).join("")}
         </div>

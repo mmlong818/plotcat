@@ -198,8 +198,8 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
               .map(
                 (scene) => `
                   <button class="list-select ${scene.id === appState.selection.sceneId ? "is-active" : ""}" type="button" data-action="select-scene" data-id="${escapeHtml(scene.id)}">
-                    <strong>${escapeHtml(scene.order_index)} 路 ${escapeHtml(scene.title || "未命名场景")}</strong>
-                    <span>${escapeHtml(getActTitle(scene.act_id))} 路 ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}</span>
+                    <strong>${escapeHtml(scene.order_index)} · ${escapeHtml(scene.title || "未命名场景")}</strong>
+                    <span>${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}</span>
                   </button>
                 `
               )
@@ -303,7 +303,7 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                       (card) => `
                         <button class="list-select" type="button" data-action="jump-to-plot-card" data-id="${escapeHtml(card.id)}">
                           <strong>${escapeHtml(card.title || "未命名剧情卡")}</strong>
-                          <span>${escapeHtml(getActTitle(card.act_id))} 路 ${escapeHtml(getNode(card.node_id)?.title ?? "未挂节点")}</span>
+                          <span>${escapeHtml(getActTitle(card.act_id))} · ${escapeHtml(getNode(card.node_id)?.title ?? "未挂节点")}</span>
                         </button>
                       `
                     )
@@ -327,7 +327,7 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                       (character) => `
                         <button class="list-select" type="button" data-action="jump-to-character" data-id="${escapeHtml(character.id)}">
                           <strong>${escapeHtml(character.name || "未命名人物")}</strong>
-                          <span>${escapeHtml(storyRoleLabels[character.story_role] ?? character.story_role)}</span>
+                          ${(() => { const roleLabel = storyRoleLabels[character.story_role] ?? character.story_role; return roleLabel && roleLabel !== character.name ? `<span>${escapeHtml(roleLabel)}</span>` : ""; })()}
                         </button>
                       `
                     )
@@ -350,7 +350,7 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                     .map(
                       (relationship) => `
                         <button class="list-select" type="button" data-action="jump-to-relationship" data-id="${escapeHtml(relationship.id)}">
-                          <strong>${escapeHtml(getCharacterNameById(relationship.source_character_id))} 路 ${escapeHtml(getCharacterNameById(relationship.target_character_id))}</strong>
+                          <strong>${escapeHtml(getCharacterNameById(relationship.source_character_id))} · ${escapeHtml(getCharacterNameById(relationship.target_character_id))}</strong>
                           <span>${escapeHtml(relationship.relationship_type || "未命名关系")}</span>
                         </button>
                       `
@@ -374,8 +374,8 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                     .map(
                       (event) => `
                         <div class="list-select list-select--static">
-                          <strong>第 ${escapeHtml(event.story_day || "?")} 天 路 ${escapeHtml(event.summary || "未命名事件")}</strong>
-                          <span>${escapeHtml(event.location || "未定地点")} 路 ${escapeHtml(event.trigger || "未定触发")}</span>
+                          <strong>第 ${escapeHtml(event.story_day || "?")} 天 · ${escapeHtml(event.summary || "未命名事件")}</strong>
+                          <span>${escapeHtml(event.location || "未定地点")} · ${escapeHtml(event.trigger || "未定触发")}</span>
                         </div>
                       `
                     )
