@@ -138,7 +138,7 @@ a { color: var(--accent); text-decoration: none; }
 /* ── App Shell ─────────────────────────────────────────────── */
 
 .app-shell {
-  width: min(1520px, calc(100vw - 24px));
+  width: calc(100vw - 24px);
   margin: 0 auto;
   padding: 14px 0 48px;
 }
