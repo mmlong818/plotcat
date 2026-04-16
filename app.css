@@ -1193,7 +1193,7 @@ a { color: var(--accent); text-decoration: none; }
   gap: 14px;
   align-items: start;
 }
-.workbench--structure { grid-template-columns: 400px minmax(0, 1fr); }
+.workbench--structure { grid-template-columns: 400px minmax(0, 1fr); gap: 0; align-items: stretch; }
 .workbench__side { display: grid; gap: 10px; align-content: start; }
 .workbench__main { display: grid; gap: 12px; }
 
@@ -1332,6 +1332,15 @@ a { color: var(--accent); text-decoration: none; }
 /* ── Structure Page Columns ────────────────────────────────── */
 
 .structure-col { display: grid; gap: 12px; align-content: start; }
+.structure-col--left {
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+  overflow-y: auto;
+}
+.structure-col--right {
+  padding-left: 16px;
+  overflow-y: auto;
+}
 
 /* ── Story Core Body (结构页左列内) ────────────────────────── */
 
@@ -1407,6 +1416,12 @@ a { color: var(--accent); text-decoration: none; }
 }
 
 /* ── Structure Acts ────────────────────────────────────────── */
+
+.structure-acts-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px 6px;
+}
 
 .structure-acts {
   display: grid;
