@@ -1561,12 +1561,6 @@ a { color: var(--accent); text-decoration: none; }
 .node-dot.req { background: var(--accent); }
 .node-dot.filled { background: var(--muted); }
 
-.node-empty-hint {
-  font-size: 0.72rem;
-  color: var(--muted-2);
-  font-style: italic;
-  margin-top: 6px;
-}
 
 [data-theme="dark"] .node-card { background: rgba(255,255,255,0.04); }
 [data-theme="dark"] .node-card.is-empty { background: transparent; }
