@@ -205,6 +205,8 @@ export function renderCharactersPage(dom, appState, { getCharacter }) {
             </div>
             <button class="button button--ghost button--tiny" type="button" data-action="add-character">新增</button>
           </div>
+          ${appState.characterGen?.loading ? `<p class="scene-summary-hint">AI 正在生成角色… ${escapeHtml(appState.characterGen.progress || "")}</p>` : ""}
+          ${appState.characterGen?.error ? `<p class="ai-error-hint">${escapeHtml(appState.characterGen.error)}</p>` : ""}
           ${renderCharacterRail(characters, appState.selection.characterId)}
         </div>
       </aside>

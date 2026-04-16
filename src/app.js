@@ -3254,6 +3254,103 @@ async function handleGenerateStructureNotes() {
   appState.structureNodeGen.progress = "";
   markDirty();
   renderStructurePage(dom, appState, structureGetters);
+
+  // 结构完成后自动进入人物核心并生成角色
+  setCurrentStep("characters");
+  await handleGenerateWorkbenchCharacters();
+}
+
+async function handleGenerateWorkbenchCharacters() {
+  appState.characterGen = { loading: true, progress: "分析项目信息…", error: "" };
+  renderCharactersPage(dom, appState, characterGetters);
+
+  const existingChars = list(appState.project.character_hub?.characters);
+  const mainRoles = ["protagonist", "antagonist", "ally"];
+  const missingRoles = mainRoles.filter(
+    (role) => !existingChars.some((c) => c.story_role === role)
+  );
+  const needsGeneration = missingRoles.length > 0 || existingChars.some((c) => !c.external_goal && !c.dramatic_need);
+
+  if (!needsGeneration) {
+    appState.characterGen = { loading: false, progress: "", error: "" };
+    renderCharactersPage(dom, appState, characterGetters);
+    return;
+  }
+
+  appState.characterGen.progress = "生成主要角色…";
+  renderCharactersPage(dom, appState, characterGetters);
+
+  const projectCtx = {
+    project: appState.project.project,
+    story_core: appState.project.story_core,
+    intent_anchor: appState.project.intent_anchor,
+    character_hub: appState.project.character_hub,
+    story_bible: appState.project.story_bible
+  };
+
+  const count = Math.max(missingRoles.length, 1) + (existingChars.length === 0 ? 2 : 0);
+  const result = await callGenerateAPI("characters", projectCtx, {
+    count: Math.min(count + existingChars.filter((c) => !c.external_goal).length, 4),
+    focusRole: missingRoles.length > 0 ? missingRoles.join("+") : "主角+对手"
+  });
+
+  if (result.error && !result.characters && !(result.choices?.[0]?.data?.characters)) {
+    appState.characterGen = { loading: false, progress: "", error: result.error };
+    renderCharactersPage(dom, appState, characterGetters);
+    return;
+  }
+
+  const generated = result.characters ?? result.choices?.[0]?.data?.characters ?? [];
+  const roleLabels = { protagonist: "主角", antagonist: "对手", ally: "盟友", opponent_ally: "复杂盟友", supporting: "配角" };
+
+  for (const gen of generated) {
+    const role = gen.story_role ?? "supporting";
+    const existing = list(appState.project.character_hub?.characters).find((c) => c.story_role === role);
+
+    if (existing) {
+      // 只补空字段
+      if (!existing.external_goal) existing.external_goal = gen.desire ?? "";
+      if (!existing.dramatic_need) existing.dramatic_need = gen.need ?? "";
+      if (!existing.contradiction) existing.contradiction = gen.wound ?? gen.belief ?? "";
+      if (!existing.arc_start) existing.arc_start = gen.arc_start ?? "";
+      if (!existing.arc_end) existing.arc_end = gen.arc_end ?? "";
+      if (!existing.archetype && gen.archetype) existing.archetype = gen.archetype;
+      if (!existing.name || existing.name === "主角" || existing.name === "未命名人物") {
+        existing.name = gen.name || existing.name;
+      }
+    } else {
+      // 新建角色
+      const newChar = {
+        id: createId("char"),
+        name: gen.name || roleLabels[role] || "新人物",
+        story_role: role,
+        external_goal: gen.desire ?? "",
+        dramatic_need: gen.need ?? "",
+        contradiction: gen.wound ?? gen.belief ?? "",
+        starting_mask: "",
+        pressure_point: "",
+        arc_start: gen.arc_start ?? "",
+        arc_end: gen.arc_end ?? "",
+        secret: "",
+        notes: gen.relationship_hook ?? "",
+        archetype: gen.archetype ?? "",
+        traits: [],
+        enneagram: "",
+        moral_alignment: "",
+        core_drive: "",
+        linked_plot_ids: []
+      };
+      list(appState.project.character_hub?.characters).push(newChar);
+    }
+  }
+
+  // 默认选中主角
+  const protagonist = list(appState.project.character_hub?.characters).find((c) => c.story_role === "protagonist");
+  if (protagonist) appState.selection.characterId = protagonist.id;
+
+  appState.characterGen = { loading: false, progress: "", error: "" };
+  markDirty();
+  renderCharactersPage(dom, appState, characterGetters);
 }
 
 async function handleGenerateScene(sceneId) {
