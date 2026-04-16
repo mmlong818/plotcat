@@ -69,26 +69,38 @@ function renderStructureArc(orderedActs) {
 }
 
 function renderActBlock(act, index, nodes, nodeCards) {
+  const CIRC_NUMS = "①②③④⑤⑥⑦⑧⑨⑩";
   const { start, end } = parseActRange(act.range_label);
   const chineseNum = ACT_CHINESE_NUMS[index] ?? String(index + 1);
 
-  const nodeItems = nodes.map((node) => {
-    const cards = list(node.card_ids).map((id) => nodeCards.get(id)).filter(Boolean);
+  const nodeCards_arr = nodes.map((node, i) => {
+    const isEmpty = !node.note;
+    const circNum = CIRC_NUMS[i] ?? String(i + 1);
+    const dotClass = node.required ? "req" : (node.note ? "filled" : "");
+
     return `
-      <div class="act-node-item ${node.required ? "is-required" : ""}">
-        <div class="act-node-item__head">
-          <span class="act-node-item__dot ${node.required ? "is-required" : ""}"></span>
-          <span class="act-node-item__title">${escapeHtml(node.title)}</span>
-          ${NODE_TOOLTIPS[node.node_type] ? `<span class="node-tooltip-trigger" data-tooltip="${escapeHtml(NODE_TOOLTIPS[node.node_type])}">!</span>` : ""}
-          ${node.required ? `<span class="act-node-item__req">必要</span>` : ""}
-          ${cards.length > 0 ? `<span class="chip chip--soft act-node-item__badge">${cards.length} 卡</span>` : ""}
+      <div class="node-card ${node.required ? "is-required" : ""} ${isEmpty ? "is-empty" : ""}">
+        <span class="node-seq-badge">${circNum}</span>
+        <div class="node-head">
+          <span class="node-dot ${dotClass}"></span>
+          <input class="act-node-item__title-input"
+            data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="title"
+            value="${escapeHtml(node.title)}" placeholder="给这个情节点命名…" />
         </div>
+        <span class="act-node-item__type-hint">${escapeHtml(node.node_type)}</span>
         <textarea class="act-node-item__note"
           data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="note"
-          rows="2" placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>
+          placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>
       </div>
     `;
-  }).join("");
+  });
+
+  // 在卡片之间插入 → 箭头
+  const railHtml = nodeCards_arr.map((card, i) =>
+    i < nodeCards_arr.length - 1
+      ? card + `<span class="node-arrow">→</span>`
+      : card
+  ).join("");
 
   return `
     <article class="act-block">
@@ -108,7 +120,7 @@ function renderActBlock(act, index, nodes, nodeCards) {
         </div>
       </div>
       ${nodes.length > 0
-        ? `<div class="act-block__nodes">${nodeItems}</div>`
+        ? `<div class="node-rail-wrap"><div class="node-rail">${railHtml}</div></div>`
         : `<p class="act-block__empty">此幕暂无叙事节点</p>`
       }
     </article>
@@ -126,7 +138,7 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
   dom.structureContent.innerHTML = `
     <section class="workbench workbench--structure">
 
-      <!-- ── 左列：故事核心 + 结构配置 ─────────────────── -->
+      <!-- ── 左列：故事核心 + 结构配置 + 弧线 ─────────────── -->
       <div class="structure-col structure-col--left">
 
         <div class="summary-card">
@@ -166,30 +178,31 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
           </div>
         </div>
 
-      </div>
-
-      <!-- ── 右列：弧线 + 各幕（含节点） ─────────────────── -->
-      <div class="structure-col structure-col--right">
-
         <div class="summary-card">
-          <div class="list-card__head">
-            <p class="section-label">结构弧线</p>
-            ${orderedActs.length > 0 ? `
-              <button class="button button--primary button--tiny"
-                type="button" data-action="ai-gen-structure-notes"
-                ${appState.structureNodeGen?.loading ? "disabled" : ""}>
-                ${appState.structureNodeGen?.loading
-                  ? `生成中… ${appState.structureNodeGen.progress || ""}`
-                  : "AI 填写情节点"}
-              </button>
-            ` : ""}
-          </div>
+          <p class="section-label">结构弧线</p>
           ${appState.structureNodeGen?.error ? `<p class="ai-error-hint">${escapeHtml(appState.structureNodeGen.error)}</p>` : ""}
           ${orderedActs.length > 0
             ? renderStructureArc(orderedActs)
             : `<p class="structure-arc-empty">选定结构模板后自动生成幕划分</p>`
           }
         </div>
+
+      </div>
+
+      <!-- ── 右列：各幕（含节点） ─────────────────────────── -->
+      <div class="structure-col structure-col--right">
+
+        ${orderedActs.length > 0 ? `
+          <div class="structure-acts-toolbar">
+            <button class="button button--primary button--tiny"
+              type="button" data-action="ai-gen-structure-notes"
+              ${appState.structureNodeGen?.loading ? "disabled" : ""}>
+              ${appState.structureNodeGen?.loading
+                ? `生成中… ${appState.structureNodeGen.progress || ""}`
+                : "AI 填写情节点"}
+            </button>
+          </div>
+        ` : ""}
 
         <div class="structure-acts">
           ${orderedActs.map((act, i) =>
@@ -204,4 +217,11 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
       </div>
     </section>
   `;
+
+  // 自动撑高所有 textarea，确保内容完整显示，不出现内部滚动条
+  dom.structureContent.querySelectorAll("textarea").forEach((ta) => {
+    const resize = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + "px"; };
+    resize();
+    ta.addEventListener("input", resize);
+  });
 }
