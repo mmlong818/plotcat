@@ -138,7 +138,7 @@ a { color: var(--accent); text-decoration: none; }
 /* ── App Shell ─────────────────────────────────────────────── */
 
 .app-shell {
-  width: min(1520px, calc(100vw - 24px));
+  width: calc(100vw - 24px);
   margin: 0 auto;
   padding: 14px 0 48px;
 }
@@ -1193,7 +1193,7 @@ a { color: var(--accent); text-decoration: none; }
   gap: 14px;
   align-items: start;
 }
-.workbench--structure { grid-template-columns: 360px minmax(0, 1fr); }
+.workbench--structure { grid-template-columns: 400px minmax(0, 1fr); gap: 0; align-items: stretch; }
 .workbench__side { display: grid; gap: 10px; align-content: start; }
 .workbench__main { display: grid; gap: 12px; }
 
@@ -1332,6 +1332,15 @@ a { color: var(--accent); text-decoration: none; }
 /* ── Structure Page Columns ────────────────────────────────── */
 
 .structure-col { display: grid; gap: 12px; align-content: start; }
+.structure-col--left {
+  border-right: 1px solid var(--border);
+  padding-right: 16px;
+  overflow-y: auto;
+}
+.structure-col--right {
+  padding-left: 16px;
+  overflow-y: auto;
+}
 
 /* ── Story Core Body (结构页左列内) ────────────────────────── */
 
@@ -1408,6 +1417,12 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Structure Acts ────────────────────────────────────────── */
 
+.structure-acts-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 2px 6px;
+}
+
 .structure-acts {
   display: grid;
   gap: 10px;
@@ -1477,8 +1492,93 @@ a { color: var(--accent); text-decoration: none; }
 .act-block__purpose-input:focus { border-bottom-color: var(--border-strong); }
 .act-block__purpose-input::placeholder { color: var(--muted-2); }
 
-.act-block__nodes { padding: 10px 14px; display: grid; gap: 10px; }
+.act-block__nodes { padding: 0; }
 .act-block__empty { padding: 10px 14px; font-size: 0.8rem; color: var(--muted); margin: 0; font-style: italic; }
+
+/* ── Node Rail (横向滑动节点轨道) ──────────────────────── */
+
+.node-rail-wrap {
+  overflow-x: auto;
+  padding: 12px 14px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.node-rail-wrap::-webkit-scrollbar { height: 5px; }
+.node-rail-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.node-rail {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  min-width: max-content;
+}
+
+.node-arrow {
+  display: flex;
+  align-items: center;
+  color: var(--muted-2);
+  font-size: 1rem;
+  flex-shrink: 0;
+  padding: 0 4px;
+  margin-top: 20px;
+}
+
+/* ── Node Card ──────────────────────────────────────────── */
+
+.node-card {
+  width: 350px;
+  flex-shrink: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+  transition: box-shadow 120ms, border-color 120ms;
+}
+.node-card:hover { box-shadow: var(--shadow-sm); border-color: var(--border-strong); }
+
+.node-card.is-required { border-left: 2.5px solid var(--accent); }
+
+.node-card.is-empty {
+  background: var(--surface-1);
+  border-style: dashed;
+  opacity: 0.7;
+}
+.node-card.is-empty:hover { opacity: 1; }
+
+.node-seq-badge {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--muted-2);
+}
+.node-card.is-required .node-seq-badge { color: var(--accent); opacity: 0.55; }
+
+.node-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding-right: 22px;
+}
+.node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted-2);
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.node-dot.req { background: var(--accent); }
+.node-dot.filled { background: var(--muted); }
+
+
+[data-theme="dark"] .node-card { background: rgba(255,255,255,0.04); }
+[data-theme="dark"] .node-card.is-empty { background: transparent; }
 
 /* ── Act Node Item ──────────────────────────────────────────── */
 
@@ -1500,6 +1600,28 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--ink-2);
   flex: 1;
   min-width: 0;
+}
+.act-node-item__title-input {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  border: none;
+  background: transparent;
+  padding: 0;
+  width: 100%;
+  outline: none;
+}
+.act-node-item__title-input:focus {
+  color: var(--ink-1);
+}
+.act-node-item__title-input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}
+.act-node-item__type-hint {
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.01em;
 }
 .act-node-item__req {
   font-size: 0.65rem;
@@ -1524,7 +1646,8 @@ a { color: var(--accent); text-decoration: none; }
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 5px 8px;
-  resize: vertical;
+  resize: none;
+  overflow: hidden;
   outline: none;
   line-height: 1.55;
   transition: border-color 120ms;
@@ -1909,9 +2032,9 @@ a { color: var(--accent); text-decoration: none; }
 .plot-node-stack { display: grid; gap: 8px; }
 .plot-node-lanes { display: grid; gap: 6px; margin-top: 8px; }
 
-/* ── Node Card ─────────────────────────────────────────────── */
+/* ── CF Node Card (creation flow) ──────────────────────────── */
 
-.node-card {
+.cf-node-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
@@ -1919,9 +2042,9 @@ a { color: var(--accent); text-decoration: none; }
   cursor: pointer;
   transition: all 120ms ease;
 }
-.node-card:hover { border-color: var(--border-strong); }
-.node-card.is-required { border-left: 3px solid var(--accent); }
-.node-card__top {
+.cf-node-card:hover { border-color: var(--border-strong); }
+.cf-node-card.is-required { border-left: 3px solid var(--accent); }
+.cf-node-card__top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
