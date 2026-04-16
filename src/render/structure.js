@@ -158,7 +158,7 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
               : ""
             }
             ${selectField("节奏覆层", "structure-meta-field", "rhythm_overlay", structure.rhythm_overlay, [
-              ["save_the_cat", "旧猫咪节拍表"],
+              ["save_the_cat", "救猫咪节拍表"],
               ["hero_journey", "英雄之旅"],
               ["story_circle", "故事圆环"],
               ["none", "不套节拍表"]
@@ -172,7 +172,19 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
       <div class="structure-col structure-col--right">
 
         <div class="summary-card">
-          <p class="section-label">结构弧线</p>
+          <div class="list-card__head">
+            <p class="section-label">结构弧线</p>
+            ${orderedActs.length > 0 ? `
+              <button class="button button--primary button--tiny"
+                type="button" data-action="ai-gen-structure-notes"
+                ${appState.structureNodeGen?.loading ? "disabled" : ""}>
+                ${appState.structureNodeGen?.loading
+                  ? `生成中… ${appState.structureNodeGen.progress || ""}`
+                  : "AI 填写情节点"}
+              </button>
+            ` : ""}
+          </div>
+          ${appState.structureNodeGen?.error ? `<p class="ai-error-hint">${escapeHtml(appState.structureNodeGen.error)}</p>` : ""}
           ${orderedActs.length > 0
             ? renderStructureArc(orderedActs)
             : `<p class="structure-arc-empty">选定结构模板后自动生成幕划分</p>`

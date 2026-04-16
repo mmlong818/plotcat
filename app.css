@@ -868,6 +868,11 @@ a { color: var(--accent); text-decoration: none; }
 .list-select--static { cursor: default; }
 .list-select--static:hover { border-color: var(--border); background: var(--surface-1); }
 
+.ai-error-hint {
+  font-size: 0.78rem;
+  color: #c0392b;
+  padding: 4px 0;
+}
 .scene-summary-hint {
   font-size: 0.78rem;
   color: var(--muted);

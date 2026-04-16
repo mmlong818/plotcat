@@ -2784,6 +2784,10 @@ function handleCreationClick(action, target) {
     handleGenerateBeatSheet();
     return true;
   }
+  if (action === "ai-gen-structure-notes") {
+    handleGenerateStructureNotes();
+    return true;
+  }
   if (action === "ai-generate-scene") {
     handleGenerateScene(target.dataset.sceneId ?? "");
     return true;
@@ -3194,6 +3198,62 @@ async function handleGenerateBeatSheet() {
     c.lastReasoning = result.reasoning ?? "";
   }
   renderCreationPage();
+}
+
+async function handleGenerateStructureNotes() {
+  const sp = appState.project.structure_profile;
+  if (!sp?.acts?.length) return;
+
+  appState.structureNodeGen = { loading: true, progress: "", error: "" };
+  renderStructurePage(dom, appState, structureGetters);
+
+  const acts = list(sp.acts).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const projectCtx = {
+    project: appState.project.project,
+    story_core: appState.project.story_core,
+    intent_anchor: appState.project.intent_anchor,
+    story_bible: appState.project.story_bible
+  };
+
+  for (let i = 0; i < acts.length; i++) {
+    const act = acts[i];
+    appState.structureNodeGen.progress = `第 ${i + 1}/${acts.length} 幕`;
+    renderStructurePage(dom, appState, structureGetters);
+
+    const actNodes = list(sp.nodes)
+      .filter((n) => n.act_id === act.id)
+      .slice()
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+      .map((n) => [n.node_type, act.key ?? "", n.title]);
+
+    if (actNodes.length === 0) continue;
+
+    try {
+      const res = await fetch("/api/ai/generate-act-nodes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectCtx, actTitle: act.title, actPurpose: act.purpose, nodes: actNodes })
+      });
+      const data = await res.json();
+      if (data.ok && data.data?.nodes) {
+        for (const node of list(sp.nodes).filter((n) => n.act_id === act.id)) {
+          const gen = data.data.nodes[node.node_type];
+          if (gen?.summary) {
+            node.note = gen.value_shift ? `${gen.summary}\n价值转变：${gen.value_shift}` : gen.summary;
+          }
+        }
+      } else {
+        appState.structureNodeGen.error = data.error ?? "生成失败，请重试";
+      }
+    } catch (err) {
+      appState.structureNodeGen.error = err.message;
+    }
+  }
+
+  appState.structureNodeGen.loading = false;
+  appState.structureNodeGen.progress = "";
+  markDirty();
+  renderStructurePage(dom, appState, structureGetters);
 }
 
 async function handleGenerateScene(sceneId) {
