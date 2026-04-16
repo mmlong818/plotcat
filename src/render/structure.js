@@ -88,12 +88,9 @@ function renderActBlock(act, index, nodes, nodeCards) {
             value="${escapeHtml(node.title)}" placeholder="给这个情节点命名…" />
         </div>
         <span class="act-node-item__type-hint">${escapeHtml(node.node_type)}</span>
-        ${isEmpty
-          ? `<p class="node-empty-hint">点击填写，或 AI 生成</p>`
-          : `<textarea class="act-node-item__note"
-              data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="note"
-              placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>`
-        }
+        <textarea class="act-node-item__note"
+          data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="note"
+          placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>
       </div>
     `;
   });

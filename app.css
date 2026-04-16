@@ -1592,13 +1592,6 @@ a { color: var(--accent); text-decoration: none; }
   flex: 1;
   min-width: 0;
 }
-.act-node-item__title-wrap {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
 .act-node-item__title-input {
   font-size: 0.82rem;
   font-weight: 600;
