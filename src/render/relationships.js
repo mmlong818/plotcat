@@ -77,12 +77,7 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
           <div class="list-card__head">
             <div>
               <p class="section-label">关系详情</p>
-              <h3 class="rel-editor__title">
-                ${selectedRelationship
-                  ? `${escapeHtml(srcName)} <span class="rel-editor__arrow">↔</span> ${escapeHtml(tgtName)}`
-                  : "未选择关系"
-                }
-              </h3>
+              ${selectedRelationship ? `<h3 class="rel-editor__title">${escapeHtml(srcName)} <span class="rel-editor__arrow">↔</span> ${escapeHtml(tgtName)}</h3>` : ""}
             </div>
             ${selectedRelationship
               ? `<button class="button button--ghost button--tiny" type="button" data-action="delete-relationship" data-id="${escapeHtml(selectedRelationship.id)}">删除</button>`
@@ -90,7 +85,7 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
             }
           </div>
           ${!selectedRelationship
-            ? renderEmptyState("还没有选择关系", "点击左侧关系网中的条目开始编辑")
+            ? renderEmptyState("从左侧选择一条关系，或点击「新增」建立角色关系")
             : `
               <div class="stack">
                 <section>

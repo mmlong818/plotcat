@@ -718,6 +718,10 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--accent);
   font-family: var(--font-display);
 }
+.metric-card__value--zero {
+  color: var(--muted);
+  font-weight: 400;
+}
 .metric-card__detail,
 .revision-card__meta,
 .list-card__meta,
