@@ -51,7 +51,7 @@ function renderPlotCardChip(appState, card, { getPlotLane, getActTitle, getNode 
       <div class="plot-note__meta-group">
         <span class="plot-note__meta">
           ${showAct ? escapeHtml(getActTitle(card.act_id)) : ""}
-          ${showAct && showNode ? " 路 " : ""}
+          ${showAct && showNode ? " · " : ""}
           ${showNode ? escapeHtml(getNode(card.node_id)?.title || "未挂节点") : ""}
         </span>
         <span class="plot-note__status">${plotStatusDot(card.status)}${escapeHtml(plotStatusLabels[card.status] ?? card.status)}</span>
@@ -525,7 +525,7 @@ export function renderPlotsPage(dom, appState, {
                       (character) => `
                         <button class="list-select" type="button" data-action="jump-to-character" data-id="${escapeHtml(character.id)}">
                           <strong>${escapeHtml(character.name || "未命名人物")}</strong>
-                          <span>${escapeHtml(storyRoleLabels[character.story_role] ?? character.story_role)}</span>
+                          ${(() => { const roleLabel = storyRoleLabels[character.story_role] ?? character.story_role; return roleLabel && roleLabel !== character.name ? `<span>${escapeHtml(roleLabel)}</span>` : ""; })()}
                         </button>
                       `
                     )
@@ -548,7 +548,7 @@ export function renderPlotsPage(dom, appState, {
                     .map(
                       (relationship) => `
                         <button class="list-select" type="button" data-action="jump-to-relationship" data-id="${escapeHtml(relationship.id)}">
-                          <strong>${escapeHtml(getCharacterNameById(relationship.source_character_id))} 路 ${escapeHtml(getCharacterNameById(relationship.target_character_id))}</strong>
+                          <strong>${escapeHtml(getCharacterNameById(relationship.source_character_id))} · ${escapeHtml(getCharacterNameById(relationship.target_character_id))}</strong>
                           <span>${escapeHtml(relationship.relationship_type || "未命名关系")}</span>
                         </button>
                       `
@@ -572,8 +572,8 @@ export function renderPlotsPage(dom, appState, {
                     .map(
                       (scene) => `
                         <button class="list-select" type="button" data-action="jump-to-scene" data-id="${escapeHtml(scene.id)}">
-                          <strong>${escapeHtml(scene.order_index)} 路 ${escapeHtml(scene.title || "未命名场景")}</strong>
-                          <span>${escapeHtml(scene.location || "未定地点")} 路 ${escapeHtml(scene.time_of_day || "未定时段")}</span>
+                          <strong>${escapeHtml(scene.order_index)} · ${escapeHtml(scene.title || "未命名场景")}</strong>
+                          <span>${escapeHtml(scene.location || "未定地点")} · ${escapeHtml(scene.time_of_day || "未定时段")}</span>
                         </button>
                       `
                     )
@@ -596,8 +596,8 @@ export function renderPlotsPage(dom, appState, {
                     .map(
                       (event) => `
                         <div class="list-select list-select--static">
-                          <strong>第 ${escapeHtml(event.story_day || "?")} 天 路 ${escapeHtml(event.summary || "未命名事件")}</strong>
-                          <span>${escapeHtml(event.location || "未定地点")} 路 ${escapeHtml(event.trigger || "未定触发")}</span>
+                          <strong>第 ${escapeHtml(event.story_day || "?")} 天 · ${escapeHtml(event.summary || "未命名事件")}</strong>
+                          <span>${escapeHtml(event.location || "未定地点")} · ${escapeHtml(event.trigger || "未定触发")}</span>
                         </div>
                       `
                     )

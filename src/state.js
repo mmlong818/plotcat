@@ -43,10 +43,15 @@ export const projectCreateStepsCurrent = [
 export const formatLabels = {
   feature_or_pilot: "电影 / 试播集",
   feature: "电影",
+  feature_film: "电影长片",
   pilot: "试播集",
+  pilot_episode: "试播集",
   series: "连续剧",
+  series_season: "连续剧季",
   short: "短片",
-  micro_drama: "微短剧"
+  short_form: "短片",
+  micro_drama: "微短剧",
+  micro_drama_serial: "微短剧"
 };
 
 export const projectFormatChoices = ["feature", "pilot", "series", "short", "micro_drama"];

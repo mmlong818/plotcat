@@ -813,6 +813,7 @@ a { color: var(--accent); text-decoration: none; }
 [data-theme="dark"] .project-card__top .button { color: rgba(200,164,90,0.75); border-color: rgba(200,164,90,0.22); }
 [data-theme="dark"] .project-card__top .button:hover { color: #c8a45a; border-color: rgba(200,164,90,0.5); background: rgba(200,164,90,0.08); }
 [data-theme="dark"] .project-card__logline { color: #9a9080; }
+.project-card__logline--empty { font-style: italic; opacity: 0.55; }
 [data-theme="dark"] .project-card .tag { background: rgba(200,164,90,0.1); border-color: rgba(200,164,90,0.2); color: #b89858; font-size: 0.73rem; }
 [data-theme="dark"] .project-card .summary-strip { border-top-color: rgba(255,255,255,0.06); }
 [data-theme="dark"] .project-card .chip--soft { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); color: #6a6258; font-size: 0.72rem; }
@@ -912,15 +913,24 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Check List ────────────────────────────────────────────── */
 
-.check-list { display: grid; gap: 7px; }
+.check-list { display: flex; flex-direction: column; gap: 6px; }
 .check-list__item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   font-size: 0.85rem;
   color: var(--ink-2);
   line-height: 1.5;
+  cursor: pointer;
+  padding: 2px 0;
 }
+.check-list__item input[type="checkbox"] {
+  flex-shrink: 0;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+.check-list__item span { flex: 1; }
 
 /* ── Overview & Project Board ──────────────────────────────── */
 
@@ -1409,14 +1419,13 @@ a { color: var(--accent); text-decoration: none; }
   margin-bottom: 7px;
 }
 .act-block__num {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
-  font-family: var(--font-display);
   color: var(--accent);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
 }
 .act-block__range {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 .act-block__fields { display: grid; gap: 5px; }
@@ -1595,6 +1604,8 @@ a { color: var(--accent); text-decoration: none; }
   padding: 10px 12px;
   cursor: pointer;
   transition: all 130ms ease;
+  text-align: left;
+  width: 100%;
 }
 .plot-note:hover { border-color: var(--border-strong); }
 .plot-note.is-selected,
@@ -2088,16 +2099,55 @@ a { color: var(--accent); text-decoration: none; }
 
 /* ── Archetype groups ──────────────────────────────────────── */
 
-.archetype-group { margin-bottom: 8px; }
-.archetype-group:last-child { margin-bottom: 0; }
+.archetype-section { display: flex; flex-direction: column; gap: 4px; }
+
+.archetype-selected-hint {
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.archetype-selected-hint strong { color: var(--accent); }
+
+.archetype-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.archetype-group[open] { border-color: var(--border-strong); }
 
 .archetype-group__label {
-  font-size: 0.65rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--muted);
-  margin-bottom: 5px;
+  background: var(--surface-1);
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+}
+.archetype-group__label::-webkit-details-marker { display: none; }
+.archetype-group__label::after {
+  content: "▸";
+  margin-left: auto;
+  transition: transform 180ms ease;
+}
+.archetype-group[open] .archetype-group__label::after {
+  transform: rotate(90deg);
+}
+
+.archetype-group .chip-wrap {
+  padding: 8px 10px;
+  gap: 4px;
+  background: var(--surface-2);
+}
+
+.ref-chip--sm {
+  font-size: 0.72rem;
+  padding: 2px 9px;
 }
 
 .section-label__hint {
@@ -3751,27 +3801,15 @@ a { color: var(--accent); text-decoration: none; }
 .cf-deco-line {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(200,164,90,0.4), transparent);
-}
-.cf-deco-title .cf-deco-line:first-child {
-  background: linear-gradient(90deg, transparent, rgba(200,164,90,0.35));
-}
-.cf-deco-title .cf-deco-line:last-child {
-  background: linear-gradient(90deg, rgba(200,164,90,0.35), transparent);
+  background: rgba(255,255,255,0.1);
 }
 
 .cf-deco-text {
   flex-shrink: 0;
-  position: relative;
 }
 .cf-deco-text::before,
 .cf-deco-text::after {
-  content: "❖";
-  font-size: 0.55em;
-  color: var(--cf-gold);
-  opacity: 0.5;
-  margin: 0 10px;
-  vertical-align: middle;
+  content: none;
 }
 
 /* ── 大图标类型卡片 ───────────────────────────────────────── */

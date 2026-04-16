@@ -15,7 +15,7 @@ function getStructureOptionsForFormat(format, currentTemplate = null) {
 }
 
 function parseActRange(rangeLabel) {
-  const m = String(rangeLabel ?? "").match(/(\d+)[%％][–—\-](\d+)[%％]/);
+  const m = String(rangeLabel ?? "").match(/(\d+)\s*[%％]\s*[–—\-]\s*(\d+)\s*[%％]/);
   if (!m) return { start: 0, end: 100 };
   return { start: parseInt(m[1]), end: parseInt(m[2]) };
 }
@@ -85,7 +85,7 @@ function renderActBlock(act, index, nodes, nodeCards) {
         </div>
         <textarea class="act-node-item__note"
           data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="note"
-          rows="2" placeholder="节点备注…">${escapeHtml(node.note || "")}</textarea>
+          rows="2" placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>
       </div>
     `;
   }).join("");
@@ -96,7 +96,7 @@ function renderActBlock(act, index, nodes, nodeCards) {
         <div class="act-block__meta">
           <span class="act-block__num">第${chineseNum}幕</span>
           <span class="act-block__range">${start}%–${end}%</span>
-          ${nodes.length > 0 ? `<span class="chip chip--soft">${nodes.length} 节点</span>` : ""}
+          ${nodes.length > 0 ? `<span class="chip chip--soft">${nodes.length} 个情节点</span>` : ""}
         </div>
         <div class="act-block__fields">
           <input class="act-block__title-input"

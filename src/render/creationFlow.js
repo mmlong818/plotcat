@@ -4,7 +4,7 @@ const CREATION_STEPS = [
   { id: 1, label: "故事核心" },
   { id: 2, label: "结构" },
   { id: 3, label: "人物" },
-  { id: 4, label: "节点填充" },
+  { id: 4, label: "情节大纲" },
   { id: 5, label: "确认" }
 ];
 
@@ -357,7 +357,7 @@ function renderStep3New(creation) {
           <button class="cf-deco-btn" type="button"
             data-action="cf-step3-next"
             ${isLoading ? "disabled" : ""}>
-            下一步：节点填充 <span class="cf-arrow">→</span>
+            下一步：情节大纲 <span class="cf-arrow">→</span>
           </button>
           ${!hasAnyConfirmed && !isLoading ? `<span class="cf-next-hint">可直接跳过角色步骤</span>` : ""}
         </div>
@@ -366,7 +366,7 @@ function renderStep3New(creation) {
           <button class="cf-deco-btn" type="button"
             data-action="cf-step3-next"
             ${isLoading ? "disabled" : ""}>
-            ${isLoading ? loadingDots("生成中") : "跳过，直接填充节点"} <span class="cf-arrow">→</span>
+            ${isLoading ? loadingDots("生成中") : "跳过，直接进入情节大纲"} <span class="cf-arrow">→</span>
           </button>
         </div>
       `}
@@ -424,7 +424,7 @@ function renderStep4New(creation) {
         <p class="cf-eyebrow">第四步 — ${escapeHtml(currentAct.title)}</p>
         <h2 class="cf-deco-title">
           <span class="cf-deco-line"></span>
-          <span class="cf-deco-text">节点填充</span>
+          <span class="cf-deco-text">情节大纲</span>
           <span class="cf-deco-line"></span>
         </h2>
         <p class="cf-step-sub">${escapeHtml(currentAct.purpose ?? "")}</p>

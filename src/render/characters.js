@@ -13,24 +13,29 @@ const ARCHETYPE_GROUPS = ["主角", "反派", "配角"];
 
 function renderArchetypePicker(character) {
   const selected = character.archetype ?? "";
+  const selectedGroup = selected
+    ? CHARACTER_ARCHETYPES.find((a) => a.key === selected)?.group ?? ""
+    : "";
   return `
-    <section>
+    <section class="archetype-section">
       <p class="section-label">角色原型 <span class="section-label__hint">（点击快速定位，可不选）</span></p>
+      ${selected ? `<p class="archetype-selected-hint">当前：<strong>${escapeHtml(selected)}</strong></p>` : ""}
       ${ARCHETYPE_GROUPS.map((group) => {
         const items = CHARACTER_ARCHETYPES.filter((a) => a.group === group);
+        const isOpen = group === selectedGroup || (!selected && group === "主角");
         return `
-          <div class="archetype-group">
-            <p class="archetype-group__label">${group}</p>
+          <details class="archetype-group" ${isOpen ? "open" : ""}>
+            <summary class="archetype-group__label">${group}（${items.length}）</summary>
             <div class="chip-wrap">
               ${items.map((a) => `
-                <button class="ref-chip ${a.key === selected ? "is-active" : ""}"
+                <button class="ref-chip ref-chip--sm ${a.key === selected ? "is-active" : ""}"
                   type="button" data-action="select-character-archetype" data-id="${escapeHtml(a.key)}"
                   title="${escapeHtml(a.desc)}">
                   ${escapeHtml(a.key)}
                 </button>
               `).join("")}
             </div>
-          </div>
+          </details>
         `;
       }).join("")}
     </section>
@@ -105,7 +110,7 @@ function renderCharacterEditorFields(character) {
         <p class="section-label">基础定位</p>
         <div class="form-grid form-grid--compact">
           ${inputField("人物名", "character-field", "name", character.name)}
-          ${selectField("人物位置", "character-field", "story_role", character.story_role, Object.entries(storyRoleLabels))}
+          ${selectField("故事角色", "character-field", "story_role", character.story_role, Object.entries(storyRoleLabels))}
           ${textareaField("备注", "character-field", "notes", character.notes, { rows: 3, full: true })}
         </div>
       </section>
