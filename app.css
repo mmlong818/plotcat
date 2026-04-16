@@ -2030,9 +2030,9 @@ a { color: var(--accent); text-decoration: none; }
 .plot-node-stack { display: grid; gap: 8px; }
 .plot-node-lanes { display: grid; gap: 6px; margin-top: 8px; }
 
-/* ── Node Card ─────────────────────────────────────────────── */
+/* ── CF Node Card (creation flow) ──────────────────────────── */
 
-.node-card {
+.cf-node-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
@@ -2040,9 +2040,9 @@ a { color: var(--accent); text-decoration: none; }
   cursor: pointer;
   transition: all 120ms ease;
 }
-.node-card:hover { border-color: var(--border-strong); }
-.node-card.is-required { border-left: 3px solid var(--accent); }
-.node-card__top {
+.cf-node-card:hover { border-color: var(--border-strong); }
+.cf-node-card.is-required { border-left: 3px solid var(--accent); }
+.cf-node-card__top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
