@@ -66,10 +66,10 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
           ${list(item.genre).map((genre) => `<span class="tag">${escapeHtml(genre)}</span>`).join("")}
         </div>
         <div class="summary-strip">
-          <span class="chip chip--soft">${item.character_count ?? 0} 人物</span>
-          <span class="chip chip--soft">${item.scene_count ?? 0} 场景</span>
-          <span class="chip chip--soft">${item.version_count ?? 0} 版本</span>
-          <span class="chip chip--soft">最近打开 ${escapeHtml(formatTime(item.last_opened_at || item.updated_at))}</span>
+          ${(item.character_count ?? 0) > 0 ? `<span class="chip chip--soft">${item.character_count} 人物</span>` : ""}
+          ${(item.scene_count ?? 0) > 0 ? `<span class="chip chip--soft">${item.scene_count} 场景</span>` : ""}
+          ${(item.version_count ?? 0) > 0 ? `<span class="chip chip--soft">${item.version_count} 版本</span>` : ""}
+          <span class="chip chip--muted">打开于 ${escapeHtml(formatTime(item.last_opened_at || item.updated_at))}</span>
         </div>
       </article>
     `;
@@ -96,8 +96,8 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
         : `
           <section class="project-group">
             <div class="project-group__head">
-              <h3>旧项目</h3>
-              <p>其余项目按最后打开时间继续排列。</p>
+              <h3>其他项目</h3>
+              <p>按最后打开时间排列。</p>
             </div>
             <div class="project-list project-list--wide">
               ${oldProjects.map(renderProjectCard).join("")}

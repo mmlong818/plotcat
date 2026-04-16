@@ -1,4 +1,4 @@
-import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState } from "../utils.js";
+import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState, isBrokenPlaceholderText } from "../utils.js";
 import { sceneStatusLabels, storyRoleLabels, SCENE_GOAL_OPTIONS, SCENE_OUTCOME_OPTIONS, EMOTION_OPTIONS, DIALOGUE_STYLE_OPTIONS, SUBTEXT_OPTIONS, DIALOGUE_POWER_OPTIONS, DIALOGUE_PACE_OPTIONS, DESC_DENSITY_OPTIONS, WRITING_STYLE_OPTIONS } from "../state.js";
 
 function sceneStatusDot(status) {
@@ -221,14 +221,17 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                   <span class="chip chip--soft">${linkedCharacters.length} 位人物</span>
                 </div>
                 <div class="stack workbench-mini-stack">
+                  ${selectedScene.location && !isBrokenPlaceholderText(selectedScene.location) ? `
                   <div class="list-select list-select--static">
                     <strong>地点</strong>
-                    <span>${escapeHtml(selectedScene.location || "还没确定")}</span>
-                  </div>
+                    <span>${escapeHtml(selectedScene.location)}</span>
+                  </div>` : ""}
+                  ${selectedScene.purpose && !isBrokenPlaceholderText(selectedScene.purpose) ? `
                   <div class="list-select list-select--static">
                     <strong>场景目的</strong>
-                    <span>${escapeHtml(selectedScene.purpose || "还没确定")}</span>
-                  </div>
+                    <span>${escapeHtml(selectedScene.purpose)}</span>
+                  </div>` : ""}
+                  ${(!selectedScene.location || isBrokenPlaceholderText(selectedScene.location)) && (!selectedScene.purpose || isBrokenPlaceholderText(selectedScene.purpose)) ? `<p class="scene-summary-hint">填写地点和场景目的后将在此显示</p>` : ""}
                 </div>
               `
           }

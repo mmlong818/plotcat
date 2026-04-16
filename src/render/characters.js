@@ -105,13 +105,15 @@ function renderPsychologySection(character) {
 function renderCharacterEditorFields(character) {
   return `
     <div class="stack">
-      ${renderArchetypePicker(character)}
-      <section>
-        <p class="section-label">基础定位</p>
-        <div class="form-grid form-grid--compact">
-          ${inputField("人物名", "character-field", "name", character.name)}
+      <section class="char-identity-section">
+        <input
+          class="char-name-hero"
+          data-action="character-field" data-field="name"
+          value="${escapeHtml(character.name)}"
+          placeholder="输入人物名…"
+        />
+        <div class="char-identity-meta">
           ${selectField("故事角色", "character-field", "story_role", character.story_role, Object.entries(storyRoleLabels))}
-          ${textareaField("备注", "character-field", "notes", character.notes, { rows: 3, full: true })}
         </div>
       </section>
       <section>
@@ -122,6 +124,13 @@ function renderCharacterEditorFields(character) {
           ${textareaField("核心矛盾", "character-field", "contradiction", character.contradiction, { rows: 3 })}
           ${inputField("压力点", "character-field", "pressure_point", character.pressure_point)}
           ${textareaField("秘密", "character-field", "secret", character.secret, { rows: 4, full: true })}
+        </div>
+      </section>
+      ${renderArchetypePicker(character)}
+      <section>
+        <p class="section-label">备注</p>
+        <div class="form-grid form-grid--compact">
+          ${textareaField("", "character-field", "notes", character.notes, { rows: 2, full: true })}
         </div>
       </section>
       <section>
@@ -202,10 +211,7 @@ export function renderCharactersPage(dom, appState, { getCharacter }) {
       <div class="workbench-pane workbench-pane--main">
         <div class="summary-card">
           <div class="list-card__head">
-            <div>
-              <p class="section-label">主编辑区</p>
-              <h3>${escapeHtml(selectedCharacter?.name || "未命名人物")}</h3>
-            </div>
+            <p class="section-label">主编辑区</p>
             ${selectedCharacter
               ? `<button class="button button--ghost button--tiny" type="button" data-action="delete-character" data-id="${escapeHtml(selectedCharacter.id)}">删除人物</button>`
               : ""}
