@@ -84,7 +84,7 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
       <div class="lock-workbench__lead summary-card">
         <p class="section-label">已锁定剧情卡</p>
         <div class="tag-row">
-          ${lockedCards.length === 0 ? `<span class="tag">还没有锁定剧情卡</span>` : lockedCards.map((card) => `<span class="tag">${escapeHtml(card.title)}</span>`).join("")}
+          ${lockedCards.length === 0 ? `<p class="scene-summary-hint">在「剧情开发」中将剧情卡状态设为「锁定」后将在此显示</p>` : lockedCards.map((card) => `<span class="tag">${escapeHtml(card.title)}</span>`).join("")}
         </div>
       </div>
       <div class="summary-card">
@@ -168,10 +168,10 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
   dom.locksContent.innerHTML = `
     <section class="lock-workbench">
       <div class="bible-overview-grid">
-        <article class="metric-card"><span class="metric-card__label">已锁定剧情</span><strong class="metric-card__value">${lockedCards.length}</strong></article>
-        <article class="metric-card"><span class="metric-card__label">时间节点</span><strong class="metric-card__value">${timeline.length}</strong></article>
-        <article class="metric-card"><span class="metric-card__label">世界规则</span><strong class="metric-card__value">${rules.length}</strong></article>
-        <article class="metric-card"><span class="metric-card__label">伏笔</span><strong class="metric-card__value">${setups.length}</strong></article>
+        <article class="metric-card"><span class="metric-card__label">已锁定剧情</span><strong class="metric-card__value ${lockedCards.length === 0 ? "metric-card__value--zero" : ""}">${lockedCards.length}</strong></article>
+        <article class="metric-card"><span class="metric-card__label">时间节点</span><strong class="metric-card__value ${timeline.length === 0 ? "metric-card__value--zero" : ""}">${timeline.length}</strong></article>
+        <article class="metric-card"><span class="metric-card__label">世界规则</span><strong class="metric-card__value ${rules.length === 0 ? "metric-card__value--zero" : ""}">${rules.length}</strong></article>
+        <article class="metric-card"><span class="metric-card__label">伏笔</span><strong class="metric-card__value ${setups.length === 0 ? "metric-card__value--zero" : ""}">${setups.length}</strong></article>
       </div>
       ${tabBar}
       ${tabContent}
