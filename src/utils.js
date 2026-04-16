@@ -61,13 +61,24 @@ export function selectField(label, action, fieldName, value, choices, options = 
 }
 
 export function formatTime(value) {
-  if (!value) {
-    return "未保存";
-  }
+  if (!value) return "未保存";
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "未保存" : date.toLocaleString("zh-CN");
+  if (Number.isNaN(date.getTime())) return "未保存";
+  const now = new Date();
+  const hhmm = date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });
+  const todayStr = now.toLocaleDateString("zh-CN");
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const dateStr = date.toLocaleDateString("zh-CN");
+  if (dateStr === todayStr) return `今天 ${hhmm}`;
+  if (dateStr === yesterday.toLocaleDateString("zh-CN")) return `昨天 ${hhmm}`;
+  return `${date.getMonth() + 1}/${date.getDate()} ${hhmm}`;
 }
 
 export function isBrokenPlaceholderText(value = "") {
-  return /^\?+$/.test(String(value || "").trim());
+  const s = String(value || "").trim();
+  if (/^\?+$/.test(s)) return true;
+  if (/^待定/.test(s)) return true;
+  if (s === "还没确定" || s === "待确认") return true;
+  return false;
 }

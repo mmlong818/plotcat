@@ -45,7 +45,6 @@ function renderPlotCardChip(appState, card, { getPlotLane, getActTitle, getNode 
     >
       <div class="plot-note__head">
         <span class="plot-lane-tag plot-lane-tag--${escapeHtml(lane?.color_slot ?? "main")}">${escapeHtml(lane?.title ?? "轨道")}</span>
-        <span class="plot-note__type">${escapeHtml(plotTypeLabels[card.type] ?? card.type)}</span>
       </div>
       <strong>${escapeHtml(card.title || "未命名剧情卡")}</strong>
       <div class="plot-note__meta-group">
