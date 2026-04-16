@@ -138,7 +138,7 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
   dom.structureContent.innerHTML = `
     <section class="workbench workbench--structure">
 
-      <!-- ── 左列：故事核心 + 结构配置 ─────────────────── -->
+      <!-- ── 左列：故事核心 + 结构配置 + 弧线 ─────────────── -->
       <div class="structure-col structure-col--left">
 
         <div class="summary-card">
@@ -178,30 +178,31 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
           </div>
         </div>
 
-      </div>
-
-      <!-- ── 右列：弧线 + 各幕（含节点） ─────────────────── -->
-      <div class="structure-col structure-col--right">
-
         <div class="summary-card">
-          <div class="list-card__head">
-            <p class="section-label">结构弧线</p>
-            ${orderedActs.length > 0 ? `
-              <button class="button button--primary button--tiny"
-                type="button" data-action="ai-gen-structure-notes"
-                ${appState.structureNodeGen?.loading ? "disabled" : ""}>
-                ${appState.structureNodeGen?.loading
-                  ? `生成中… ${appState.structureNodeGen.progress || ""}`
-                  : "AI 填写情节点"}
-              </button>
-            ` : ""}
-          </div>
+          <p class="section-label">结构弧线</p>
           ${appState.structureNodeGen?.error ? `<p class="ai-error-hint">${escapeHtml(appState.structureNodeGen.error)}</p>` : ""}
           ${orderedActs.length > 0
             ? renderStructureArc(orderedActs)
             : `<p class="structure-arc-empty">选定结构模板后自动生成幕划分</p>`
           }
         </div>
+
+      </div>
+
+      <!-- ── 右列：各幕（含节点） ─────────────────────────── -->
+      <div class="structure-col structure-col--right">
+
+        ${orderedActs.length > 0 ? `
+          <div class="structure-acts-toolbar">
+            <button class="button button--primary button--tiny"
+              type="button" data-action="ai-gen-structure-notes"
+              ${appState.structureNodeGen?.loading ? "disabled" : ""}>
+              ${appState.structureNodeGen?.loading
+                ? `生成中… ${appState.structureNodeGen.progress || ""}`
+                : "AI 填写情节点"}
+            </button>
+          </div>
+        ` : ""}
 
         <div class="structure-acts">
           ${orderedActs.map((act, i) =>
