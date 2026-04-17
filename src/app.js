@@ -3467,7 +3467,7 @@ async function handleFinalizeNewCreation() {
     const nodeData = result?.nodes?.[node.node_type];
     if (nodeData) {
       const cardId = createId("card");
-      cards.push({ id: cardId, node_id: node.id, title: nodeData.key_event ?? "", summary: nodeData.summary ?? "", value_shift: nodeData.value_shift ?? "", status: "draft" });
+      cards.push({ id: cardId, node_id: node.id, title: nodeData.story_title ?? nodeData.key_event ?? "", summary: nodeData.summary ?? "", value_shift: nodeData.value_shift ?? "", status: "draft" });
       node.card_ids = [cardId];
     }
   }
