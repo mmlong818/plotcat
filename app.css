@@ -5,17 +5,17 @@
    ============================================================ */
 
 :root {
-  /* 背景层次 */
-  --bg: #ede9e1;
-  --surface-1: #f8f5ef;
-  --surface-2: #ffffff;
-  --surface-3: #f0ece3;
-  --surface-hover: #ebe7de;
+  /* 背景层次（加强层次对比） */
+  --bg: #e6e1d5;           /* 页面底色更深 */
+  --surface-1: #f5f1e7;    /* 普通卡片 */
+  --surface-2: #ffffff;    /* 主编辑区/白面 */
+  --surface-3: #ece6d8;    /* 凹陷区（input 背景） */
+  --surface-hover: #e4dfd1;
 
-  /* 边框 */
-  --border: rgba(40, 30, 15, 0.1);
-  --border-strong: rgba(40, 30, 15, 0.18);
-  --border-accent: rgba(186, 86, 22, 0.35);
+  /* 边框（提升可视度） */
+  --border: rgba(40, 30, 15, 0.22);
+  --border-strong: rgba(40, 30, 15, 0.38);
+  --border-accent: rgba(186, 86, 22, 0.5);
 
   /* 文字 */
   --ink: #1c1610;
@@ -54,9 +54,9 @@
   --radius: 10px;
   --radius-sm: 6px;
   --radius-lg: 16px;
-  --shadow: 0 4px 20px rgba(40, 30, 15, 0.12);
-  --shadow-sm: 0 1px 6px rgba(40, 30, 15, 0.08);
-  --shadow-lg: 0 16px 48px rgba(40, 30, 15, 0.18);
+  --shadow: 0 6px 24px rgba(40, 30, 15, 0.18);
+  --shadow-sm: 0 2px 8px rgba(40, 30, 15, 0.12);
+  --shadow-lg: 0 20px 56px rgba(40, 30, 15, 0.25);
 }
 
 /* ── 暗色主题（好莱坞黄金时代）──────────────────────────── */
@@ -6051,11 +6051,10 @@ body[data-mode="creation"] {
   margin-bottom: 6px;
 }
 
-/* 编辑器中的 section-label（动机与秘密/弧光变化/心理剖面 等）
+/* 编辑器中的 section-label（动机与秘密/弧光变化/性格特质/心理剖面/备注）
    改为带装饰线的分组头，形成强视觉区隔 */
-.character-workbench--editor section > .section-label:not(.section-label--row),
-.character-workbench--editor section > .section-label--row,
-.relationship-workbench--dual section > .section-label:not(.section-label--row) {
+.character-workbench section > .section-label,
+.relationship-workbench--dual section > .section-label {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -6066,12 +6065,34 @@ body[data-mode="creation"] {
   color: var(--accent);
   text-transform: uppercase;
 }
-.character-workbench--editor section > .section-label:not(.section-label--row)::after,
-.relationship-workbench--dual section > .section-label:not(.section-label--row)::after {
+/* 装饰线：在 label 文本后延伸；当有 lockBadge 时，让文本占自然宽度，线居中，badge 最后 */
+.character-workbench section > .section-label > span:first-child,
+.relationship-workbench--dual section > .section-label > span:first-child {
+  flex-shrink: 0;
+}
+.character-workbench section > .section-label::after,
+.relationship-workbench--dual section > .section-label::after {
   content: "";
   flex: 1;
   height: 1px;
   background: linear-gradient(to right, var(--border-accent), transparent 70%);
+  order: 5;
+}
+/* lockBadge 推到最右 */
+.character-workbench section > .section-label > .field-lock,
+.relationship-workbench--dual section > .section-label > .field-lock {
+  order: 10;
+  flex-shrink: 0;
+}
+/* hint「（多选）」等辅助文字取消 uppercase 与字距，视觉轻化 */
+.character-workbench section > .section-label .section-label__hint,
+.relationship-workbench--dual section > .section-label .section-label__hint {
+  font-size: 0.68rem;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+  font-weight: 500;
+  margin-left: 4px;
 }
 
 /* field label 更紧凑、字重稍提 */
@@ -6085,9 +6106,10 @@ body[data-mode="creation"] {
 
 /* ── A2 · Card 视觉语言 ──────────────────────────────────── */
 
-/* summary-card 增加呼吸感 + hover 微抬 */
+/* summary-card 增加呼吸感 + 基础阴影 + hover 加强 */
 .summary-card {
   padding: 18px 20px;
+  box-shadow: 0 1px 4px rgba(40, 30, 15, 0.08);
   transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
 }
 .summary-card:hover {
@@ -6248,12 +6270,12 @@ body[data-active-step] .step-button.is-active .step-button__label {
 }
 
 /* 编辑器 section 分组头颜色跟随 step-hue */
-body[data-active-step] .character-workbench--editor section > .section-label:not(.section-label--row),
-body[data-active-step] .relationship-workbench--dual section > .section-label:not(.section-label--row) {
+body[data-active-step] .character-workbench section > .section-label,
+body[data-active-step] .relationship-workbench--dual section > .section-label {
   color: var(--step-hue);
 }
-body[data-active-step] .character-workbench--editor section > .section-label:not(.section-label--row)::after,
-body[data-active-step] .relationship-workbench--dual section > .section-label:not(.section-label--row)::after {
+body[data-active-step] .character-workbench section > .section-label::after,
+body[data-active-step] .relationship-workbench--dual section > .section-label::after {
   background: linear-gradient(to right, var(--step-hue-glow), transparent 70%);
 }
 
@@ -6429,6 +6451,627 @@ body[data-active-step] .char-card:hover {
   margin-right: 10px;
 }
 .runtime-status:empty { display: none; }
+
+/* ============================================================
+   D 轮 · 人物页 split layout（rail + editor + 可选 compare）
+   ============================================================ */
+
+.character-workbench--split {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.char-rail-pane {
+  position: sticky;
+  top: 76px;
+  max-height: calc(100vh - 100px);
+}
+.char-rail-pane .summary-card {
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+/* Rail 角色组 */
+.char-rail-group + .char-rail-group { margin-top: 14px; }
+.char-rail-group__label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 6px;
+  padding-left: 4px;
+}
+.char-rail-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Rail item（紧凑卡片） */
+.char-rail-item {
+  padding: 10px 12px 10px 14px;
+  align-items: flex-start;
+  text-align: left;
+  width: 100%;
+}
+.char-rail-item__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.char-rail-item__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+.char-rail-item__role {
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  color: var(--step-hue, var(--accent));
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.char-rail-item__goal {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.45;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.char-rail-item.is-compare {
+  border-color: var(--step-hue, var(--accent));
+  background: var(--step-hue-soft, var(--accent-soft));
+}
+.char-rail-item.is-compare::before { background: var(--step-hue, var(--accent)); opacity: 0.5; }
+
+/* 编辑器 pane 覆盖旧的 editor max-width 规则 */
+.character-workbench--split .char-editor-pane .summary-card {
+  max-width: none;
+  margin: 0;
+}
+
+/* 有 compare 时：编辑器 + compare 并排 */
+.char-editor-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.char-editor-pane.has-compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.char-editor-head {
+  /* 顶部工具条对齐 */
+}
+
+.char-compare-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-1);
+  font-size: 0.78rem;
+}
+.char-compare-trigger__label {
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+}
+.char-compare-trigger select {
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.char-compare-trigger select:focus {
+  box-shadow: none;
+}
+
+/* Compare card（只读侧） */
+.char-compare-card {
+  background: var(--surface-1);
+  border-style: dashed;
+  border-color: var(--step-hue-glow, var(--border-accent));
+}
+.char-compare__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.char-compare__name {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.2;
+}
+.char-compare__role {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  color: var(--step-hue, var(--accent));
+  text-transform: uppercase;
+  margin: 4px 0 0;
+  font-weight: 600;
+}
+.char-compare__body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.char-compare-field__label {
+  font-size: 0.64rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 4px;
+}
+.char-compare-field__value {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.char-compare-field__value--empty {
+  color: var(--muted-2);
+}
+
+/* 窄屏降级 */
+@media (max-width: 1200px) {
+  .character-workbench--split {
+    grid-template-columns: 260px minmax(0, 1fr);
+  }
+  .char-editor-pane.has-compare {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .character-workbench--split {
+    grid-template-columns: 1fr;
+  }
+  .char-rail-pane {
+    position: static;
+    max-height: none;
+  }
+}
+
+/* ============================================================
+   E 轮 · 心理剖面视觉升级
+   九型人格圆盘 · 道德阵营带轴 · 马斯洛八层金字塔
+   ============================================================ */
+
+.psych-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.psych-block {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-1);
+}
+.psych-block__label {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+/* ── MBTI 16 型 · 紧凑 4×4 网格 ───────────────────── */
+
+/* MBTI + 道德阵营 两栏布局（MBTI 窄一点给阵营更多空间） */
+.psych-grid.psych-grid--two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+@media (max-width: 1100px) {
+  .psych-grid.psych-grid--two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mbti-board {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mbti-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.64rem;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.mbti-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mbti-legend__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--mbti-group-color);
+}
+.mbti-legend__item--analyst  { --mbti-group-color: #6a3a8a; }
+.mbti-legend__item--diplomat { --mbti-group-color: #2e7d52; }
+.mbti-legend__item--sentinel { --mbti-group-color: #1e5fa8; }
+.mbti-legend__item--explorer { --mbti-group-color: #b45309; }
+
+.mbti-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+.mbti-cell {
+  appearance: none;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--mbti-group-color, var(--border-strong));
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  min-width: 0;
+  transition: transform 120ms ease, box-shadow 120ms ease,
+              border-color 120ms ease, background 120ms ease;
+}
+.mbti-cell__code {
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+.mbti-cell__name {
+  font-size: 0.7rem;
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mbti-cell:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+.mbti-cell.is-active {
+  background: var(--step-hue, var(--accent));
+  border-color: var(--step-hue, var(--accent));
+}
+.mbti-cell.is-active .mbti-cell__code,
+.mbti-cell.is-active .mbti-cell__name {
+  color: #fff;
+}
+
+.mbti-cell--analyst  { --mbti-group-color: #6a3a8a; }
+.mbti-cell--diplomat { --mbti-group-color: #2e7d52; }
+.mbti-cell--sentinel { --mbti-group-color: #1e5fa8; }
+.mbti-cell--explorer { --mbti-group-color: #b45309; }
+
+@media (max-width: 900px) {
+  .mbti-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ── 性格特质只读 chip（AI 识别结果） ─────────────── */
+
+.ref-chip--readonly {
+  cursor: default;
+  pointer-events: none;
+}
+.ref-chip--readonly:not(.is-active) {
+  opacity: 0.4;
+  background: transparent;
+  border-color: var(--border);
+  color: var(--muted);
+}
+.trait-pool .ref-chip--readonly.is-active {
+  background: var(--step-hue, var(--accent));
+  border-color: var(--step-hue, var(--accent));
+  color: #fff;
+  opacity: 1;
+}
+
+/* ── 马斯洛 · 需求上限（单选） ───────────────────── */
+
+/* 上限层：满格填充高亮 */
+.maslow-chip.is-ceiling {
+  background: var(--step-hue, var(--accent));
+  border-color: var(--step-hue, var(--accent));
+  box-shadow: 0 0 0 3px var(--step-hue-soft, var(--accent-soft)),
+              0 4px 14px var(--step-hue-glow, var(--accent-glow));
+}
+.maslow-chip.is-ceiling .maslow-chip__num {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+.maslow-chip.is-ceiling .maslow-chip__label { color: #fff; }
+
+/* 上限以下：半填充（也被驱动，但不是峰值） */
+.maslow-chip.is-below {
+  background: var(--step-hue-soft, var(--accent-soft));
+  border-color: var(--step-hue-glow, var(--border-accent));
+}
+.maslow-chip.is-below .maslow-chip__label {
+  color: var(--step-hue, var(--accent));
+}
+.maslow-chip.is-below .maslow-chip__num {
+  background: var(--surface-2);
+  color: var(--step-hue, var(--accent));
+}
+
+.maslow-row__note {
+  margin: 4px 2px 0;
+  font-size: 0.7rem;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* ── Hover 气泡 tooltip（data-tooltip 驱动） ───────── */
+
+[data-tooltip] {
+  position: relative;
+}
+[data-tooltip]:hover::after,
+[data-tooltip]:focus-visible::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  min-width: 200px;
+  max-width: 320px;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: var(--surface-1);
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  font-weight: 500;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 100;
+  box-shadow: var(--shadow);
+  animation: tooltipFade 160ms ease both;
+}
+[data-tooltip]:hover::before,
+[data-tooltip]:focus-visible::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--ink);
+  pointer-events: none;
+  z-index: 100;
+  animation: tooltipFade 160ms ease both;
+}
+@keyframes tooltipFade {
+  from { opacity: 0; transform: translateX(-50%) translateY(3px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+/* 靠近顶部的元素：tooltip 翻到下方 */
+.psych-block--mbti [data-tooltip]:hover::after,
+.psych-block--mbti [data-tooltip]:focus-visible::after,
+.maslow-chip[data-tooltip]:hover::after,
+.maslow-chip[data-tooltip]:focus-visible::after {
+  /* 默认向上；若被遮挡，可手动改方向 */
+}
+
+/* ── 道德阵营带轴 ───────────────────────────────────── */
+
+.alignment-board {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: 18px minmax(0, 1fr);
+  gap: 4px;
+  padding: 2px;
+}
+.alignment-axis {
+  display: flex;
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.alignment-axis--cols {
+  grid-column: 2;
+  grid-row: 1;
+  justify-content: space-around;
+  align-items: center;
+}
+.alignment-axis--rows {
+  grid-column: 1;
+  grid-row: 2;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  text-align: center;
+}
+.alignment-board__grid {
+  grid-column: 2;
+  grid-row: 2;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 1fr);
+  gap: 3px;
+}
+.alignment-cell {
+  appearance: none;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  padding: 8px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  color: var(--ink-2);
+}
+.alignment-cell:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+/* 善良 行浅绿、中立 米色、邪恶 浅红 */
+.alignment-cell--善 { background: rgba(46, 125, 82, 0.08); }
+.alignment-cell--恶 { background: rgba(192, 57, 43, 0.08); }
+.alignment-cell--立 { background: var(--surface-2); }
+.alignment-cell.is-active {
+  background: var(--step-hue, var(--accent));
+  border-color: var(--step-hue, var(--accent));
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--step-hue-soft, var(--accent-soft));
+}
+
+/* ── 马斯洛八层 · 单行多选 ──────────────────────────── */
+
+.maslow-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.maslow-row__axis {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 0 4px;
+}
+.maslow-row__axis-left {
+  grid-column: 1 / span 4;
+  color: var(--warning);
+  text-align: left;
+}
+.maslow-row__axis-mid {
+  grid-column: 5 / span 2;
+  color: var(--info);
+  text-align: center;
+}
+.maslow-row__axis-right {
+  grid-column: 7 / span 2;
+  color: var(--success);
+  text-align: right;
+}
+.maslow-row__chips {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 6px;
+}
+.maslow-chip {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-top-width: 3px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: pointer;
+  font: inherit;
+  min-width: 0;
+  transition: all 140ms ease;
+}
+.maslow-chip__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface-3);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.7rem;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.maslow-chip__label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.maslow-chip--deficiency { border-top-color: rgba(180, 83, 9, 0.5); }
+.maslow-chip--growth { border-top-color: rgba(30, 95, 168, 0.5); }
+.maslow-chip--peak { border-top-color: rgba(46, 125, 82, 0.5); }
+
+.maslow-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+}
+.maslow-chip.is-active {
+  background: var(--step-hue, var(--accent));
+  border-color: var(--step-hue, var(--accent));
+  box-shadow: 0 0 0 3px var(--step-hue-soft, var(--accent-soft));
+}
+.maslow-chip.is-active .maslow-chip__num {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+.maslow-chip.is-active .maslow-chip__label {
+  color: #fff;
+}
+
+@media (max-width: 900px) {
+  .maslow-row__axis,
+  .maslow-row__chips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .maslow-row__axis-left { grid-column: 1 / span 2; }
+  .maslow-row__axis-mid { grid-column: 3 / span 1; text-align: left; }
+  .maslow-row__axis-right { grid-column: 4 / span 1; }
+}
+
+
 
 
 

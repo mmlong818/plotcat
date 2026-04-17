@@ -514,9 +514,28 @@ export const WRITING_STYLE_OPTIONS = [
 ];
 
 // ── 角色心理剖面 ─────────────────────────────────────────────
-export const CHARACTER_ENNEAGRAM = [
-  "1-完美主义者", "2-助人者", "3-成就者", "4-自我主义者", "5-观察者",
-  "6-怀疑论者", "7-享乐主义者", "8-挑战者", "9-和平主义者"
+// MBTI 16 种人格类型（按四个集群分组）
+export const CHARACTER_MBTI_TYPES = [
+  // 分析家 NT
+  { code: "INTJ", name: "建筑师", group: "analyst" },
+  { code: "INTP", name: "逻辑学家", group: "analyst" },
+  { code: "ENTJ", name: "指挥官", group: "analyst" },
+  { code: "ENTP", name: "辩论家", group: "analyst" },
+  // 外交官 NF
+  { code: "INFJ", name: "提倡者", group: "diplomat" },
+  { code: "INFP", name: "调停者", group: "diplomat" },
+  { code: "ENFJ", name: "主人公", group: "diplomat" },
+  { code: "ENFP", name: "竞选者", group: "diplomat" },
+  // 哨兵 SJ
+  { code: "ISTJ", name: "物流师", group: "sentinel" },
+  { code: "ISFJ", name: "守卫者", group: "sentinel" },
+  { code: "ESTJ", name: "总经理", group: "sentinel" },
+  { code: "ESFJ", name: "执政官", group: "sentinel" },
+  // 探险家 SP
+  { code: "ISTP", name: "鉴赏家", group: "explorer" },
+  { code: "ISFP", name: "探险家", group: "explorer" },
+  { code: "ESTP", name: "企业家", group: "explorer" },
+  { code: "ESFP", name: "表演者", group: "explorer" },
 ];
 
 export const CHARACTER_MORAL_ALIGNMENT = [
@@ -526,8 +545,14 @@ export const CHARACTER_MORAL_ALIGNMENT = [
 ];
 
 export const CHARACTER_CORE_DRIVE = [
-  "生理需求（生存）", "安全需求（秩序/保障）", "归属与爱（家庭/友谊）",
-  "尊重需求（成就/地位）", "自我实现（潜能/创造）"
+  "生理需求（生存）",
+  "安全需求（秩序/保障）",
+  "归属与爱（家庭/友谊）",
+  "尊重需求（成就/地位）",
+  "认知需求（知识/理解）",
+  "审美需求（秩序/美感）",
+  "自我实现（潜能/创造）",
+  "超越需求（利他/精神）"
 ];
 
 // ── 情节元件库 ───────────────────────────────────────────────

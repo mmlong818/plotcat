@@ -511,6 +511,97 @@ export function buildSingleCharacterPrompt(context, existingChars, storyRole) {
   return { system, user };
 }
 
+const ROLE_LABEL_MAP = { protagonist: "主角", antagonist: "对手", ally: "盟友", opponent_ally: "复杂盟友", supporting: "配角" };
+
+const REFINE_FIELD_LABELS = {
+  name: "姓名",
+  story_role: "故事角色",
+  external_goal: "外部目标",
+  dramatic_need: "内部需要",
+  contradiction: "核心矛盾",
+  pressure_point: "压力点",
+  secret: "秘密",
+  notes: "备注",
+  starting_mask: "人物表层",
+  arc_start: "弧光起点",
+  arc_end: "弧光终点",
+  traits: "性格特质",
+  mbti: "MBTI 人格类型",
+  core_drive: "核心驱动力"
+};
+
+export function buildRefineCharacterPrompt(context, character, lockedFields = []) {
+  const { genres = [], concept = {}, synopsis = {} } = context ?? {};
+  const genreStr = genres.join("、") || "不限";
+  const roleLabel = ROLE_LABEL_MAP[character?.story_role] ?? character?.story_role ?? "";
+  const lockedSet = new Set(Array.isArray(lockedFields) ? lockedFields : []);
+
+  const renderValue = (key) => {
+    const value = character?.[key];
+    if (Array.isArray(value)) return value.join("、") || "（空）";
+    return (value ?? "") === "" ? "（空）" : String(value);
+  };
+
+  const lockedSummary = [...lockedSet]
+    .filter((key) => REFINE_FIELD_LABELS[key])
+    .map((key) => `- ${REFINE_FIELD_LABELS[key]}：${renderValue(key)}`)
+    .join("\n") || "（无锁定项，所有字段均可修正）";
+
+  const editableKeys = Object.keys(REFINE_FIELD_LABELS).filter((key) => !lockedSet.has(key));
+  const editableSummary = editableKeys
+    .map((key) => `- ${REFINE_FIELD_LABELS[key]}：${renderValue(key)}`)
+    .join("\n") || "（无可修正字段）";
+
+  const system = `你是一位资深人物设计师，负责优化现有角色档案。
+必须严格遵守"锁定字段"的原值：绝对不能改写锁定字段。
+仅允许修改未锁定字段，同时保持人物整体一致性与戏剧逻辑。
+字符串内部禁止使用英文双引号，用书名号《》代替。`;
+
+  const user = `类型：${genreStr}
+概念：${concept.title ?? ""} — ${concept.hook ?? ""}
+梗概：${synopsis.summary ?? ""}
+角色定位：${roleLabel}
+
+【锁定字段（必须保持原值，禁止改动）】
+${lockedSummary}
+
+【可修正字段（请重新设计或优化这些字段，使人物更立体、冲突更鲜明、弧光更清晰）】
+${editableSummary}
+
+要求：
+1. 锁定字段的值在输出中必须与上文完全一致。
+2. 可修正字段应整体连贯：动机、矛盾、弧光与锁定部分保持一致性。
+3. 若锁定字段已经暗示了某些设定，请让未锁定字段服务于这个设定。
+4. 避免空洞套话，优先写出具体、可拍的细节。
+
+重要：JSON字符串内部禁止使用英文双引号，用《》代替。
+
+输出JSON格式：
+\`\`\`json
+{
+  "character": {
+    "name": "${character?.name ?? ""}",
+    "story_role": "${character?.story_role ?? "supporting"}",
+    "external_goal": "外部目标",
+    "dramatic_need": "内部需要",
+    "contradiction": "核心矛盾",
+    "pressure_point": "压力点",
+    "secret": "秘密",
+    "notes": "备注",
+    "starting_mask": "人物表层",
+    "arc_start": "弧光起点",
+    "arc_end": "弧光终点",
+    "traits": ["特质1", "特质2"],
+    "mbti": "MBTI 类型（格式：CODE-中文名，如 INTJ-建筑师）",
+    "core_drive": "需求上限（如：尊重需求（成就/地位）——表示此角色追求的最高层需求，该层及以下都驱动其行为）"
+  },
+  "reasoning": "改动说明：解释未锁定字段为何这样设计"
+}
+\`\`\``;
+
+  return { system, user };
+}
+
 export function buildKeyScenesPrompt(context) {
   const { genres = [], concept = {}, synopsis = {}, characters = [] } = context ?? {};
   const genreStr = genres.join("、") || "不限";
