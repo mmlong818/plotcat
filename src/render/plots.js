@@ -88,6 +88,10 @@ function renderStructureViewBoard(appState, cards, lanes, { getOrderedActs, getO
                       </div>
                       <div class="plot-node-lanes">
                         ${lanes
+                          .filter((lane) => {
+                            if (lane.kind !== "scenario") return true;
+                            return cards.some((card) => card.node_id === node.id && card.lane_id === lane.id);
+                          })
                           .map((lane) => {
                             const laneCards = cards
                               .filter((card) => card.node_id === node.id && card.lane_id === lane.id)
