@@ -511,7 +511,6 @@ export const appState = {
   creation: null,
   createModePickerOpen: false,
   projectDeleteConfirmId: null,
-  characterEditorOpen: false,
   characterDesign: { loading: false, error: "" },
   proCreation: {
     step: "anchor",
