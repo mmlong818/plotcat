@@ -1027,14 +1027,8 @@ a { color: var(--accent); text-decoration: none; }
   grid-template-columns: minmax(0, 740px);
 }
 
-/* ── Bible Workbench ───────────────────────────────────────── */
+/* ── Overview & Workbench ─────────────────────────────────── */
 
-.bible-dashboard {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 14px;
-}
 .bible-overview-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1042,87 +1036,13 @@ a { color: var(--accent); text-decoration: none; }
   margin-bottom: 14px;
 }
 
-.bible-workbench { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 14px; }
-.bible-workbench--characters { grid-template-columns: 360px minmax(0, 1fr); }
-.bible-workbench--relationships { grid-template-columns: 320px minmax(0, 1fr); }
-.bible-workbench--timeline { grid-template-columns: 380px minmax(0, 1fr); }
-.bible-workbench--world_rules { grid-template-columns: 320px minmax(0, 1fr); }
-.bible-workbench--setups { grid-template-columns: 460px minmax(0, 1fr); }
-
-.bible-sidebar,
-.bible-detail {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
-
-.bible-sidebar__controls {
-  position: sticky;
-  top: 10px;
-  z-index: 1;
-}
-
-.bible-toolbar__head,
-.bible-detail__head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: flex-start;
-}
-.bible-toolbar__meta,
 .choice-chip-row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.bible-record-list {
-  display: grid;
-  gap: 8px;
-  max-height: 900px;
-  overflow: auto;
-  padding-right: 2px;
-}
-
-.character-roster { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 8px; }
-.relationship-ledger,
-.timeline-rail,
-.rulebook-list { display: grid; gap: 8px; }
-
-/* ── Three-column Workbench ────────────────────────────────── */
-
-.character-workbench--dual {
-  display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-
-.character-workbench--triple,
 .scene-workbench--triple {
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr) 270px;
-  gap: 14px;
-  align-items: start;
-}
-
-/* ── Character role groups ─────────────────────────────────── */
-
-.char-role-group { display: grid; gap: 4px; }
-
-.char-role-group + .char-role-group { margin-top: 10px; }
-
-.char-role-group__label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  padding: 0 2px;
-  margin-bottom: 2px;
-}
-
-.relationship-workbench--triple {
   display: grid;
   grid-template-columns: 250px minmax(0, 1fr) 270px;
   gap: 14px;
@@ -2586,48 +2506,25 @@ a { color: var(--accent); text-decoration: none; }
 /* ── 响应式断点 ────────────────────────────────────────────── */
 
 @media (max-width: 1280px) {
-  .character-workbench--triple,
-  .scene-workbench--triple,
-  .relationship-workbench--triple {
+  .scene-workbench--triple {
     grid-template-columns: 240px minmax(0, 1fr);
   }
   .workbench-pane--context { display: none; }
-  .bible-workbench,
-  .bible-workbench--characters,
-  .bible-workbench--relationships,
-  .bible-workbench--timeline,
-  .bible-workbench--world_rules,
-  .bible-workbench--setups {
-    grid-template-columns: 240px minmax(0, 1fr);
-  }
   .overview-grid { grid-template-columns: repeat(2, 1fr); }
   .plot-workbench--triple,
   .plot-workbench--triple.plot-workbench--studio {
     grid-template-columns: 220px minmax(0, 1fr);
   }
-  .workbench-pane--context { display: none; }
 }
 
 @media (max-width: 960px) {
   .app-shell { width: calc(100vw - 16px); }
-  .character-workbench--dual,
-  .character-workbench--triple,
   .scene-workbench--triple,
-  .relationship-workbench--dual,
-  .relationship-workbench--triple {
+  .relationship-workbench--dual {
     grid-template-columns: 1fr;
   }
   .workbench-pane--rail { max-height: 220px; overflow-y: auto; }
-  .bible-workbench,
-  .bible-workbench--characters,
-  .bible-workbench--relationships,
-  .bible-workbench--timeline,
-  .bible-workbench--world_rules,
-  .bible-workbench--setups {
-    grid-template-columns: 1fr;
-  }
   .overview-grid { grid-template-columns: 1fr 1fr; }
-  .bible-dashboard { grid-template-columns: repeat(3, 1fr); }
   .plot-workbench--triple,
   .plot-workbench--triple.plot-workbench--studio {
     grid-template-columns: 1fr;
@@ -5982,10 +5879,8 @@ body[data-mode="creation"] {
   gap: 10px 14px;
 }
 
-/* 工作台三栏之间加强间距节奏 */
-.character-workbench--triple,
+/* 工作台之间加强间距节奏 */
 .scene-workbench--triple,
-.relationship-workbench--triple,
 .relationship-workbench--dual {
   gap: 18px;
 }
