@@ -810,7 +810,7 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
   const bibChars = sb?.characters ?? [];
   const hubChars = charHub?.characters ?? [];
   const allChars = hubChars.length > 0 ? hubChars : bibChars;
-  const charLines = allChars.slice(0, 4).map((c) => {
+  const charLines = allChars.filter((c) => c && c.name).slice(0, 4).map((c) => {
     const goal = c.external_goal ?? c.external_want ?? c.desire ?? "";
     const need = c.dramatic_need ?? c.internal_need ?? c.need ?? "";
     return `- ${c.name}（${c.story_role ?? ""}）：目标=${goal}；需求=${need}`;
