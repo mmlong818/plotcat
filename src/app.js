@@ -39,6 +39,7 @@ const dom = {
   heroTitle: document.querySelector("#hero-title"),
   heroSide: document.querySelector(".hero__side"),
   saveButton: document.querySelector("#save-button"),
+  runtimeStatus: document.querySelector("#runtime-status"),
   resetButton: document.querySelector("#reset-button"),
   resetConfirmArea: document.querySelector("#reset-confirm-area"),
   pageProjectButton: document.querySelector("#page-project-button"),
@@ -1250,11 +1251,16 @@ function updateProjectField(action, fieldName, value) {
 function renderRuntimeStatus() {
   if (!dom.runtimeStatus) return;
   const mode = appState.runtime.serverAvailable ? "本地服务" : "本地草稿";
-  const saving = appState.runtime.saving ? "保存中" : appState.runtime.dirty ? "待保存" : "已同步";
+  const savingState = appState.runtime.saving ? "saving" : appState.runtime.dirty ? "dirty" : "synced";
+  const savingLabel = { saving: "保存中", dirty: "待保存", synced: "已同步" }[savingState];
   dom.runtimeStatus.innerHTML = `
     <span class="chip chip--soft">${escapeHtml(mode)}</span>
-    <span class="chip chip--soft">${escapeHtml(saving)}</span>
+    <span class="chip chip--save chip--save-${savingState}">${escapeHtml(savingLabel)}</span>
   `;
+  if (dom.saveButton) {
+    dom.saveButton.classList.toggle("is-dirty", savingState === "dirty");
+    dom.saveButton.classList.toggle("is-saving", savingState === "saving");
+  }
 }
 
 function renderStepperNav() {
@@ -1323,6 +1329,7 @@ function renderPageVisibility() {
   dom.stepPanels.forEach((panel) => {
     panel.hidden = appState.currentPage !== "workflow" || panel.dataset.stepGroup !== appState.currentStepId;
   });
+  document.body.dataset.activeStep = appState.currentPage === "workflow" ? appState.currentStepId : "";
   dom.projectCreateDialog.hidden = !appState.createDialogOpen;
   dom.settingsDialog.hidden = !appState.settingsDialogOpen;
 }
@@ -1607,16 +1614,20 @@ function handleClick(event) {
     _renderProjectCreateForm();
     return;
   }
-  if (action === "select-character-archetype") {
-    const char = getCharacter();
-    if (char) { char.archetype = char.archetype === id ? "" : id; markDirty(); render(); }
-    return;
-  }
   if (action === "toggle-character-trait") {
     const char = getCharacter();
     if (char) {
       const traits = list(char.traits);
       char.traits = traits.includes(id) ? traits.filter((t) => t !== id) : [...traits, id];
+      markDirty(); render();
+    }
+    return;
+  }
+  if (action === "toggle-character-field-lock") {
+    const char = getCharacter();
+    if (char && id) {
+      const locked = list(char.locked_fields);
+      char.locked_fields = locked.includes(id) ? locked.filter((f) => f !== id) : [...locked, id];
       markDirty(); render();
     }
     return;
@@ -1757,6 +1768,36 @@ function handleClick(event) {
       });
     return;
   }
+  if (action === "request-delete-project") {
+    appState.projectDeleteConfirmId = id;
+    render();
+    return;
+  }
+  if (action === "cancel-delete-project") {
+    appState.projectDeleteConfirmId = null;
+    render();
+    return;
+  }
+  if (action === "confirm-delete-project") {
+    const deletingId = id;
+    fetchJson(`/api/projects/${encodeURIComponent(deletingId)}`, { method: "DELETE" })
+      .then((payload) => {
+        appState.projectList = payload.projects ?? [];
+        appState.projectDeleteConfirmId = null;
+        if (appState.project?.project?.id === deletingId) {
+          window.clearTimeout(appState.saveTimer);
+          appState.runtime.dirty = false;
+          appState.project = null;
+        }
+        render();
+      })
+      .catch((error) => {
+        appState.projectDeleteConfirmId = null;
+        window.alert(`删除失败：${error.message}`);
+        render();
+      });
+    return;
+  }
   if (action === "open-structure-library") { openStructureLibrary(); return; }
   if (action === "close-library") { closeStructureLibrary(); return; }
   if (action === "filter-library") {
@@ -1859,20 +1900,41 @@ function handleClick(event) {
       notes: "",
       archetype: "",
       traits: [],
+      locked_fields: [],
       status: "active",
       linked_plot_ids: []
     };
     appState.project.character_hub.characters.push(character);
     appState.selection.characterId = character.id;
+    appState.characterEditorOpen = true;
+    appState.characterDesign = { loading: false, error: "" };
     normalizeProject(); markDirty(); render();
     return;
   }
   if (action === "select-character") { appState.selection.characterId = id; render(); return; }
+  if (action === "edit-character") {
+    appState.selection.characterId = id;
+    appState.characterEditorOpen = true;
+    appState.characterDesign = { loading: false, error: "" };
+    render();
+    return;
+  }
+  if (action === "close-character-editor") {
+    appState.characterEditorOpen = false;
+    appState.characterDesign = { loading: false, error: "" };
+    render();
+    return;
+  }
+  if (action === "ai-refine-character") {
+    handleRefineCharacter(id);
+    return;
+  }
   if (action === "delete-character") {
     appState.project.character_hub.characters = list(appState.project.character_hub?.characters).filter((item) => item.id !== id);
     appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
     list(appState.project.plot_board?.cards).forEach((card) => { card.character_ids = list(card.character_ids).filter((characterId) => characterId !== id); });
     list(appState.project.scene_workbench?.scenes).forEach((scene) => { if (scene.pov_character_id === id) scene.pov_character_id = ""; });
+    if (appState.characterEditorOpen) appState.characterEditorOpen = false;
     normalizeProject(); markDirty(); render();
     return;
   }
@@ -3337,6 +3399,7 @@ async function handleGenerateWorkbenchCharacters() {
         notes: gen.relationship_hook ?? "",
         archetype: gen.archetype ?? "",
         traits: [],
+        locked_fields: [],
         enneagram: "",
         moral_alignment: "",
         core_drive: "",
@@ -3351,6 +3414,61 @@ async function handleGenerateWorkbenchCharacters() {
   if (protagonist) appState.selection.characterId = protagonist.id;
 
   appState.characterGen = { loading: false, progress: "", error: "" };
+  markDirty();
+  renderCharactersPage(dom, appState, characterGetters);
+}
+
+async function handleRefineCharacter(characterId) {
+  const character = list(appState.project.character_hub?.characters).find((c) => c.id === characterId);
+  if (!character) return;
+
+  appState.characterDesign = { loading: true, error: "" };
+  renderCharactersPage(dom, appState, characterGetters);
+
+  const projectCtx = {
+    project: appState.project.project,
+    story_core: appState.project.story_core,
+    intent_anchor: appState.project.intent_anchor,
+    character_hub: appState.project.character_hub,
+    story_bible: appState.project.story_bible
+  };
+
+  const result = await callGenerateAPI("refine_character", projectCtx, {
+    character,
+    lockedFields: list(character.locked_fields)
+  });
+
+  const refined = result.character
+    ?? result.choices?.[0]?.data?.character
+    ?? result.choices?.[0]?.data;
+
+  if (result.error || !refined || typeof refined !== "object") {
+    appState.characterDesign = {
+      loading: false,
+      error: result.error || "AI 返回内容无法解析"
+    };
+    renderCharactersPage(dom, appState, characterGetters);
+    return;
+  }
+
+  const locked = new Set(list(character.locked_fields));
+  const writableKeys = [
+    "name", "story_role",
+    "external_goal", "dramatic_need", "contradiction", "pressure_point", "secret",
+    "notes", "starting_mask", "arc_start", "arc_end",
+    "enneagram", "moral_alignment", "core_drive"
+  ];
+  for (const key of writableKeys) {
+    if (locked.has(key)) continue;
+    if (refined[key] == null) continue;
+    const value = String(refined[key] ?? "");
+    if (value) character[key] = value;
+  }
+  if (!locked.has("traits") && Array.isArray(refined.traits) && refined.traits.length) {
+    character.traits = refined.traits.map((t) => String(t));
+  }
+
+  appState.characterDesign = { loading: false, error: "" };
   markDirty();
   renderCharactersPage(dom, appState, characterGetters);
 }

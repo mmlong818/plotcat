@@ -6023,3 +6023,412 @@ body[data-mode="creation"] {
 }
 .cf-confirm-act-title { font-weight: 500; }
 .cf-confirm-act-count { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+/* ============================================================
+   A 轮 · 视觉层级与节奏升级
+   目标：建立强层级对比、引入卡片呼吸感、统一留白节拍
+   ============================================================ */
+
+/* ── A1 · Typography 层级对比 ─────────────────────────────── */
+
+/* card 头部 h3 从 0.95rem 提升为可读主标题 */
+.summary-card .list-card__head > div > h3,
+.summary-card > .list-card__head h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+}
+
+/* eyebrow/section-label 加细节：更窄更轻，与主标题拉开对比 */
+.summary-card .section-label,
+.summary-card .eyebrow {
+  font-size: 0.645rem;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+/* 编辑器中的 section-label（动机与秘密/弧光变化/心理剖面 等）
+   改为带装饰线的分组头，形成强视觉区隔 */
+.character-workbench--editor section > .section-label:not(.section-label--row),
+.character-workbench--editor section > .section-label--row,
+.relationship-workbench--dual section > .section-label:not(.section-label--row) {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.character-workbench--editor section > .section-label:not(.section-label--row)::after,
+.relationship-workbench--dual section > .section-label:not(.section-label--row)::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-accent), transparent 70%);
+}
+
+/* field label 更紧凑、字重稍提 */
+.character-workbench--editor label,
+.relationship-workbench--dual label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-2);
+  letter-spacing: 0.02em;
+}
+
+/* ── A2 · Card 视觉语言 ──────────────────────────────────── */
+
+/* summary-card 增加呼吸感 + hover 微抬 */
+.summary-card {
+  padding: 18px 20px;
+  transition: box-shadow 200ms ease, border-color 200ms ease, transform 200ms ease;
+}
+.summary-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+/* 列表卡片 head 下方加细分割线，划分 head 与 body */
+.summary-card .list-card__head {
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+/* 但：compact card 和只有 head 的场合不加线 */
+.summary-card.summary-card--compact .list-card__head,
+.summary-card .list-card__head:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+
+/* list-select 左侧 accent bar（激活态）—— 比纯底色更有选中感 */
+.list-select {
+  position: relative;
+  padding-left: 14px;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+}
+.list-select::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10%;
+  bottom: 10%;
+  width: 3px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background 140ms ease;
+}
+.list-select:hover {
+  transform: translateX(1px);
+  box-shadow: 0 1px 3px rgba(40, 30, 15, 0.06);
+}
+.list-select.is-active::before {
+  background: var(--accent);
+}
+
+/* 人物卡 & 其他 card hover 轻抬 */
+.char-card {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.char-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(40, 30, 15, 0.08);
+}
+
+/* char-card head 与 summary 之间加 subtle 分隔感 */
+.char-card__summary {
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  margin-top: 2px;
+}
+
+/* ── A3 · 留白节奏 ────────────────────────────────────────── */
+
+/* .stack 间距按层级区分 */
+.summary-card > .stack { gap: 22px; }
+.character-workbench--editor .stack,
+.relationship-workbench--dual .stack { gap: 26px; }
+
+/* section 内部 form-grid 更紧凑 */
+.character-workbench--editor section > .form-grid,
+.relationship-workbench--dual section > .form-grid {
+  gap: 12px;
+}
+.character-workbench--editor section > .form-grid.form-grid--compact,
+.relationship-workbench--dual section > .form-grid.form-grid--compact {
+  gap: 10px 14px;
+}
+
+/* 工作台三栏之间加强间距节奏 */
+.character-workbench--triple,
+.scene-workbench--triple,
+.relationship-workbench--triple,
+.relationship-workbench--dual {
+  gap: 18px;
+}
+
+/* ── A4 · Input 聚焦微反馈（A 轮顺手） ─────────────────────── */
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  outline: none;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+/* ============================================================
+   B 轮 · 色彩系统语义化
+   六步工作流各赋一个辅色；当前步骤通过 body[data-active-step]
+   注入 --step-hue / --step-hue-soft，让全局 accent 呼吸感带上
+   "我在哪一步" 的身份感
+   ============================================================ */
+
+/* 默认：无 step 时沿用全局 accent */
+:root {
+  --step-hue: var(--accent);
+  --step-hue-soft: var(--accent-soft);
+  --step-hue-glow: var(--accent-glow);
+}
+
+body[data-active-step="structure"] {
+  --step-hue: #3d5a80;            /* 炭蓝 · 结构骨架 */
+  --step-hue-soft: rgba(61, 90, 128, 0.10);
+  --step-hue-glow: rgba(61, 90, 128, 0.22);
+}
+body[data-active-step="characters"] {
+  --step-hue: #ba5616;            /* 暖橙 · 人物核心（同系统 accent） */
+  --step-hue-soft: rgba(186, 86, 22, 0.10);
+  --step-hue-glow: rgba(186, 86, 22, 0.22);
+}
+body[data-active-step="relationships"] {
+  --step-hue: #6a3a8a;            /* 深紫 · 关系张力 */
+  --step-hue-soft: rgba(106, 58, 138, 0.10);
+  --step-hue-glow: rgba(106, 58, 138, 0.22);
+}
+body[data-active-step="plots"] {
+  --step-hue: #2e6e4b;            /* 墨绿 · 剧情开发 */
+  --step-hue-soft: rgba(46, 110, 75, 0.10);
+  --step-hue-glow: rgba(46, 110, 75, 0.22);
+}
+body[data-active-step="locks"] {
+  --step-hue: #a8751c;            /* 金棕 · 沉淀锁定 */
+  --step-hue-soft: rgba(168, 117, 28, 0.10);
+  --step-hue-glow: rgba(168, 117, 28, 0.22);
+}
+body[data-active-step="scenes"] {
+  --step-hue: #2b5f8a;            /* 靛青 · 场景拆解 */
+  --step-hue-soft: rgba(43, 95, 138, 0.10);
+  --step-hue-glow: rgba(43, 95, 138, 0.22);
+}
+
+/* 导航激活态使用 step-hue */
+body[data-active-step] .step-button.is-active {
+  background: var(--step-hue);
+  border-color: var(--step-hue);
+  color: #fff;
+  box-shadow: 0 2px 10px var(--step-hue-glow);
+}
+body[data-active-step] .step-button.is-active .step-button__count {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+body[data-active-step] .step-button.is-active .step-button__label {
+  color: #fff;
+}
+
+/* 编辑器 section 分组头颜色跟随 step-hue */
+body[data-active-step] .character-workbench--editor section > .section-label:not(.section-label--row),
+body[data-active-step] .relationship-workbench--dual section > .section-label:not(.section-label--row) {
+  color: var(--step-hue);
+}
+body[data-active-step] .character-workbench--editor section > .section-label:not(.section-label--row)::after,
+body[data-active-step] .relationship-workbench--dual section > .section-label:not(.section-label--row)::after {
+  background: linear-gradient(to right, var(--step-hue-glow), transparent 70%);
+}
+
+/* list-select 激活左条跟随 step-hue */
+body[data-active-step] .list-select.is-active::before {
+  background: var(--step-hue);
+}
+
+/* 人物卡 role label、tab button 激活态 */
+body[data-active-step] .char-card__role {
+  color: var(--step-hue);
+}
+body[data-active-step] .tab-button.is-active {
+  color: var(--step-hue);
+  border-bottom-color: var(--step-hue);
+}
+
+/* Input 聚焦 glow 使用 step-hue */
+body[data-active-step] input[type="text"]:focus,
+body[data-active-step] input[type="number"]:focus,
+body[data-active-step] textarea:focus,
+body[data-active-step] select:focus {
+  border-color: var(--step-hue);
+  box-shadow: 0 0 0 3px var(--step-hue-soft);
+}
+
+/* 选中项目卡片、主按钮（仅工作台内）悬停使用 step-hue */
+body[data-active-step] .char-card:hover {
+  border-color: var(--step-hue);
+}
+
+/* ============================================================
+   C 轮 · 微交互与状态反馈
+   ============================================================ */
+
+/* ── C1 · 按钮阶梯反馈 ──────────────────────────────────── */
+
+.button {
+  transition: background 160ms ease, border-color 160ms ease,
+              color 160ms ease, box-shadow 160ms ease,
+              transform 80ms ease;
+}
+.button:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
+}
+.button--ghost:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+.button--tiny:active:not(:disabled) {
+  transform: translateY(1px) scale(0.97);
+}
+
+/* ── C2 · 保存按钮状态 pill ─────────────────────────────── */
+
+/* 已同步 / 待保存 / 保存中 — 在 hero 区 chip 上加视觉差异 */
+.chip--save {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background 200ms ease, color 200ms ease;
+}
+.chip--save-synced {
+  background: var(--success-soft);
+  color: var(--success);
+  border-color: transparent;
+}
+.chip--save-synced::before {
+  content: "✓ ";
+  font-weight: 700;
+}
+.chip--save-dirty {
+  background: var(--warning-soft);
+  color: var(--warning);
+  border-color: transparent;
+  animation: dirtyPulse 1.8s ease-in-out infinite;
+}
+.chip--save-dirty::before {
+  content: "● ";
+  font-weight: 700;
+}
+.chip--save-saving {
+  background: var(--info-soft);
+  color: var(--info);
+  border-color: transparent;
+}
+.chip--save-saving::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-top-color: transparent;
+  vertical-align: middle;
+  animation: saveSpin 700ms linear infinite;
+}
+
+@keyframes dirtyPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+@keyframes saveSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* Save button 自身 dirty 态：主色 + subtle glow */
+.button--primary.is-dirty {
+  box-shadow: 0 0 0 3px var(--warning-soft), 0 2px 8px var(--accent-glow);
+}
+.button--primary.is-saving {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+/* ── C3 · AI 生成 skeleton 占位 ─────────────────────────── */
+
+.ai-skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--surface-1) 0%,
+    var(--surface-hover) 50%,
+    var(--surface-1) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--radius-sm);
+  animation: skeletonShimmer 1.4s ease-in-out infinite;
+}
+.ai-skeleton--line { height: 12px; margin: 6px 0; }
+.ai-skeleton--line-short { width: 60%; }
+.ai-skeleton--line-mid { width: 80%; }
+
+@keyframes skeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── C4 · Chip 可点击 hover 反馈 ────────────────────────── */
+
+.ref-chip {
+  transition: background 140ms ease, border-color 140ms ease,
+              color 140ms ease, transform 80ms ease;
+}
+.ref-chip:hover:not(.is-active) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+.ref-chip.is-active {
+  background: var(--step-hue, var(--accent));
+  color: white;
+  border-color: var(--step-hue, var(--accent));
+}
+.ref-chip:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+/* ── C5 · Loading 提示统一样式 ───────────────────────────── */
+
+.scene-summary-hint {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.55;
+  font-style: normal;
+}
+
+/* ── C6 · Runtime status 容器 ──────────────────────────── */
+
+.runtime-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: 10px;
+}
+.runtime-status:empty { display: none; }
+
+
+
