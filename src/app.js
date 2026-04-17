@@ -1614,15 +1614,6 @@ function handleClick(event) {
     _renderProjectCreateForm();
     return;
   }
-  if (action === "toggle-character-trait") {
-    const char = getCharacter();
-    if (char) {
-      const traits = list(char.traits);
-      char.traits = traits.includes(id) ? traits.filter((t) => t !== id) : [...traits, id];
-      markDirty(); render();
-    }
-    return;
-  }
   if (action === "toggle-character-field-lock") {
     const char = getCharacter();
     if (char && id) {
@@ -1689,19 +1680,21 @@ function handleClick(event) {
     return;
   }
   // ── 角色心理剖面事件处理 ──────────────────────────────────────
-  if (action === "select-char-enneagram") {
+  if (action === "select-char-mbti") {
     const char = getCharacter();
-    if (char) { char.enneagram = char.enneagram === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-char-alignment") {
-    const char = getCharacter();
-    if (char) { char.moral_alignment = char.moral_alignment === id ? "" : id; markDirty(); render(); }
+    if (char) { char.mbti = char.mbti === id ? "" : id; markDirty(); render(); }
     return;
   }
   if (action === "select-char-drive") {
     const char = getCharacter();
-    if (char) { char.core_drive = char.core_drive === id ? "" : id; markDirty(); render(); }
+    if (!char) return;
+    // 统一字符串：表示角色追求的需求上限（再次点击同一层清空）
+    const current = Array.isArray(char.core_drive)
+      ? (char.core_drive[char.core_drive.length - 1] ?? "")
+      : (char.core_drive ?? "");
+    char.core_drive = current === id ? "" : id;
+    markDirty();
+    render();
     return;
   }
   // ── 情节元件事件处理 ──────────────────────────────────────────
@@ -1911,7 +1904,12 @@ function handleClick(event) {
     normalizeProject(); markDirty(); render();
     return;
   }
-  if (action === "select-character") { appState.selection.characterId = id; render(); return; }
+  if (action === "select-character") {
+    if (id && id === appState.characterCompareId) appState.characterCompareId = null;
+    appState.selection.characterId = id;
+    render();
+    return;
+  }
   if (action === "edit-character") {
     appState.selection.characterId = id;
     appState.characterEditorOpen = true;
@@ -1922,6 +1920,11 @@ function handleClick(event) {
   if (action === "close-character-editor") {
     appState.characterEditorOpen = false;
     appState.characterDesign = { loading: false, error: "" };
+    render();
+    return;
+  }
+  if (action === "clear-character-compare") {
+    appState.characterCompareId = null;
     render();
     return;
   }
@@ -2146,6 +2149,11 @@ function handleChange(event) {
     card.scenario_group_id = event.target.value || null;
     appState.activeScenarioGroupId = card.scenario_group_id || appState.activeScenarioGroupId;
     markDirty(); render();
+    return;
+  }
+  if (event.target.dataset.action === "set-character-compare") {
+    appState.characterCompareId = event.target.value || null;
+    render();
     return;
   }
   handleInput(event);
@@ -3400,8 +3408,7 @@ async function handleGenerateWorkbenchCharacters() {
         archetype: gen.archetype ?? "",
         traits: [],
         locked_fields: [],
-        enneagram: "",
-        moral_alignment: "",
+        mbti: "",
         core_drive: "",
         linked_plot_ids: []
       };
@@ -3456,7 +3463,7 @@ async function handleRefineCharacter(characterId) {
     "name", "story_role",
     "external_goal", "dramatic_need", "contradiction", "pressure_point", "secret",
     "notes", "starting_mask", "arc_start", "arc_end",
-    "enneagram", "moral_alignment", "core_drive"
+    "mbti", "core_drive"
   ];
   for (const key of writableKeys) {
     if (locked.has(key)) continue;
