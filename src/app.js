@@ -3212,7 +3212,8 @@ async function handleGenerateStructureNotes() {
     project: appState.project.project,
     story_core: appState.project.story_core,
     intent_anchor: appState.project.intent_anchor,
-    story_bible: appState.project.story_bible
+    story_bible: appState.project.story_bible,
+    character_hub: appState.project.character_hub
   };
 
   for (let i = 0; i < acts.length; i++) {
@@ -3239,6 +3240,7 @@ async function handleGenerateStructureNotes() {
         for (const node of list(sp.nodes).filter((n) => n.act_id === act.id)) {
           const gen = data.data.nodes[node.node_type];
           if (gen?.summary) {
+            if (gen.story_title) node.title = gen.story_title;
             node.note = gen.value_shift ? `${gen.summary}\n价值转变：${gen.value_shift}` : gen.summary;
           }
         }
