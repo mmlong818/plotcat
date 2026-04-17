@@ -15,7 +15,7 @@ const LOCKABLE_FIELDS = [
   "external_goal", "dramatic_need", "contradiction", "pressure_point", "secret",
   "notes",
   "starting_mask", "arc_start", "arc_end",
-  "traits", "mbti", "moral_alignment", "core_drive"
+  "traits", "mbti", "core_drive"
 ];
 
 function lockBadge(character, fieldKey) {

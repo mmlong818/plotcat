@@ -538,23 +538,6 @@ export const CHARACTER_MBTI_TYPES = [
   { code: "ESFP", name: "表演者", group: "explorer" },
 ];
 
-export const CHARACTER_MORAL_ALIGNMENT = [
-  "守序善良", "中立善良", "混乱善良",
-  "守序中立", "绝对中立", "混乱中立",
-  "守序邪恶", "中立邪恶", "混乱邪恶"
-];
-
-export const CHARACTER_CORE_DRIVE = [
-  "生理需求（生存）",
-  "安全需求（秩序/保障）",
-  "归属与爱（家庭/友谊）",
-  "尊重需求（成就/地位）",
-  "认知需求（知识/理解）",
-  "审美需求（秩序/美感）",
-  "自我实现（潜能/创造）",
-  "超越需求（利他/精神）"
-];
-
 // ── 情节元件库 ───────────────────────────────────────────────
 export const PLOT_MACGUFFIN_OPTIONS  = ["神器", "失落的宝藏", "秘密公式", "致命武器", "关键证人", "神秘地图", "末日装置"];
 export const PLOT_CATALYST_OPTIONS   = ["陌生人来访", "接到任务", "失去亲人", "发现秘密", "被诬陷", "世界异变", "最后通牒", "一个无法拒绝的提议"];
