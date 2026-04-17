@@ -270,8 +270,8 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                       ...list(appState.project.character_hub?.characters).map((character) => `<option value="${escapeHtml(character.id)}" ${character.id === selectedScene.pov_character_id ? "selected" : ""}>${escapeHtml(character.name)}</option>`)
                     ].join("")}</select>`
                   )}
-                  ${inputField("地点", "scene-field", "location", selectedScene.location)}
-                  ${inputField("时段", "scene-field", "time_of_day", selectedScene.time_of_day)}
+                  ${inputField("地点", "scene-field", "location", isBrokenPlaceholderText(selectedScene.location) ? "" : selectedScene.location)}
+                  ${inputField("时段", "scene-field", "time_of_day", isBrokenPlaceholderText(selectedScene.time_of_day) ? "" : selectedScene.time_of_day)}
                   ${selectField("状态", "scene-field", "status", selectedScene.status, Object.entries(sceneStatusLabels))}
                   ${field("关联剧情卡", renderPlotChecklist(appState, selectedScene.linked_plot_card_ids), true)}
                   ${textareaField("场景目的", "scene-field", "purpose", selectedScene.purpose, { rows: 3 })}
@@ -338,6 +338,31 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                 </div>
               `
           }
+          ${(() => {
+            if (!selectedScene) return "";
+            const allChars = list(appState.project.character_hub?.characters);
+            const linkedIds = new Set(linkedCharacters.map((c) => c.id));
+            const sceneText = [selectedScene.purpose, selectedScene.obstacle, selectedScene.beat_summary, selectedScene.script_excerpt].filter(Boolean).join(" ");
+            if (!sceneText) return "";
+            const mentioned = allChars.filter((c) => {
+              if (linkedIds.has(c.id)) return false;
+              const name = (c.name || "").trim();
+              return name.length >= 2 && sceneText.includes(name);
+            });
+            if (!mentioned.length) return "";
+            return `
+              <div class="mentioned-chars-hint">
+                <p class="scene-summary-hint">⚠ 文本中提到但未加入出场（请关联对应剧情卡或设为视角人物）：</p>
+                <div class="chip-wrap chip-wrap--dense" style="margin-top:6px">
+                  ${mentioned.map((c) => `
+                    <button class="ref-chip" type="button" data-action="jump-to-character" data-id="${escapeHtml(c.id)}" title="点击跳转到该角色">
+                      ${escapeHtml(c.name)}
+                    </button>
+                  `).join("")}
+                </div>
+              </div>
+            `;
+          })()}
         </div>
         <div class="summary-card">
           <div class="list-card__head">

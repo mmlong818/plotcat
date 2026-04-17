@@ -165,6 +165,13 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
     tabContent = renderGenresTab(appState);
   }
 
+  const allEmpty = lockedCards.length === 0 && timeline.length === 0 && rules.length === 0 && setups.length === 0;
+  const zeroGuide = allEmpty ? `
+    <p class="scene-summary-hint" style="margin: 6px 2px 12px">
+      这里汇集你锁定的剧情、时间节点、世界规则与伏笔——相当于这部戏的「宪法」。从下方任一页签开始添加，或回到「剧情开发」把关键剧情卡设为「锁定」。
+    </p>
+  ` : "";
+
   dom.locksContent.innerHTML = `
     <section class="lock-workbench">
       <div class="bible-overview-grid">
@@ -173,6 +180,7 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
         <article class="metric-card"><span class="metric-card__label">世界规则</span><strong class="metric-card__value ${rules.length === 0 ? "metric-card__value--zero" : ""}">${rules.length}</strong></article>
         <article class="metric-card"><span class="metric-card__label">伏笔</span><strong class="metric-card__value ${setups.length === 0 ? "metric-card__value--zero" : ""}">${setups.length}</strong></article>
       </div>
+      ${zeroGuide}
       ${tabBar}
       ${tabContent}
     </section>

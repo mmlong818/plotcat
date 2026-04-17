@@ -111,10 +111,13 @@ export const projectStatusLabels = {
 
 export const storyRoleLabels = {
   protagonist: "主角",
-  supporting: "配角",
+  deuteragonist: "次主角",
+  antagonist: "对手",
   ally: "盟友",
   opponent_ally: "复杂盟友",
-  antagonist: "对手"
+  supporting: "配角",
+  mentor: "导师",
+  love_interest: "情感对象"
 };
 
 // ── 叙事风格选项 ──────────────────────────────────────────────
@@ -590,6 +593,9 @@ export const appState = {
   resetConfirmPending: false,
   creation: null,
   createModePickerOpen: false,
+  projectDeleteConfirmId: null,
+  characterEditorOpen: false,
+  characterDesign: { loading: false, error: "" },
   proCreation: {
     step: "anchor",
     anchor: "",

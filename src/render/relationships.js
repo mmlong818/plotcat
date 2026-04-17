@@ -64,7 +64,7 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
         <div class="summary-card">
           <div class="list-card__head">
             <div>
-              <p class="section-label">关系网</p>
+              <p class="section-label">关系网 · 按角色分组</p>
               <h3>${relationships.length} 条关系</h3>
             </div>
             <button class="button button--ghost button--tiny" type="button" data-action="add-relationship">新增</button>
