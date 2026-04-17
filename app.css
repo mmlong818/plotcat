@@ -2300,116 +2300,9 @@ a { color: var(--accent); text-decoration: none; }
   font-size: 0.72rem;
 }
 
-/* ── Character card grid (default view) ────────────────────── */
-
-.character-workbench--cards,
-.character-workbench--editor {
-  display: block;
-}
-
-.character-workbench--editor .summary-card {
-  max-width: 1100px;
-  margin: 0 auto;
-}
-
+/* 关系编辑器限宽（人物 split 编辑器由 D 轮控制） */
 .relationship-workbench--dual .workbench-pane--main .summary-card {
   max-width: 1100px;
-}
-
-.char-grid-section + .char-grid-section { margin-top: 18px; }
-
-.char-grid-section__label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin: 0 0 8px;
-}
-
-.char-card-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.char-card-grid > .char-card {
-  flex: 1 1 280px;
-  max-width: 360px;
-}
-
-.char-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-1);
-  padding: 12px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  transition: border-color 160ms ease, box-shadow 160ms ease;
-}
-.char-card:hover {
-  border-color: var(--border-strong);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
-}
-
-.char-card__head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.char-card__identity {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.char-card__name {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--ink-1);
-}
-
-.char-card__role {
-  font-size: 0.7rem;
-  letter-spacing: 0.06em;
-  color: var(--accent);
-  text-transform: uppercase;
-}
-
-.char-card__actions {
-  display: inline-flex;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.char-card__summary {
-  font-size: 0.82rem;
-  color: var(--ink-2);
-  line-height: 1.5;
-  margin: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.char-card__arc {
-  font-size: 0.76rem;
-  color: var(--ink-2);
-  margin: 0;
-  padding-top: 6px;
-  border-top: 1px dashed var(--border);
-}
-
-.char-card__arc-label {
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-right: 4px;
 }
 
 /* ── Field lock toggle ─────────────────────────────────────── */
@@ -2462,54 +2355,6 @@ a { color: var(--accent); text-decoration: none; }
   font-size: 0.75rem;
   color: var(--muted);
   align-self: center;
-}
-
-/* ── Archetype groups (legacy, not rendered in design workbench) ── */
-
-.archetype-section { display: flex; flex-direction: column; gap: 4px; }
-
-.archetype-selected-hint {
-  font-size: 0.8rem;
-  color: var(--ink-2);
-  margin-bottom: 4px;
-}
-.archetype-selected-hint strong { color: var(--accent); }
-
-.archetype-group {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-.archetype-group[open] { border-color: var(--border-strong); }
-
-.archetype-group__label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  background: var(--surface-1);
-  cursor: pointer;
-  user-select: none;
-  list-style: none;
-}
-.archetype-group__label::-webkit-details-marker { display: none; }
-.archetype-group__label::after {
-  content: "▸";
-  margin-left: auto;
-  transition: transform 180ms ease;
-}
-.archetype-group[open] .archetype-group__label::after {
-  transform: rotate(90deg);
-}
-
-.archetype-group .chip-wrap {
-  padding: 8px 10px;
-  gap: 4px;
-  background: var(--surface-2);
 }
 
 .ref-chip--sm {
@@ -3040,45 +2885,11 @@ a { color: var(--accent); text-decoration: none; }
   font-size: 1rem;
 }
 
-/* ── Character Psychology Section ─────────────────────────── */
-
-.psych-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.psych-block {}
 
 .psych-block__label {
   font-size: 0.75rem;
   color: var(--muted);
   margin: 0 0 6px;
-}
-
-.alignment-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-
-.alignment-cell {
-  padding: 5px 4px;
-  font-size: 0.73rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  background: var(--surface-1);
-  color: var(--text-secondary);
-  cursor: pointer;
-  text-align: center;
-  transition: all 140ms ease;
-  white-space: nowrap;
-}
-.alignment-cell:hover { border-color: var(--accent); color: var(--accent); }
-.alignment-cell.is-active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
 }
 
 /* ── Plot Element Library Section ─────────────────────────── */
@@ -3107,7 +2918,6 @@ a { color: var(--accent); text-decoration: none; }
 @media (max-width: 700px) {
   .weave-row,
   .element-row { grid-template-columns: 1fr; }
-  .alignment-grid { grid-template-columns: repeat(3, 1fr); }
 }
 
 
@@ -6096,7 +5906,7 @@ body[data-mode="creation"] {
 }
 
 /* field label 更紧凑、字重稍提 */
-.character-workbench--editor label,
+.character-workbench label,
 .relationship-workbench--dual label {
   font-size: 0.72rem;
   font-weight: 600;
@@ -6155,35 +5965,19 @@ body[data-mode="creation"] {
   background: var(--accent);
 }
 
-/* 人物卡 & 其他 card hover 轻抬 */
-.char-card {
-  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
-}
-.char-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(40, 30, 15, 0.08);
-}
-
-/* char-card head 与 summary 之间加 subtle 分隔感 */
-.char-card__summary {
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
-  margin-top: 2px;
-}
-
 /* ── A3 · 留白节奏 ────────────────────────────────────────── */
 
 /* .stack 间距按层级区分 */
 .summary-card > .stack { gap: 22px; }
-.character-workbench--editor .stack,
+.character-workbench .stack,
 .relationship-workbench--dual .stack { gap: 26px; }
 
 /* section 内部 form-grid 更紧凑 */
-.character-workbench--editor section > .form-grid,
+.character-workbench section > .form-grid,
 .relationship-workbench--dual section > .form-grid {
   gap: 12px;
 }
-.character-workbench--editor section > .form-grid.form-grid--compact,
+.character-workbench section > .form-grid.form-grid--compact,
 .relationship-workbench--dual section > .form-grid.form-grid--compact {
   gap: 10px 14px;
 }
@@ -6534,12 +6328,6 @@ body[data-active-step] .char-card:hover {
 }
 .char-rail-item.is-compare::before { background: var(--step-hue, var(--accent)); opacity: 0.5; }
 
-/* 编辑器 pane 覆盖旧的 editor max-width 规则 */
-.character-workbench--split .char-editor-pane .summary-card {
-  max-width: none;
-  margin: 0;
-}
-
 /* 有 compare 时：编辑器 + compare 并排 */
 .char-editor-pane {
   display: flex;
@@ -6659,14 +6447,8 @@ body[data-active-step] .char-card:hover {
 
 /* ============================================================
    E 轮 · 心理剖面视觉升级
-   九型人格圆盘 · 道德阵营带轴 · 马斯洛八层金字塔
+   MBTI 16 型 · 马斯洛八层需求上限
    ============================================================ */
-
-.psych-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 18px;
-}
 
 .psych-block {
   padding: 10px 12px;
@@ -6684,19 +6466,6 @@ body[data-active-step] .char-card:hover {
 }
 
 /* ── MBTI 16 型 · 紧凑 4×4 网格 ───────────────────── */
-
-/* MBTI + 道德阵营 两栏布局（MBTI 窄一点给阵营更多空间） */
-.psych-grid.psych-grid--two-col {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .psych-grid.psych-grid--two-col {
-    grid-template-columns: 1fr;
-  }
-}
 
 .mbti-board {
   display: flex;
@@ -6895,73 +6664,6 @@ body[data-active-step] .char-card:hover {
 .maslow-chip[data-tooltip]:hover::after,
 .maslow-chip[data-tooltip]:focus-visible::after {
   /* 默认向上；若被遮挡，可手动改方向 */
-}
-
-/* ── 道德阵营带轴 ───────────────────────────────────── */
-
-.alignment-board {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  grid-template-rows: 18px minmax(0, 1fr);
-  gap: 4px;
-  padding: 2px;
-}
-.alignment-axis {
-  display: flex;
-  font-size: 0.6rem;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  text-transform: uppercase;
-  font-weight: 600;
-}
-.alignment-axis--cols {
-  grid-column: 2;
-  grid-row: 1;
-  justify-content: space-around;
-  align-items: center;
-}
-.alignment-axis--rows {
-  grid-column: 1;
-  grid-row: 2;
-  flex-direction: column;
-  justify-content: space-around;
-  align-items: center;
-  text-align: center;
-}
-.alignment-board__grid {
-  grid-column: 2;
-  grid-row: 2;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(3, 1fr);
-  gap: 3px;
-}
-.alignment-cell {
-  appearance: none;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  padding: 8px 4px;
-  border-radius: var(--radius-sm);
-  font-size: 0.76rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 150ms ease;
-  color: var(--ink-2);
-}
-.alignment-cell:hover {
-  border-color: var(--border-strong);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-/* 善良 行浅绿、中立 米色、邪恶 浅红 */
-.alignment-cell--善 { background: rgba(46, 125, 82, 0.08); }
-.alignment-cell--恶 { background: rgba(192, 57, 43, 0.08); }
-.alignment-cell--立 { background: var(--surface-2); }
-.alignment-cell.is-active {
-  background: var(--step-hue, var(--accent));
-  border-color: var(--step-hue, var(--accent));
-  color: #fff;
-  box-shadow: 0 0 0 3px var(--step-hue-soft, var(--accent-soft));
 }
 
 /* ── 马斯洛八层 · 单行多选 ──────────────────────────── */

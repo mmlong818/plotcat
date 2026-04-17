@@ -9,3 +9,7 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# E2E 测试与调试临时产物
+e2e-screenshots/
+screenshots/
