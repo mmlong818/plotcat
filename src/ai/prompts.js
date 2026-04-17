@@ -791,34 +791,54 @@ ${list || '（无幕结构数据）'}
 }
 
 export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
-  const p = projectCtx?.project ?? projectCtx;
-  const title        = p?.project?.title ?? "未命名项目";
-  const logline      = p?.project?.logline ?? p?.story_core?.premise ?? "";
-  const coreConflict = p?.story_bible?.core_conflict ?? p?.story_core?.core_conflict ?? "";
-  const protagonist  = p?.intent_anchor?.protagonist ?? "";
-  const theme        = p?.intent_anchor?.theme ?? p?.story_core?.theme_statement ?? "";
+  // 兼容两种调用格式：
+  //   创建流程: projectCtx.project = { project: draft, ... }
+  //   工作台:   projectCtx.project = { title, logline, ... } (直接元数据)
+  const meta = projectCtx?.project?.project ?? projectCtx?.project ?? {};
+  const sc   = projectCtx?.story_core ?? projectCtx?.project?.story_core ?? {};
+  const ia   = projectCtx?.intent_anchor ?? projectCtx?.project?.intent_anchor ?? {};
+  const sb   = projectCtx?.story_bible ?? projectCtx?.project?.story_bible ?? {};
+
+  const title        = meta?.title ?? "未命名项目";
+  const logline      = meta?.logline ?? sc?.premise ?? "";
+  const coreConflict = sb?.core_conflict ?? sc?.core_conflict ?? "";
+  const protagonist  = ia?.protagonist ?? "";
+  const theme        = ia?.theme ?? sc?.theme_statement ?? "";
+
+  // 提取角色信息
+  const charHub = projectCtx?.character_hub ?? projectCtx?.project?.character_hub ?? {};
+  const bibChars = sb?.characters ?? [];
+  const hubChars = charHub?.characters ?? [];
+  const allChars = hubChars.length > 0 ? hubChars : bibChars;
+  const charLines = allChars.slice(0, 4).map((c) => {
+    const goal = c.external_goal ?? c.external_want ?? c.desire ?? "";
+    const need = c.dramatic_need ?? c.internal_need ?? c.need ?? "";
+    return `- ${c.name}（${c.story_role ?? ""}）：目标=${goal}；需求=${need}`;
+  }).join("\n");
 
   const nodeList = nodes.map(([nodeType, , nodeTitle]) =>
     `- ${nodeTitle}（${nodeType}）`
   ).join("\n");
 
-  const system = `你是一位好莱坞专业编剧顾问，擅长根据故事核心为每个叙事节点提炼关键剧情内容。
-每个节点需要输出：
-- summary：80-120字，描述该节点在故事中发生的核心事件和戏剧转变
-- key_event：一句话，最核心的单一事件
-- value_shift：从什么价值状态→到什么价值状态（McKee价值转变原则）`;
+  const system = `你是一位好莱坞专业编剧顾问，擅长根据故事具体信息为每个叙事节点提炼实际发生的情节。
+严格要求：
+- story_title：不超过12字，必须用本故事的真实人物名+具体行动命名，禁止任何框架术语（如"开场""诱因""转折""建立""危机"等）
+- summary：80-120字，写本故事这个情节点中真实发生的核心事件——具体人物做了什么、发生了什么冲突、造成了什么后果
+- value_shift：本故事在这个节点的具体价值转变（McKee原则）
+如果没有足够的故事信息，宁可根据logline和核心冲突合理推演，也不要使用通用模板描述。`;
 
   const user = `故事信息：
 标题：${title}
-一句话概念：${logline}
-核心冲突：${coreConflict}
-主角：${protagonist}
-主题：${theme}
+一句话概念：${logline || "待定"}
+核心冲突：${coreConflict || "待定"}
+主角：${protagonist || "待定"}
+主题：${theme || "待定"}
+${charLines ? `\n主要角色：\n${charLines}` : ""}
 
 当前幕：${actTitle}
 此幕叙事目的：${actPurpose}
 
-需要生成内容的节点：
+需要生成的节点（括号内是结构框架类型，仅供定位参考，story_title 和 summary 必须写本故事的具体情节，不能照抄框架术语）：
 ${nodeList}
 
 请为每个节点生成内容，以 JSON 格式返回：
@@ -827,9 +847,9 @@ ${nodeList}
 {
   "nodes": {
     "节点type": {
-      "summary": "80-120字描述核心事件和戏剧转变",
-      "key_event": "一句话核心事件",
-      "value_shift": "从X→到Y"
+      "story_title": "本故事角色+具体行动（≤12字）",
+      "summary": "80-120字，本故事在此节点真实发生的事件",
+      "value_shift": "从X→到Y（本故事具体的价值转变）"
     }
   }
 }
