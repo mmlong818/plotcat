@@ -1,5 +1,5 @@
 import { escapeHtml, field, inputField, textareaField, selectField, list } from "../utils.js";
-import { structureTemplateLabels, formatStructureOptions, ENDING_DIRECTION_OPTIONS, NODE_TOOLTIPS } from "../state.js";
+import { structureTemplateLabels, formatStructureOptions, ENDING_DIRECTION_OPTIONS } from "../state.js";
 
 function endingDirectionSelect(current) {
   const options = [["", "— 未定 —"], ...ENDING_DIRECTION_OPTIONS.map((e) => [e, e])];
