@@ -614,6 +614,13 @@ export function createProject(options = {}) {
   return loadProject(savedProject.project.id);
 }
 
+export function deleteProject(projectId) {
+  ensureProjectSeeded();
+  ensureProjectExists(projectId);
+  const db = getDb();
+  db.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
+}
+
 export function resetProject(projectId = null) {
   ensureProjectSeeded();
   const targetProjectId = projectId ?? getFallbackProjectId();

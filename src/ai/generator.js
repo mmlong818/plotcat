@@ -13,6 +13,7 @@ import {
   buildKeyScenesPrompt,
   buildActStructurePrompt,
   buildSingleCharacterPrompt,
+  buildRefineCharacterPrompt,
   buildEvaluateConceptsPrompt,
   buildEvaluateSynopsisPrompt,
   buildEvaluateCharactersPrompt,
@@ -299,7 +300,8 @@ const FORMATTERS = {
   synopsis: formatSynopsisChoices,
   key_scenes: formatKeyScenesChoices,
   act_structure: formatActStructureChoices,
-  single_character: (parsed) => [{ id: makeId(), label: '角色', content: parsed.character?.name ?? '', data: parsed }]
+  single_character: (parsed) => [{ id: makeId(), label: '角色', content: parsed.character?.name ?? '', data: parsed }],
+  refine_character: (parsed) => [{ id: makeId(), label: '修正结果', content: parsed.character?.name ?? '', data: parsed }]
 };
 
 const PROMPT_BUILDERS = {
@@ -315,7 +317,8 @@ const PROMPT_BUILDERS = {
   synopsis: (ctx, opts) => buildSynopsisPrompt(ctx, opts),
   key_scenes: (ctx) => buildKeyScenesPrompt(ctx),
   act_structure: (ctx) => buildActStructurePrompt(ctx),
-  single_character: (ctx, opts) => buildSingleCharacterPrompt(ctx, opts?.existingChars ?? [], opts?.storyRole ?? "supporting")
+  single_character: (ctx, opts) => buildSingleCharacterPrompt(ctx, opts?.existingChars ?? [], opts?.storyRole ?? "supporting"),
+  refine_character: (ctx, opts) => buildRefineCharacterPrompt(ctx, opts?.character ?? {}, opts?.lockedFields ?? [])
 };
 
 export function buildPromptForStep(step, projectContext, options) {

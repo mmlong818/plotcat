@@ -50,6 +50,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
   const oldProjects = sortedProjects.slice(3);
   const renderProjectCard = (item) => {
     const safeTitle = isBrokenPlaceholderText(item.title) ? "未命名项目" : item.title;
+    const confirmingDelete = appState.projectDeleteConfirmId === item.id;
     return `
       <article class="summary-card project-card">
         <div class="project-card__top">
@@ -57,9 +58,23 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
             <h3>${escapeHtml(safeTitle)}</h3>
             <p>${escapeHtml(formatLabels[item.format] ?? item.format)} · ${escapeHtml(projectStatusLabels[item.status] ?? item.status)}</p>
           </div>
-          <button class="button button--ghost button--tiny" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">
-            继续创作
-          </button>
+          <div class="project-card__actions">
+            <button class="button button--ghost button--tiny" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">
+              继续创作
+            </button>
+            ${confirmingDelete ? `
+              <button class="button button--danger button--tiny" type="button" data-action="confirm-delete-project" data-id="${escapeHtml(item.id)}">
+                确认删除
+              </button>
+              <button class="button button--ghost button--tiny" type="button" data-action="cancel-delete-project">
+                取消
+              </button>
+            ` : `
+              <button class="button button--ghost button--tiny project-card__delete" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}" title="删除项目">
+                删除
+              </button>
+            `}
+          </div>
         </div>
         <p class="project-card__logline ${!item.logline ? "project-card__logline--empty" : ""}">${escapeHtml(item.logline || "点击进入，开始定义这个故事的核心。")}</p>
         <div class="tag-row">
