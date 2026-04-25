@@ -11,7 +11,7 @@ fs.mkdirSync(SHOTS_DIR, { recursive: true });
 const log = (m) => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
 const browser = await chromium.launch({ headless: true });
-const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
+const ctx = await browser.newContext({ viewport: { width: 1920, height: 1100 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
 const pageErrors = [];
 page.on('pageerror', (e) => pageErrors.push(e.message));
@@ -48,7 +48,7 @@ for (const stepLabel of checkSteps) {
   await btn.click().catch(e => log(`  click err: ${e.message}`));
   await page.waitForTimeout(900);
   const fname = `step-${stepNum}-${stepName}.png`;
-  await page.screenshot({ path: path.join(SHOTS_DIR, fname), fullPage: true });
+  await page.screenshot({ path: path.join(SHOTS_DIR, fname), fullPage: false });
 
   // 抓主区域可见文本
   const mainTxt = await page.locator('main, body').first().innerText().catch(() => '');

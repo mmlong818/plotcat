@@ -629,7 +629,14 @@ export function ensurePlotDrivenProject(sourceProject) {
     conventions: [],
     taboos: []
   });
-  project.character_hub = clone(project.character_hub, deriveCharacterHub(project.story_bible));
+  // character_hub 始终从 story_bible 派生（external_goal ← external_want 等字段名映射），
+  // 保留已有的 relationship_map（如果非空）避免覆盖手动添加的关系
+  const derivedHub = deriveCharacterHub(project.story_bible);
+  const existingRelMap = list(project.character_hub?.relationship_map);
+  project.character_hub = {
+    ...derivedHub,
+    relationship_map: existingRelMap.length > 0 ? existingRelMap : derivedHub.relationship_map
+  };
   if (!project.structure_profile) {
     // 完全重建结构 + 卡片
     const derived = buildCardsFromStory(project, createStructureProfile(templateFromProject(project)));
