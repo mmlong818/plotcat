@@ -2640,17 +2640,44 @@ function handleCreationClick(action, target) {
     const field = target.dataset.field ?? "";
     const value = target.value ?? "";
     if (!c.draft) c.draft = {};
+    const prev = c.draft[field] ?? "";
     c.draft[field] = value;
     if (field === "format") {
       const recs = { feature: "feature_film", pilot: "pilot_episode", series: "series_season", short: "short_form", micro_drama: "micro_drama_serial" };
       c.draft.structure_template = recs[value] ?? "feature_film";
+      renderCreationPage();
+      return true;
     }
-    renderCreationPage();
+    // logline：仅在「能否进入下一步」临界点切换时重渲，其他 keystroke 不重建 DOM（避免光标闪烁）
+    if (field === "logline") {
+      const wasValid = prev.trim().length >= 10;
+      const nowValid = value.trim().length >= 10;
+      if (wasValid !== nowValid) renderCreationPage();
+    }
     return true;
   }
 
   if (action === "cf-step1-next") {
     c.currentStep = 2;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+
+  if (action === "cf-step1-ai-suggest") {
+    handleGenerateConceptCF();
+    return true;
+  }
+
+  if (action === "cf-step1-pick-concept") {
+    const idx = parseInt(target.dataset.idx ?? "0", 10);
+    const choice = (c.conceptChoices ?? [])[idx];
+    if (!choice) return true;
+    const d = choice.data ?? {};
+    if (!c.draft) c.draft = {};
+    if (d.title && !c.draft.title) c.draft.title = d.title;
+    if (d.hook) c.draft.logline = d.hook;
+    c.selectedConceptIdx = idx;
     c.aiError = "";
     renderCreationPage();
     return true;
@@ -3122,6 +3149,40 @@ async function handleFinalizeNewCreation() {
 
   setCurrentPage("workflow");
   setCurrentStep("structure");
+}
+
+async function handleGenerateConceptCF() {
+  const c = appState.creation;
+  c.loadingStep = 1;
+  c.aiError = "";
+  c.streamPreview = "";
+  c.conceptChoices = [];
+  renderCreationPage();
+
+  const draft = c.draft ?? {};
+  const conceptHint = (draft.logline || draft.title || "").trim();
+  const result = await callGenerateAPIStream(
+    "concept",
+    {},
+    { genres: c.genres ?? [], conceptHint, era: "", count: 3 },
+    (text) => streamingOnChunk(c, text)
+  );
+
+  if (result.cancelled) return;
+  c.loadingStep = -1;
+  c.streamPreview = "";
+  if (result.error) {
+    c.aiError = result.error;
+  } else {
+    const choices = result.choices ?? [];
+    if (choices.length === 0) {
+      c.aiError = "AI 未返回故事概念，请重试";
+    } else {
+      c.conceptChoices = choices;
+      c.lastReasoning = result.reasoning ?? "";
+    }
+  }
+  renderCreationPage();
 }
 
 async function handleGenerateCharactersCF() {

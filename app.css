@@ -5731,6 +5731,100 @@ body[data-mode="creation"] {
 .cf-confirm-act-title { font-weight: 500; }
 .cf-confirm-act-count { font-size: 12px; color: rgba(255,255,255,0.45); }
 
+/* ── Step 1: AI 概念辅助 ──────────────────────────────────── */
+.cf-label-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 6px;
+}
+.cf-ai-btn {
+  font-size: 12px; padding: 6px 12px;
+  background: linear-gradient(135deg, rgba(200,164,90,0.18), rgba(200,164,90,0.08));
+  border: 1px solid rgba(200,164,90,0.35);
+  color: #c8a45a; border-radius: 6px;
+  cursor: pointer; transition: all 0.18s ease;
+  font-weight: 500;
+}
+.cf-ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, rgba(200,164,90,0.28), rgba(200,164,90,0.14));
+  border-color: rgba(200,164,90,0.55);
+}
+.cf-ai-btn:disabled { opacity: 0.55; cursor: progress; }
+
+.cf-stream-preview {
+  background: rgba(0,0,0,0.04); border: 1px dashed rgba(200,164,90,0.3);
+  border-radius: 8px; padding: 10px 14px; margin-top: 4px;
+}
+.cf-stream-label { font-size: 12px; color: #c8a45a; margin: 0 0 6px; }
+.cf-stream-text {
+  font-size: 12px; color: rgba(0,0,0,0.6); margin: 0;
+  white-space: pre-wrap; max-height: 120px; overflow: hidden;
+  font-family: inherit;
+}
+[data-theme="dark"] .cf-stream-text { color: rgba(255,255,255,0.6); }
+
+.cf-concept-choices { margin-top: 4px; }
+.cf-choices-title {
+  font-size: 13px; color: #6a6055; margin: 0 0 12px;
+  font-weight: 500; letter-spacing: 0.02em;
+}
+[data-theme="dark"] .cf-choices-title { color: #9a9080; }
+
+.cf-choices-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.cf-choice-card {
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px; padding: 14px 16px;
+  display: flex; flex-direction: column; gap: 8px;
+  transition: all 0.18s ease;
+}
+.cf-choice-card:hover {
+  border-color: rgba(200,164,90,0.5);
+  box-shadow: 0 4px 16px rgba(200,164,90,0.12);
+  transform: translateY(-1px);
+}
+[data-theme="dark"] .cf-choice-card {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+}
+[data-theme="dark"] .cf-choice-card:hover { border-color: rgba(200,164,90,0.4); }
+
+.cf-choice-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.cf-choice-tag {
+  font-size: 10px; padding: 2px 8px; border-radius: 4px;
+  background: rgba(200,164,90,0.15); color: #c8a45a;
+  letter-spacing: 0.04em; font-weight: 600;
+}
+.cf-choice-title { font-size: 15px; color: #2a2620; }
+[data-theme="dark"] .cf-choice-title { color: #e0d8c8; }
+
+.cf-choice-hook {
+  font-size: 13px; color: rgba(0,0,0,0.78); margin: 0;
+  line-height: 1.5;
+}
+[data-theme="dark"] .cf-choice-hook { color: rgba(255,255,255,0.78); }
+
+.cf-choice-meta {
+  font-size: 12px; color: rgba(0,0,0,0.55); margin: 0;
+  line-height: 1.5;
+}
+.cf-choice-meta b { color: rgba(0,0,0,0.7); font-weight: 500; }
+[data-theme="dark"] .cf-choice-meta { color: rgba(255,255,255,0.55); }
+[data-theme="dark"] .cf-choice-meta b { color: rgba(255,255,255,0.7); }
+
+.cf-choice-pick {
+  margin-top: auto; align-self: flex-start;
+  font-size: 12px; padding: 6px 14px;
+  background: rgba(200,164,90,0.92); color: #fff;
+  border: none; border-radius: 6px;
+  cursor: pointer; font-weight: 500;
+  transition: all 0.18s ease;
+}
+.cf-choice-pick:hover { background: #c8a45a; }
+
+
 /* ============================================================
    A 轮 · 视觉层级与节奏升级
    目标：建立强层级对比、引入卡片呼吸感、统一留白节拍

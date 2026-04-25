@@ -137,6 +137,9 @@ function renderStep1(creation) {
   const logline     = creation.draft?.logline ?? "";
   const protagonist = creation.draft?.protagonist ?? "";
   const canProceed  = logline.trim().length >= 10;
+  const isLoadingConcept = creation.loadingStep === 1;
+  const conceptChoices   = creation.conceptChoices ?? [];
+  const stream           = creation.streamPreview ?? "";
 
   return `
     <div class="cf-section">
@@ -147,7 +150,7 @@ function renderStep1(creation) {
           <span class="cf-deco-text">故事核心</span>
           <span class="cf-deco-line"></span>
         </h2>
-        <p class="cf-step-sub">告诉 AI 你要讲什么故事</p>
+        <p class="cf-step-sub">告诉 AI 你要讲什么故事 — 也可以让 AI 先帮你想几个方向</p>
       </div>
 
       <div class="cf-form-stack">
@@ -169,11 +172,50 @@ function renderStep1(creation) {
         </div>
 
         <div class="cf-field">
-          <label class="cf-label">一句话概念 <span class="cf-label-req">必填</span></label>
+          <div class="cf-label-row">
+            <label class="cf-label">一句话概念 <span class="cf-label-req">必填</span></label>
+            <button class="cf-ai-btn" type="button"
+              data-action="cf-step1-ai-suggest"
+              ${isLoadingConcept ? "disabled" : ""}
+              title="基于已填字段，让 AI 生成 3 个方向">
+              ${isLoadingConcept ? "AI 思考中…" : "✨ AI 帮我想几个"}
+            </button>
+          </div>
           <textarea class="cf-textarea" rows="3"
-            placeholder="主角是谁、面对什么困境、核心冲突是什么…（至少10字）"
+            placeholder="主角是谁、面对什么困境、核心冲突是什么…（至少10字，也可点上方按钮让 AI 起草）"
             data-action="cf-set-draft-field" data-field="logline">${escapeHtml(logline)}</textarea>
         </div>
+
+        ${isLoadingConcept && stream ? `
+          <div class="cf-stream-preview">
+            <p class="cf-stream-label">AI 流式生成中…</p>
+            <pre class="cf-stream-text">${escapeHtml(stream.slice(-400))}</pre>
+          </div>
+        ` : ""}
+
+        ${conceptChoices.length > 0 ? `
+          <div class="cf-concept-choices">
+            <p class="cf-choices-title">AI 给你的 ${conceptChoices.length} 个方向 · 选一个填回概念</p>
+            <div class="cf-choices-grid">
+              ${conceptChoices.map((choice, idx) => {
+                const d = choice.data ?? {};
+                return `
+                  <article class="cf-choice-card">
+                    <header class="cf-choice-head">
+                      <span class="cf-choice-tag">${escapeHtml(choice.label ?? `方案${idx + 1}`)}</span>
+                      <strong class="cf-choice-title">${escapeHtml(d.title ?? "（无标题）")}</strong>
+                    </header>
+                    <p class="cf-choice-hook">${escapeHtml(d.hook ?? "")}</p>
+                    ${d.core_conflict ? `<p class="cf-choice-meta"><b>核心冲突：</b>${escapeHtml(d.core_conflict)}</p>` : ""}
+                    ${d.unique_angle ? `<p class="cf-choice-meta"><b>独特视角：</b>${escapeHtml(d.unique_angle)}</p>` : ""}
+                    <button class="cf-choice-pick" type="button"
+                      data-action="cf-step1-pick-concept" data-idx="${idx}">采用此方向</button>
+                  </article>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        ` : ""}
 
         <div class="cf-field">
           <label class="cf-label">主角 <span class="cf-label-opt">（可选）</span></label>
