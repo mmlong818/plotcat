@@ -965,3 +965,151 @@ ${nodeList}
 
   return { system, user };
 }
+
+// ── 关系网（含权力/历史/隐情） ────────────────────────────────────────
+export function buildRelationshipsPrompt(context, options) {
+  const { characters = [], concept = {}, synopsis = {} } = context ?? {};
+  const charList = characters.map((c, i) => `${i+1}. ${c.name}（${c.story_role ?? "supporting"}）— ${c.archetype ?? c.public_mask ?? ""}`).join("\n");
+
+  const system = `你是关系网设计师，擅长为剧本设计富有戏剧张力的人物关系。
+字符串内部禁止使用英文双引号，用书名号《》代替。`;
+
+  const user = `项目概念：${concept.title ?? ""} — ${concept.hook ?? ""}
+${synopsis.summary ? `梗概：${synopsis.summary}\n` : ""}
+角色名单：
+${charList}
+
+请为这些角色之间设计 3-6 条关键关系（不一定每两人都要有，挑最有戏剧张力的）。
+
+输出JSON格式（每个字段都要填实）：
+\`\`\`json
+{
+  "relationships": [
+    {
+      "source_character_name": "源角色名（必须用上方名单中的名字）",
+      "target_character_name": "目标角色名",
+      "relationship_type": "ally / antagonist / mentor / lover / rival / family / superior 等",
+      "tension": "核心张力：他们之间最戏剧性的矛盾点（一句话）",
+      "power_balance": "权力关系：谁掌握主动权，为什么；权力会如何在故事中翻转",
+      "shared_history": "共同过去：他们以前发生过什么，留下了什么羁绊或心结",
+      "hidden_information": "隐情：一方对另一方隐瞒的关键事实（推动悬念）"
+    }
+  ],
+  "reasoning": "关系设计思路"
+}
+\`\`\`
+
+每个字段都要填实，禁止空字符串。`;
+
+  return { system, user };
+}
+
+// ── 世界规则（5-8 条） ────────────────────────────────────────────
+export function buildWorldRulesPrompt(context) {
+  const { genres = [], concept = {}, synopsis = {} } = context ?? {};
+
+  const system = `你是世界观架构师，擅长提炼独特、可被打破的世界规则。
+字符串内部禁止使用英文双引号，用书名号《》代替。`;
+
+  const user = `类型：${genres.join("、") || "不限"}
+概念：${concept.title ?? ""} — ${concept.hook ?? ""}
+${synopsis.summary ? `梗概：${synopsis.summary}\n` : ""}
+
+请为这个故事提炼 5-8 条「世界规则」——这部作品独有的运行法则、社会规范、超自然约束或行业潜规则。
+好的世界规则应当：① 可被打破（违反时产生戏剧）② 影响主角决策 ③ 区别于普通现实
+
+输出JSON格式（每个字段都要填实）：
+\`\`\`json
+{
+  "world_rules": [
+    {
+      "rule_statement": "规则陈述：一句话说清楚这条规则是什么",
+      "rule_level": "natural / social / supernatural / institutional 之一",
+      "scope": "适用范围：什么人、什么场合受这条规则约束",
+      "exceptions": ["例外情形 1", "例外情形 2"],
+      "evidence": ["故事中能体现这条规则的具体场景或对白线索"]
+    }
+  ],
+  "reasoning": "为什么这些规则能驱动这个故事的戏剧张力"
+}
+\`\`\`
+
+每条规则都要填实 exceptions 和 evidence 数组（至少 1 项）。`;
+
+  return { system, user };
+}
+
+// ── 时间线事件（剧情前 + 剧情中关键时间锚点） ────────────────────
+export function buildTimelineEventsPrompt(context) {
+  const { concept = {}, synopsis = {}, characters = [] } = context ?? {};
+  const protagonist = characters[0]?.name ?? "主角";
+
+  const system = `你是剧本时间线设计师，擅长梳理故事中的关键时间事件。
+字符串内部禁止使用英文双引号，用书名号《》代替。`;
+
+  const user = `概念：${concept.title ?? ""} — ${concept.hook ?? ""}
+${synopsis.summary ? `梗概：${synopsis.summary}\n` : ""}
+主角：${protagonist}
+
+请为这个故事整理 6-10 条关键时间线事件，覆盖：
+- 剧情开始前的「前史事件」（造就主角现状的过去）
+- 剧情中的关键时间锚点（主线推进的节点）
+
+输出JSON格式（每个字段都要填实）：
+\`\`\`json
+{
+  "timeline_events": [
+    {
+      "story_day": "时间标签（如：剧情前 12 年 / 第 1 天 / 第 7 天 / 剧情后 1 月 等）",
+      "sequence_index": 1,
+      "summary": "事件梗概：发生了什么",
+      "participants": ["参与角色名 1", "参与角色名 2"],
+      "location": "发生地点",
+      "trigger": "诱因：什么促成了这件事",
+      "consequence": "后果：这件事改变了什么，为后续埋下了什么"
+    }
+  ],
+  "reasoning": "时间线整体逻辑说明"
+}
+\`\`\`
+
+sequence_index 从 1 起按时间顺序递增。每个字段都要填实。`;
+
+  return { system, user };
+}
+
+// ── 伏笔/回收（setup-payoff 对） ────────────────────────────────
+export function buildSetupPayoffsPrompt(context) {
+  const { concept = {}, synopsis = {}, scenes = [] } = context ?? {};
+  const sceneTitles = scenes.slice(0, 12).map((s, i) => `${i+1}. ${s.title ?? ""}`).join("\n");
+
+  const system = `你是叙事密度专家，擅长设计前后呼应的伏笔与回收。
+字符串内部禁止使用英文双引号，用书名号《》代替。`;
+
+  const user = `概念：${concept.title ?? ""} — ${concept.hook ?? ""}
+${synopsis.summary ? `梗概：${synopsis.summary}\n` : ""}
+${sceneTitles ? `已有关键场景：\n${sceneTitles}\n` : ""}
+
+请为这个故事设计 4-6 组「伏笔—回收」（setup-payoff）。每组都要：
+- setup 在故事前段不动声色地埋下（看似无关、容易被忽略）
+- payoff 在中后段以惊喜方式回收（让观众恍然大悟）
+
+输出JSON格式（每个字段都要填实）：
+\`\`\`json
+{
+  "setup_payoffs": [
+    {
+      "setup_summary": "伏笔：早期某一刻发生/出现的细节（必须具体可拍摄）",
+      "expected_payoff_window": "回收时机（如：中点附近 / 第三幕 / 高潮 等）",
+      "status": "planned",
+      "payoff_summary": "回收：这个伏笔最终在哪一刻、以什么方式被激活，让观众恍然大悟"
+    }
+  ],
+  "reasoning": "伏笔/回收整体策略说明"
+}
+\`\`\`
+
+每个字段都要填实。`;
+
+  return { system, user };
+}
