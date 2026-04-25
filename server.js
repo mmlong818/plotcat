@@ -16,6 +16,7 @@ import { getDbInfo } from "./src/server/db.js";
 import {
   createProject,
   createProjectVersion,
+  deleteProject,
   ensureProjectSeeded,
   listProjectVersions,
   listProjects,
@@ -182,6 +183,17 @@ async function handleProjectsApi(request, response, pathname) {
       json(response, 200, { project: loadProject(projectId), projects: listProjects() });
     } catch (error) {
       json(response, 404, { error: error.message });
+    }
+    return true;
+  }
+
+  if (projectMatch && request.method === "DELETE") {
+    try {
+      const projectId = decodeSegment(projectMatch[1]);
+      deleteProject(projectId);
+      json(response, 200, { projects: listProjects() });
+    } catch (error) {
+      json(response, 400, { error: error.message });
     }
     return true;
   }
