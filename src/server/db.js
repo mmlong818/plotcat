@@ -169,6 +169,11 @@ function migrate(db) {
       document_json TEXT NOT NULL,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS app_meta (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
   `);
 
   const projectColumns = db.prepare("PRAGMA table_info(projects)").all();

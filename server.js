@@ -533,27 +533,34 @@ async function handleApi(request, response, pathname) {
         theme_statement:   ""
       };
 
-      // 3. 填充角色
+      // 3. 填充角色 — 兼容新旧 prompt 字段名，缺失时从相邻字段 fallback
       if (Array.isArray(characters) && characters.length > 0) {
-        projectData.story_bible.characters = characters.map((c) => ({
-          id: createId("char"),
-          name: c.name ?? "角色",
-          story_role: c.story_role ?? "supporting",
-          external_want: c.desire ?? c.external_want ?? "",
-          internal_need: c.need ?? c.internal_need ?? "",
-          psychological_flaw: c.psychological_flaw ?? "",
-          moral_flaw: c.moral_flaw ?? "",
-          public_mask: c.public_mask ?? "",
-          core_fear: c.core_fear ?? "",
-          wound: c.wound ?? "",
-          arc_start: c.arc_start ?? "",
-          arc_end: c.arc_end ?? "",
-          voice_rules: [],
-          secret: c.secret ?? ""
-        }));
+        projectData.story_bible.characters = characters.map((c) => {
+          const fallbackPsych = c.psychological_flaw || c.belief || ""; // 错误信念 ≈ 心理弱点
+          const fallbackPublic = c.public_mask || c.archetype || "";    // 角色原型 ≈ 公开面具
+          const fallbackVoice = Array.isArray(c.voice_rules) && c.voice_rules.length > 0
+            ? c.voice_rules
+            : (c.voice_signature ? [c.voice_signature] : []);
+          return {
+            id: createId("char"),
+            name: c.name ?? "角色",
+            story_role: c.story_role ?? "supporting",
+            external_want: c.external_want ?? c.desire ?? "",
+            internal_need: c.internal_need ?? c.need ?? "",
+            psychological_flaw: fallbackPsych,
+            moral_flaw: c.moral_flaw ?? "",
+            public_mask: fallbackPublic,
+            core_fear: c.core_fear ?? "",
+            wound: c.wound ?? "",
+            arc_start: c.arc_start ?? "",
+            arc_end: c.arc_end ?? "",
+            voice_rules: fallbackVoice,
+            secret: c.secret ?? ""
+          };
+        });
       }
 
-      // 4. 填充关键剧情点 → scene_cards（保留 conflict/turn）+ beats（链接到 scene_cards）
+      // 4. 填充关键剧情点 → scene_cards + beats — AI 必须返回 location/time_of_day/goal/obstacle/turn
       if (Array.isArray(scenes) && scenes.length > 0) {
         const firstCharId = projectData.story_bible.characters[0]?.id ?? "";
         const sceneCards = scenes.map((s, i) => ({
@@ -561,12 +568,12 @@ async function handleApi(request, response, pathname) {
           order_index: i + 1,
           title: s.title ?? `场景 ${i + 1}`,
           pov_character_id: firstCharId,
-          location: "待定",
-          time_of_day: "待定",
-          goal: s.goal ?? s.scene_goal ?? "",
-          obstacle: s.conflict ?? "",
+          location: s.location || "待定",
+          time_of_day: s.time_of_day || "待定",
+          goal: s.goal ?? s.scene_goal ?? s.core_event ?? "",
+          obstacle: s.obstacle ?? s.conflict ?? "",
           tactic: "",
-          turn: s.turn ?? "",
+          turn: s.turn ?? s.character_change ?? "",
           value_shift: "",
           new_information: [],
           input_state: "",
@@ -580,7 +587,7 @@ async function handleApi(request, response, pathname) {
           id: createId("beat"),
           framework: primaryStructure,
           slot: s.act_position ?? "setup",
-          purpose: s.title ?? s.goal ?? s.scene_goal ?? `剧情点 ${i + 1}`,
+          purpose: s.dramatic_function || s.title || s.core_event || `剧情点 ${i + 1}`,
           linked_scene_ids: [sceneCards[i].id]
         }));
       }
@@ -593,7 +600,7 @@ async function handleApi(request, response, pathname) {
         protagonist: Array.isArray(characters) && characters.length > 0 ? (characters[0]?.name ?? "") : ""
       };
 
-      // 6. 填充 structure_profile（acts + nodes）和 character_hub
+      // 6. 填充 structure_profile（acts + nodes）— 把 scenes 按 act_position/序号分配给节点的 note
       const _preset1 = structurePresets[primaryStructure];
       if (_preset1) {
         const _acts1 = (_preset1.acts ?? []).map((a, i) => ({
@@ -605,6 +612,21 @@ async function handleApi(request, response, pathname) {
           id: createId("node"), node_type: nodeType, title: nodeTitle, required,
           act_id: _actMap1.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
         }));
+        // 按 scenes 顺序均匀分布到 nodes（最稳）：12 个 scenes / 11 个 nodes ≈ 每节点 1 个
+        const sceneList = Array.isArray(scenes) ? scenes : [];
+        if (sceneList.length > 0 && _nodes1.length > 0) {
+          for (let idx = 0; idx < _nodes1.length; idx++) {
+            const sceneIdx = Math.min(Math.floor(idx * sceneList.length / _nodes1.length), sceneList.length - 1);
+            const s = sceneList[sceneIdx];
+            if (!s) continue;
+            const noteParts = [];
+            if (s.title) noteParts.push(s.title);
+            if (s.core_event) noteParts.push(`核心：${s.core_event}`);
+            if (s.character_change) noteParts.push(`变化：${s.character_change}`);
+            if (s.dramatic_function) noteParts.push(`功能：${s.dramatic_function}`);
+            _nodes1[idx].note = noteParts.join("\n");
+          }
+        }
         projectData.structure_profile = { template: primaryStructure, acts: _acts1, nodes: _nodes1 };
       } else {
         projectData.structure_profile = { template: primaryStructure };

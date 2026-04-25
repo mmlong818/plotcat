@@ -105,10 +105,13 @@ function ensureProjectExists(projectId) {
 
 export function ensureProjectSeeded() {
   const db = getDb();
+  const seeded = db.prepare("SELECT value FROM app_meta WHERE key = 'seeded'").get();
+  if (seeded) return;
   const row = db.prepare("SELECT COUNT(*) AS count FROM projects").get();
   if (!row || row.count === 0) {
     saveProject(cloneDefaultProject());
   }
+  db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES ('seeded', '1')").run();
 }
 
 export function listProjects() {

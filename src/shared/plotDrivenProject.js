@@ -630,8 +630,14 @@ export function ensurePlotDrivenProject(sourceProject) {
     taboos: []
   });
   project.character_hub = clone(project.character_hub, deriveCharacterHub(project.story_bible));
-  if (!project.structure_profile || !project.plot_board) {
+  if (!project.structure_profile) {
+    // 完全重建结构 + 卡片
     const derived = buildCardsFromStory(project, createStructureProfile(templateFromProject(project)));
+    project.structure_profile = derived.structure_profile;
+    project.plot_board = derived.plot_board;
+  } else if (!project.plot_board) {
+    // 已有 structure_profile（保留 finalize 写入的 note 等字段），只补 plot_board
+    const derived = buildCardsFromStory(project, project.structure_profile);
     project.structure_profile = derived.structure_profile;
     project.plot_board = derived.plot_board;
   }
