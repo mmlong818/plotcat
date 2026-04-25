@@ -8,7 +8,7 @@ const path = require("path");
 const HOST = "127.0.0.1";
 const PORT = 4173;
 
-function req(method, p, body, timeoutMs = 300_000) {
+function req(method, p, body, timeoutMs = 600_000) {
   return new Promise((resolve, reject) => {
     const data = body ? JSON.stringify(body) : null;
     const options = {
@@ -86,6 +86,41 @@ async function gen(step, ctx, opts) {
   out.steps.key_scenes = sceneList;
   log(`  key_scenes: ${sceneList.length}, titles=${sceneList.slice(0, 3).map(s => s.title).join(" / ")}…`);
 
+  // ── Step 4.5: 关系 / 世界规则 / 时间线 / 伏笔（新增 4 个 step）────────────
+  const ctxForExtras = { ...projectCtx, project: projectCtx.project };
+  // 这 4 个 step 用 context 平铺方式
+  const flatCtx = {
+    genres: ["悬疑", "犯罪"],
+    concept: conceptChoice.data,
+    synopsis: { summary: conceptChoice.data.hook },
+    characters: charList,
+    scenes: sceneList
+  };
+
+  const rels = await gen("relationships", flatCtx, {});
+  const relList = rels.choices[0].data?.relationships ?? [];
+  if (relList.length < 2) fail("relationships <2", rels.choices[0]);
+  log(`  relationships: ${relList.length}`);
+  out.steps.relationships = relList;
+
+  const wrules = await gen("world_rules", flatCtx, {});
+  const worldRuleList = wrules.choices[0].data?.world_rules ?? [];
+  if (worldRuleList.length < 3) fail("world_rules <3", wrules.choices[0]);
+  log(`  world_rules: ${worldRuleList.length}`);
+  out.steps.world_rules = worldRuleList;
+
+  const tline = await gen("timeline_events", flatCtx, {});
+  const timelineList = tline.choices[0].data?.timeline_events ?? [];
+  if (timelineList.length < 4) fail("timeline_events <4", tline.choices[0]);
+  log(`  timeline_events: ${timelineList.length}`);
+  out.steps.timeline_events = timelineList;
+
+  const sp = await gen("setup_payoffs", flatCtx, {});
+  const payoffList = sp.choices[0].data?.setup_payoffs ?? [];
+  if (payoffList.length < 3) fail("setup_payoffs <3", sp.choices[0]);
+  log(`  setup_payoffs: ${payoffList.length}`);
+  out.steps.setup_payoffs = payoffList;
+
   // ── Step 5: finalize → 落库 ────────────────────────────────────────────────
   log("→ finalize");
   const finalize = await req("POST", "/api/creation-flow/finalize", {
@@ -94,7 +129,11 @@ async function gen(step, ctx, opts) {
     synopsis: { summary: conceptChoice.data.hook, version_label: conceptChoice.data.title },
     characters: charList,
     scenes: sceneList,
-    structure: { primary: "three_act", acts }
+    structure: { primary: "three_act", acts },
+    relationships: relList,
+    world_rules: worldRuleList,
+    timeline_events: timelineList,
+    setup_payoffs: payoffList
   });
   if (finalize.status !== 200) fail(`finalize HTTP ${finalize.status}`, finalize.body);
   const projectId = finalize.body.projectId ?? finalize.body.project?.project?.id;
@@ -132,27 +171,7 @@ async function gen(step, ctx, opts) {
   }
   out.steps.scene_weave = wovenScenes;
 
-  // ── Step 8: 派生 relationships → 写到 character_hub.relationship_map（真源）
-  const charSrcMap = new Map((charList || []).map(c => [c.name, c]));
-  const hubChars = p.character_hub?.characters ?? [];
-  const protagonist = hubChars[0];
-  if (protagonist && hubChars.length > 1) {
-    p.character_hub.relationship_map = hubChars.slice(1).map((c, i) => {
-      const src = charSrcMap.get(c.name) ?? {};
-      return {
-        id: `rel_auto_${i}`,
-        source_character_id: protagonist.id,
-        target_character_id: c.id,
-        relationship_type: src.story_role ?? c.story_role ?? "supporting",
-        tension: src.relationship_hook ?? "",
-        power_balance: "",
-        shared_history: "",
-        hidden_information: src.secret ?? "",
-        related_plot_ids: []
-      };
-    });
-    log(`  derived relationship_map: ${p.character_hub.relationship_map.length}`);
-  }
+  // ── Step 8: relationships 已在 finalize 阶段写入（无需再 derive） ──────
 
   // ── Step 9: PUT 全量项目 ──────────────────────────────────────────────────
   log("→ PUT updated project");
@@ -189,8 +208,19 @@ async function gen(step, ctx, opts) {
   });
   const nodes = fp.structure_profile?.nodes ?? [];
   nodes.forEach((n, i) => { if (!n.note || String(n.note).trim() === "") issues.push(`structure.nodes[${i} ${n.title}].note 空`); });
-  const rels = fp.story_bible?.relationships ?? [];
-  if (rels.length === 0) issues.push("relationships 数为 0");
+  const finalRels = fp.story_bible?.relationships ?? [];
+  if (finalRels.length === 0) issues.push("relationships 数为 0");
+  finalRels.forEach((r, i) => {
+    ["power_balance", "shared_history", "hidden_information"].forEach(f => {
+      if (!r[f] || String(r[f]).trim() === "") issues.push(`relationships[${i}].${f} 空`);
+    });
+  });
+  const wr = fp.story_bible?.world_rules ?? [];
+  if (wr.length < 3) issues.push(`world_rules 仅 ${wr.length} 条`);
+  const te = fp.story_bible?.timeline_events ?? [];
+  if (te.length < 4) issues.push(`timeline_events 仅 ${te.length} 条`);
+  const spx = fp.story_bible?.setup_payoffs ?? [];
+  if (spx.length < 3) issues.push(`setup_payoffs 仅 ${spx.length} 组`);
 
   if (issues.length === 0) {
     log("  ✅ 所有字段完整");

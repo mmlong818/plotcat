@@ -510,7 +510,9 @@ async function handleApi(request, response, pathname) {
   if (pathname === "/api/creation-flow/finalize" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
-      const { genres, concept, synopsis, characters, scenes, structure } = body;
+      const { genres, concept, synopsis, characters, scenes, structure,
+              relationships: relList, world_rules: worldRules,
+              timeline_events: timelineEvents, setup_payoffs: setupPayoffs } = body;
       const title = concept?.title ?? synopsis?.version_label ?? "新长片项目";
       const logline = concept?.hook ?? synopsis?.summary ?? "";
       const genreList = Array.isArray(genres) ? genres : [];
@@ -636,6 +638,56 @@ async function handleApi(request, response, pathname) {
       } : { characters: [] };
       projectData.plot_board = null;
       projectData.scene_workbench = null;
+
+      // 7. 写入 relationships（按 source/target_character_name 解析为 id）
+      if (Array.isArray(relList) && relList.length > 0) {
+        const charByName = new Map((projectData.story_bible.characters ?? []).map(c => [c.name, c.id]));
+        projectData.story_bible.relationships = relList.map((r, i) => ({
+          id: createId("rel"),
+          source_character_id: charByName.get(r.source_character_name) ?? "",
+          target_character_id: charByName.get(r.target_character_name) ?? "",
+          relationship_type: r.relationship_type ?? "ally",
+          tension: r.tension ?? "",
+          power_balance: r.power_balance ?? "",
+          shared_history: r.shared_history ?? "",
+          hidden_information: r.hidden_information ?? ""
+        })).filter(r => r.source_character_id && r.target_character_id);
+      }
+
+      // 8. 世界规则 / 时间线 / 伏笔
+      if (Array.isArray(worldRules) && worldRules.length > 0) {
+        projectData.story_bible.world_rules = worldRules.map((w, i) => ({
+          id: createId("rule"),
+          rule_statement: w.rule_statement ?? "",
+          rule_level: w.rule_level ?? "social",
+          scope: w.scope ?? "",
+          exceptions: Array.isArray(w.exceptions) ? w.exceptions : [],
+          evidence: Array.isArray(w.evidence) ? w.evidence : []
+        }));
+      }
+      if (Array.isArray(timelineEvents) && timelineEvents.length > 0) {
+        projectData.story_bible.timeline_events = timelineEvents.map((t, i) => ({
+          id: createId("event"),
+          story_day: t.story_day ?? "",
+          sequence_index: t.sequence_index ?? i + 1,
+          summary: t.summary ?? "",
+          participants: Array.isArray(t.participants) ? t.participants : [],
+          location: t.location ?? "",
+          trigger: t.trigger ?? "",
+          consequence: t.consequence ?? ""
+        }));
+      }
+      if (Array.isArray(setupPayoffs) && setupPayoffs.length > 0) {
+        projectData.story_bible.setup_payoffs = setupPayoffs.map((p, i) => ({
+          id: createId("setup"),
+          setup_summary: p.setup_summary ?? "",
+          setup_scene_id: "",
+          expected_payoff_window: p.expected_payoff_window ?? "",
+          status: p.status ?? "planned",
+          payoff_scene_id: "",
+          payoff_summary: p.payoff_summary ?? ""
+        }));
+      }
 
       const saved = saveProject(projectData);
       const projectId = saved.project?.id ?? saved.id;

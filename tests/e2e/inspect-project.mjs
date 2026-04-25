@@ -4,7 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const PROJECT_ID = 'project_moe93eqh_wsdpcd';
+const PROJECT_ID = 'project_moebvmbl_djrwq8';
 const SHOTS_DIR = path.join(__dirname, 'inspect-shots');
 fs.mkdirSync(SHOTS_DIR, { recursive: true });
 

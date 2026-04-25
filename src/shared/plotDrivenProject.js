@@ -652,16 +652,18 @@ export function ensurePlotDrivenProject(sourceProject) {
     project.scene_workbench,
     deriveSceneWorkbench(project, project.structure_profile, project.plot_board)
   );
-  project.lock_layer = clone(project.lock_layer, {
-    locked_plot_ids: [],
+  // lock_layer.projections 始终从 story_bible 派生（story_bible 是真源）；
+  // 保留已有的 locked_plot_ids 避免覆盖用户在剧情开发页的锁定操作
+  project.lock_layer = {
+    locked_plot_ids: list(project.lock_layer?.locked_plot_ids),
     projections: {
-      characters: [],
-      relationships: [],
+      characters: list(project.character_hub?.characters),
+      relationships: list(project.character_hub?.relationship_map),
       world_rules: clone(project.story_bible.world_rules, []),
       timeline_events: clone(project.story_bible.timeline_events, []),
       setup_payoffs: clone(project.story_bible.setup_payoffs, [])
     }
-  });
+  };
   relinkStructureCards(project);
   relinkCharacters(project);
   syncLegacyStoryBible(project);
