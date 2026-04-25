@@ -101,28 +101,64 @@ export function parseJsonFromText(text) {
   if (codeBlockMatch) {
     raw = codeBlockMatch[1];
   } else {
-    // 提取最后一个完整 {...} 块，避免贪婪匹配到错误位置
-    const lastBrace = text.lastIndexOf('{');
-    raw = lastBrace !== -1 ? text.slice(lastBrace) : text;
-    // 只取到最后一个 } 结束
-    const lastEnd = raw.lastIndexOf('}');
-    raw = lastEnd !== -1 ? raw.slice(0, lastEnd + 1) : raw;
+    // 从首个 { 开始用 brace counter 配对到对应 }，正确处理嵌套数组/对象
+    raw = extractFirstBalancedJson(text) ?? text;
   }
   const trimmed = raw.trim();
   try {
     return JSON.parse(trimmed);
   } catch {
-    // 尝试修复：把字符串值内的未转义英文双引号替换为中文引号
     try {
-      const fixed = trimmed.replace(/"((?:[^"\\]|\\.)*)"/g, (_, inner) => {
-        const repaired = inner.replace(/(?<!\\)"/g, '\\"');
-        return `"${repaired}"`;
-      });
-      return JSON.parse(fixed);
+      return JSON.parse(repairLLMJsonQuotes(trimmed));
     } catch {
       return { raw: text };
     }
   }
+}
+
+// 从文本中提取第一个 brace 平衡的 {...} 片段
+function extractFirstBalancedJson(text) {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escapeNext) { escapeNext = false; continue; }
+    if (ch === "\\") { escapeNext = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return null;
+}
+
+// 修复 LLM 返回的 JSON 中，字符串值内嵌未转义的英文双引号
+// 状态机：遇到 string 中的 "，若后续非空白非 : , } ] 则视为内嵌引号转义
+function repairLLMJsonQuotes(text) {
+  let result = "";
+  let inString = false;
+  let escapeNext = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (escapeNext) { result += ch; escapeNext = false; continue; }
+    if (ch === "\\") { result += ch; escapeNext = true; continue; }
+    if (ch !== '"') { result += ch; continue; }
+    if (!inString) { inString = true; result += ch; continue; }
+    // 在 string 内遇到 "：看下一个非空白字符判断是否为字符串结束
+    let j = i + 1;
+    while (j < text.length && /\s/.test(text[j])) j++;
+    const next = text[j];
+    if (next === "," || next === "}" || next === "]" || next === ":" || next === undefined) {
+      inString = false;
+      result += ch;
+    } else {
+      result += '\\"';
+    }
+  }
+  return result;
 }
 
 function formatLoglineChoices(parsed) {

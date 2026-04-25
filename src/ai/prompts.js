@@ -169,27 +169,34 @@ ${existingChars}
 
 为每个角色提供完整的心理档案：
 
-用JSON格式输出：
+用JSON格式输出（字段必须齐全，全部填实，不能空字符串）：
 {
   "characters": [
     {
       "name": "角色名",
       "story_role": "protagonist/antagonist/supporting/ally",
-      "archetype": "角色原型",
-      "desire": "表层欲望（外部目标，具体可见）",
-      "need": "深层需求（内部成长，自己未必意识到）",
-      "wound": "核心创伤（是什么让他变成这样）",
+      "archetype": "角色原型（如：受伤的理想主义者、堕落的圣人）",
+      "external_want": "表层欲望（外部目标，具体可见，剧情驱动力）",
+      "internal_need": "深层需求（内在成长，自己未必意识到）",
+      "psychological_flaw": "心理弱点（妨碍他成长的内在缺陷，如自欺、傲慢、执念）",
+      "moral_flaw": "道德弱点（他对他人造成伤害的方式，如操控、冷漠、背叛）",
+      "public_mask": "公开面具（外人看到的形象 vs 私下的他）",
+      "core_fear": "核心恐惧（最深处害怕被揭穿/失去/面对的事）",
+      "wound": "核心创伤（具体事件，是什么让他变成这样）",
       "belief": "错误信念（他以为什么是真的，其实是枷锁）",
       "arc_start": "弧光起点（开始时的状态）",
       "arc_end": "弧光终点（结束时的改变）",
-      "relationship_hook": "与其他角色的关系动力（什么让他们必然碰撞）",
-      "voice_signature": "说话方式特征（一句话描述他的对白风格）"
+      "voice_rules": ["对白风格规则1", "对白风格规则2", "对白风格规则3"],
+      "secret": "他不愿被人知道的秘密（推动张力）",
+      "relationship_hook": "与其他角色的关系动力（什么让他们必然碰撞）"
     }
   ],
   "relationship_tensions": ["角色间的核心张力点"],
   "reasoning": "角色设计思路",
   "warnings": []
-}`;
+}
+
+每个字段都要填实，禁止空字符串和省略号。`;
 
   return { system, user };
 }
@@ -620,21 +627,29 @@ export function buildKeyScenesPrompt(context) {
 
 重要：JSON字符串内部禁止使用英文双引号，用《》代替。
 
-输出JSON格式：
+输出JSON格式（字段必须齐全，全部填实，不能空字符串）：
 \`\`\`json
 {
   "scenes": [
     {
       "id": "plot_1",
       "title": "剧情节点名称（一句话概括这个转折）",
+      "act_position": "act_1 / act_2a / act_2b / act_3 之一",
       "dramatic_function": "叙事功能（如：诱发事件、锁定点、中点翻转、最低谷、高潮决战）",
-      "core_event": "核心事件：发生了什么，造成了什么不可逆的改变",
-      "character_change": "角色状态变化：谁从什么状态变成了什么状态"
+      "location": "具体场景地点（如：刑警队办公室、陆沉公寓厨房、雨夜废弃码头）",
+      "time_of_day": "时段（黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜）",
+      "goal": "本场主角想达成的目的",
+      "obstacle": "阻碍：人/事/内心冲突",
+      "turn": "戏剧转折：发生了什么不可逆的改变",
+      "core_event": "核心事件：可拍摄的具体动作",
+      "character_change": "角色状态变化：从什么状态变成什么状态"
     }
   ],
   "reasoning": "剧情点选取策略说明"
 }
-\`\`\``;
+\`\`\`
+
+每个字段都要填实，location 不能写《待定》，time_of_day 不能写《不限》。`;
 
   return { system, user };
 }
