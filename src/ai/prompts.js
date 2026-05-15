@@ -988,7 +988,7 @@ ${charList}
     {
       "source_character_name": "源角色名（必须用上方名单中的名字）",
       "target_character_name": "目标角色名",
-      "relationship_type": "ally / antagonist / mentor / lover / rival / family / superior 等",
+      "relationship_type": "从以下选项选择最贴切的一项：三角恋情 / 假面情侣 / 强制婚约 / 博得芳心 / 单向爱意 / 手足战友 / 师徒传承 / 强力对手 / 左膀右臂 / 暴躁上司 / 反目旧友 / 归来宿敌 / 大家长式 （或自定义中文名称）",
       "tension": "核心张力：他们之间最戏剧性的矛盾点（一句话）",
       "power_balance": "权力关系：谁掌握主动权，为什么；权力会如何在故事中翻转",
       "shared_history": "共同过去：他们以前发生过什么，留下了什么羁绊或心结",
