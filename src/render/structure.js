@@ -10,9 +10,27 @@ const NODE_TYPE_LABELS = {
   break_into_three: "进入第三幕", finale: "终局行动", final_image: "结尾印象",
 };
 
+const ENDING_GROUPS = [
+  { label: "爱情 / 情感", values: ["相濡以沫", "结为夫妻", "寻得真爱", "劳燕分飞", "博得芳心"] },
+  { label: "正义 / 秩序", values: ["罪有应得", "天网恢恢", "公诸于世", "逍遥法外", "旗开得胜邪恶犹存"] },
+  { label: "成长 / 救赎", values: ["成长蜕变", "实现自我", "皆有所悟", "主角得到救赎", "主人公重拾理想信念"] },
+  { label: "归属 / 生活", values: ["家人团聚", "终得归家", "生活美满"] },
+  { label: "悲剧 / 失落", values: ["同归于尽", "主角梦碎", "主角彻底隐退", "宝藏永失"] },
+];
+
 function endingDirectionSelect(current) {
-  const options = [["", "— 未定 —"], ...ENDING_DIRECTION_OPTIONS.map((e) => [e, e])];
-  return selectField("结局方向", "story-core-field", "ending_direction", current ?? "", options);
+  const cur = current ?? "";
+  const knownValues = new Set(ENDING_GROUPS.flatMap((g) => g.values));
+  const groupsHtml = [
+    `<option value="">— 未定 —</option>`,
+    ...ENDING_GROUPS.map((g) => `
+      <optgroup label="${escapeHtml(g.label)}">
+        ${g.values.map((v) => `<option value="${escapeHtml(v)}" ${v === cur ? "selected" : ""}>${escapeHtml(v)}</option>`).join("")}
+      </optgroup>
+    `),
+    ...(cur && !knownValues.has(cur) ? [`<option value="${escapeHtml(cur)}" selected>${escapeHtml(cur)}</option>`] : []),
+  ].join("");
+  return field("结局方向", `<select data-action="story-core-field" data-field="ending_direction">${groupsHtml}</select>`);
 }
 
 function getStructureOptionsForFormat(format, currentTemplate = null) {
