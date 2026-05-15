@@ -1,4 +1,4 @@
-import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState, isBrokenPlaceholderText } from "../utils.js";
+import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState, isBrokenPlaceholderText, sanitizeTextField } from "../utils.js";
 import { sceneStatusLabels, storyRoleLabels, SCENE_GOAL_OPTIONS, SCENE_OUTCOME_OPTIONS, EMOTION_OPTIONS, DIALOGUE_STYLE_OPTIONS, SUBTEXT_OPTIONS, DIALOGUE_POWER_OPTIONS, DIALOGUE_PACE_OPTIONS, DESC_DENSITY_OPTIONS, WRITING_STYLE_OPTIONS } from "../state.js";
 
 function sceneStatusDot(status) {
@@ -280,7 +280,7 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                   ${inputField("进入状态", "scene-field", "entry_state", selectedScene.entry_state)}
                   ${inputField("离开状态", "scene-field", "exit_state", selectedScene.exit_state)}
                   ${textareaField("台词或片段种子", "scene-field", "script_excerpt", selectedScene.script_excerpt, { rows: 4 })}
-                  ${textareaField("备注", "scene-field", "notes", selectedScene.notes, { rows: 3 })}
+                  ${textareaField("备注", "scene-field", "notes", sanitizeTextField(selectedScene.notes), { rows: 3 })}
                 </div>
                 ${renderSceneWeavingSection(selectedScene)}
               `
