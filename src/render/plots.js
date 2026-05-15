@@ -438,6 +438,16 @@ export function renderPlotsPage(dom, appState, {
         </div>
       </aside>
       <div class="workbench-pane workbench-pane--main">
+        ${(() => {
+          const emptyCards = allCards.filter((card) => !card.title && !card.summary);
+          if (emptyCards.length > 0 && emptyCards.length >= allCards.length * 0.6) {
+            return `<div class="issue__hint" style="margin-bottom:8px">
+              <strong>💡 ${emptyCards.length} 张剧情卡尚未填写内容</strong>
+              — 点击左侧卡池中的任意一张，在右侧「完整编辑」面板逐一填写；或返回创建向导的「AI 情节生成」步骤自动补全。
+            </div>`;
+          }
+          return "";
+        })()}
         <div class="summary-card plot-workbench__toolbar">
           <div class="list-card__head">
             <div>

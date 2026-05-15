@@ -82,3 +82,14 @@ export function isBrokenPlaceholderText(value = "") {
   if (s === "还没确定" || s === "待确认") return true;
   return false;
 }
+
+export function sanitizeTextField(value = "") {
+  const s = String(value || "").trim();
+  if (!s) return "";
+  try {
+    const parsed = JSON.parse(s);
+    if (typeof parsed === "object" && parsed !== null) return "";
+  } catch (_) { /* not JSON, fine */ }
+  if (/^[A-Z_]+_\d{10,}$/.test(s)) return "";
+  return s;
+}
