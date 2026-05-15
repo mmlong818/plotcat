@@ -6439,6 +6439,35 @@ body[data-active-step] .char-card:hover {
    MBTI 16 型 · 马斯洛八层需求上限
    ============================================================ */
 
+.psych-details {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.psych-details__summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  background: var(--surface-1);
+}
+.psych-details__summary::-webkit-details-marker { display: none; }
+.psych-details__summary::before {
+  content: "▸";
+  font-size: 0.7rem;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.psych-details[open] .psych-details__summary::before { transform: rotate(90deg); }
+.psych-details > .psych-block {
+  border: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.psych-details > .psych-block + .psych-block { border-top: 1px solid var(--border); }
 .psych-block {
   padding: 10px 12px;
   border: 1px solid var(--border);

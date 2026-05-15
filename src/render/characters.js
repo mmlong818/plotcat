@@ -183,9 +183,16 @@ function renderMaslowRow(character) {
 function renderPsychologySection(character) {
   const mbtiLocked = list(character.locked_fields).includes("mbti");
   const driveLocked = list(character.locked_fields).includes("core_drive");
+  const hasMbti = !!character.mbti;
+  const hasDrive = !!character.core_drive;
+  const isOpen = hasMbti || hasDrive;
   return `
-    <section>
-      <p class="section-label">心理剖面</p>
+    <details class="psych-details" ${isOpen ? "open" : ""}>
+      <summary class="psych-details__summary">
+        <span class="section-label">心理工具</span>
+        <span class="section-label__hint">MBTI · 马斯洛</span>
+        ${hasMbti ? `<span class="chip chip--soft" style="margin-left:auto">${escapeHtml(character.mbti)}</span>` : ""}
+      </summary>
       <div class="psych-block psych-block--mbti ${mbtiLocked ? "is-locked-section" : ""}">
         <p class="psych-block__label psych-block__label--row"><span>MBTI 16 型人格 <span class="section-label__hint">点击切换 · 悬停查看描述</span></span>${lockBadge(character, "mbti")}</p>
         ${renderMbtiDisplay(character)}
@@ -194,7 +201,7 @@ function renderPsychologySection(character) {
         <p class="psych-block__label psych-block__label--row"><span>核心驱动力 · 马斯洛需求上限 <span class="section-label__hint">选一层：该层及以下都驱动其行为</span></span>${lockBadge(character, "core_drive")}</p>
         ${renderMaslowRow(character)}
       </div>
-    </section>
+    </details>
   `;
 }
 
