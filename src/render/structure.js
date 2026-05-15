@@ -1,6 +1,15 @@
 import { escapeHtml, field, inputField, textareaField, selectField, list } from "../utils.js";
 import { structureTemplateLabels, formatStructureOptions, ENDING_DIRECTION_OPTIONS } from "../state.js";
 
+const NODE_TYPE_LABELS = {
+  opening_image: "开场印象", setup: "基础铺陈", catalyst: "诱发事件",
+  break_into_two: "进入第二幕", b_story: "B 故事", fun_and_games: "娱乐段落",
+  midpoint: "中点翻转", bad_guys_close_in: "压力上升", all_is_lost: "一切尽失",
+  dark_night: "至暗时刻", reaction: "反应段", attack: "主动进攻",
+  crisis: "危机时刻", pressure_wave: "压力波",
+  break_into_three: "进入第三幕", finale: "终局行动", final_image: "结尾印象",
+};
+
 function endingDirectionSelect(current) {
   const options = [["", "— 未定 —"], ...ENDING_DIRECTION_OPTIONS.map((e) => [e, e])];
   return selectField("结局方向", "story-core-field", "ending_direction", current ?? "", options);
@@ -87,7 +96,7 @@ function renderActBlock(act, index, nodes, nodeCards) {
             data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="title"
             value="${escapeHtml(node.title)}" placeholder="给这个情节点命名…" />
         </div>
-        <span class="act-node-item__type-hint">${escapeHtml(node.node_type)}</span>
+        <span class="act-node-item__type-hint">${escapeHtml(NODE_TYPE_LABELS[node.node_type] ?? node.node_type)}</span>
         <textarea class="act-node-item__note"
           data-action="node-field" data-id="${escapeHtml(node.id)}" data-field="note"
           placeholder="写下这个情节点的核心事件与戏剧转变…">${escapeHtml(node.note || "")}</textarea>

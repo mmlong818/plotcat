@@ -76,7 +76,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
             `}
           </div>
         </div>
-        <p class="project-card__logline ${!item.logline ? "project-card__logline--empty" : ""}">${escapeHtml(item.logline || "点击进入，开始定义这个故事的核心。")}</p>
+        <p class="project-card__logline ${!item.logline ? "project-card__logline--empty" : ""}">${escapeHtml(/^[A-Z_]+_\d+$/.test(item.logline ?? "") ? "" : (item.logline || "")) || "点击进入，开始定义这个故事的核心。"}</p>
         <div class="tag-row">
           ${list(item.genre).map((genre) => `<span class="tag">${escapeHtml(genre)}</span>`).join("")}
         </div>
