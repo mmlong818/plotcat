@@ -1121,8 +1121,6 @@ a { color: var(--accent); text-decoration: none; }
 .workbench-scroll-list {
   display: grid;
   gap: 7px;
-  max-height: 580px;
-  overflow-y: auto;
 }
 
 /* ── Workbench (generic) ───────────────────────────────────── */
