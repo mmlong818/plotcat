@@ -363,6 +363,85 @@ ${sceneCard}
   return { system, user };
 }
 
+// 针对单个场景 id 生成完整剧本格式文本（用于「剧本撰写」步骤）
+export function buildSceneScriptPrompt(projectContext, options) {
+  const { sceneId = "", dialogueStyle = "naturalism", subtextType = "" } = options ?? {};
+  // projectContext 可能是：完整的 appState.project（含 scene_workbench 等同级键），
+  // 或 { project: {...} } 包装。统一兼容两种。
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible)
+    ? projectContext
+    : (projectContext?.project ?? projectContext);
+  const scenes = ctx?.scene_workbench?.scenes ?? ctx?.story_bible?.scene_cards ?? [];
+  const characters = ctx?.character_hub?.characters ?? ctx?.story_bible?.characters ?? [];
+  const charById = new Map(characters.map((c) => [c.id, c]));
+  const target = scenes.find((s) => s.id === sceneId) ?? scenes[0];
+  if (!target) {
+    return {
+      system: "你是一位专业剧本执笔作家。",
+      user: "未找到场景。请返回 {\"script\":\"\",\"warnings\":[\"未找到目标场景\"]}"
+    };
+  }
+
+  const pov = charById.get(target.pov_character_id)?.name ?? "未指定 POV";
+  const lockedRules = (ctx?.lock_layer?.projections?.world_rules ?? ctx?.story_bible?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}（${r.scope ?? ""}）`).join("\n") || "（无）";
+  const lockedTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? ctx?.story_bible?.timeline_events ?? [])
+    .slice(0, 6)
+    .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n") || "（无）";
+
+  const intExt = (target.location || "").trim().startsWith("内") ? "INT." : "EXT.";
+  const slug = `${intExt} ${(target.location || "未定地点").toUpperCase()}${target.time_of_day ? " - " + (target.time_of_day || "").toUpperCase() : ""}`;
+
+  const system = `你是一位专业剧本执笔作家，擅长创作有潜台词、有画面感、有情感张力的场景。
+${DRAMA_PRINCIPLES}`;
+
+  const user = `${projectSummary(projectContext)}
+
+本场场景卡：
+- 标题：${target.title || "未命名"}
+- 顺序：第 ${target.order_index ?? "?"} 场
+- 场景头（slug line）：${slug}
+- POV 角色：${pov}
+- 目标：${target.purpose ?? target.goal ?? ""}
+- 障碍：${target.obstacle ?? ""}
+- 节拍/转折：${target.beat_summary ?? target.turn ?? ""}
+- 进场状态：${target.entry_state ?? target.input_state ?? ""}
+- 出场状态：${target.exit_state ?? target.output_state ?? ""}
+- 创作笔记：${target.notes ?? target.emotion_stage ?? ""}
+
+已锁定世界规则（须遵守）：
+${lockedRules}
+
+时间线参考（最近事件）：
+${lockedTimeline}
+
+对白风格：${dialogueStyle}（自然主义=贴近生活；戏剧化=高张力；幽默=诙谐；诗意=抒情）
+潜台词类型：${subtextType || "根据场景情感选择"}
+
+请写本场完整的剧本格式文本，严格遵守：
+- 第一行必须是场景头（slug line）：${slug}
+- 动作描述左对齐段落，每段不超过 3 行，写画面而非感受
+- 人物名单独成行（建议大写名字，提示如「（停顿）」用括号）
+- 对白下一行接说话内容，不超过 3 行
+- 对白不能解释性、说教式
+- 潜台词：角色说 X 实际要 Y
+- 场景结尾留一个悬而未决的张力点
+
+用 JSON 格式输出：
+{
+  "script": "完整剧本文本（多行字符串，保留换行）",
+  "subtext_map": [
+    {"character": "角色名", "says": "表面说的", "means": "实际要的"}
+  ],
+  "emotion_arc": "情感弧描述",
+  "end_hook": "结尾留下的问题/张力",
+  "reasoning": "创作思路（简短）",
+  "warnings": []
+}`;
+
+  return { system, user };
+}
+
 export function buildDiagnosisPrompt(projectContext) {
   const ctx = projectContext?.project ?? projectContext;
   const scenes = ctx?.scene_workbench?.scenes ?? ctx?.story_bible?.scene_cards ?? [];

@@ -56,6 +56,8 @@ function renderEditor(appState, scene) {
   const header = fountainHeader(scene, appState);
   const status = sceneStatusLabel(scene);
   const pov = getCharNameById(appState, scene.pov_character_id);
+  const busyList = appState.screenplayAi?.busySceneIds ?? [];
+  const isSceneAiBusy = busyList.includes(scene.id);
   return `
     <article class="screenplay-editor">
       <header class="screenplay-editor__head">
@@ -70,7 +72,7 @@ function renderEditor(appState, scene) {
         </div>
       </header>
       <div class="screenplay-editor__toolbar">
-        <button class="button button--ghost button--tiny" type="button" data-action="ai-write-scene-script" data-id="${escapeHtml(scene.id)}">AI 写本场</button>
+        <button class="button button--ghost button--tiny" type="button" data-action="ai-write-scene-script" data-id="${escapeHtml(scene.id)}" ${isSceneAiBusy ? "disabled" : ""}>${isSceneAiBusy ? "AI 写作中..." : "AI 写本场"}</button>
         <button class="button button--ghost button--tiny" type="button" data-action="insert-scene-script-template" data-id="${escapeHtml(scene.id)}">插入剧本模板</button>
         <span class="screenplay-editor__hint">${(scene.script_full || "").length} 字 · 约 ${Math.ceil((scene.script_full || "").length / 250)} 页</span>
       </div>
@@ -116,6 +118,13 @@ export function renderScreenplayPage(dom, appState) {
 
   const totalChars = scenes.reduce((sum, s) => sum + (s.script_full?.length ?? 0), 0);
   const donCount = scenes.filter((s) => (s.script_full?.trim().length ?? 0) > 50).length;
+  const ai = appState.screenplayAi ?? { bulkRunning: false, bulkProgress: { done: 0, total: 0 }, lastError: "" };
+  const bulkLabel = ai.bulkRunning
+    ? `批量中 ${ai.bulkProgress.done}/${ai.bulkProgress.total}`
+    : "AI 批量生成全部";
+  const errorBanner = ai.lastError
+    ? `<p class="scene-summary-hint" style="color:#b04848;margin:4px 0 8px;">AI 错误：${escapeHtml(ai.lastError)}</p>`
+    : "";
 
   dom.screenplayContent.innerHTML = `
     <section class="screenplay-page">
@@ -127,11 +136,12 @@ export function renderScreenplayPage(dom, appState) {
           <div class="metric-card"><span class="metric-card__label">估算页数</span><strong class="metric-card__value">${Math.ceil(totalChars / 250)}</strong></div>
         </div>
         <div class="screenplay-page__actions">
-          <button class="button button--ghost button--small" type="button" data-action="ai-write-screenplay-bulk">AI 批量生成全部</button>
+          <button class="button button--ghost button--small" type="button" data-action="ai-write-screenplay-bulk" ${ai.bulkRunning ? "disabled" : ""}>${escapeHtml(bulkLabel)}</button>
           <button class="button button--ghost button--small" type="button" data-action="export-screenplay-fountain">导出 .fountain</button>
           <button class="button button--primary button--small" type="button" data-action="preview-screenplay-full">全本预览</button>
         </div>
       </header>
+      ${errorBanner}
       <div class="screenplay-page__body">
         <aside class="screenplay-page__list">
           ${scenes.map((s) => renderSceneListItem(appState, s, s.id === activeScene?.id)).join("")}
