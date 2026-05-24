@@ -14,8 +14,13 @@ yarn-error.log*
 e2e-screenshots/
 screenshots/
 tests/e2e/inspect-shots/
+tests/e2e/real-check-shots/
 tests/e2e/adversarial-flow-result.json
 tests/e2e/adversarial-screenplay.md
+
+# 一次性 DOM 调试脚本（迭代多次的临时排查工具）
+tests/e2e/dom-inspect*.mjs
+tests/e2e/debug-page.mjs
 
 # 工具与规划目录（本地工作产物，不入库）
 .claude/
