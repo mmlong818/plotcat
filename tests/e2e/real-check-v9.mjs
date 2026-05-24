@@ -447,15 +447,140 @@ await w(2500);
 await page.screenshot({ path: path.join(SHOTS, '05-scenes.png'), fullPage: true });
 
 // =========================================================
-// STAGE 6：剧本撰写 — AI 批量
+// STAGE 5.5：资料库 — 时间线 / 世界规则 / 伏笔 / 类型 + 外部知识源
 // =========================================================
-console.log('\n=== STAGE 6: AI 批量剧本 ===');
+console.log('\n=== STAGE 5.5: 资料库（顶部独立入口）===');
+await page.locator('#page-library-button').click(); await w(800);
+
+// 5.5.1 时间线 — 加 4 个事件
+await page.locator('button[data-action="locks-tab"][data-id="timeline"]').click(); await w(300);
+const timelineEvents = [
+  { day: 1, summary: '林知夏回到小镇', location: '渡口',     trigger: '父亲病危电话',   consequence: '与陈牧重逢' },
+  { day: 1, summary: '发现录音笔',     location: '父亲卧室', trigger: '整理遗物',       consequence: '怀疑陈牧' },
+  { day: 2, summary: '老周交备忘',     location: '老法医家', trigger: 'A 坚持',         consequence: '握有铁证' },
+  { day: 3, summary: '镇政府台阶揭穿', location: '镇政府',   trigger: '放录音 + 备忘',  consequence: '陈牧被带走' }
+];
+for (const e of timelineEvents) {
+  await clickById(page, 'add-timeline'); await w(300);
+  // story_day 是 number input，summary/location/trigger/consequence 是 text
+  await fillField(page, 'timeline-field', 'story_day', String(e.day));
+  await fillField(page, 'timeline-field', 'summary', e.summary);
+  await fillField(page, 'timeline-field', 'location', e.location);
+  await fillField(page, 'timeline-field', 'trigger', e.trigger);
+  await fillField(page, 'timeline-field', 'consequence', e.consequence);
+  await w(150);
+}
+await w(1500);
+await page.screenshot({ path: path.join(SHOTS, '06-library-timeline.png'), fullPage: true });
+
+// 5.5.2 世界规则 — 加 2 条
+await page.locator('button[data-action="locks-tab"][data-id="rules"]').click(); await w(300);
+const worldRules = [
+  { statement: '小镇所有人都互相认识，任何调查都会立刻传开。', scope: '社会层' },
+  { statement: '陈牧在小镇有相当政治资源，公开对抗他需要不可反驳的证据。', scope: '政治层' }
+];
+for (const r of worldRules) {
+  await clickById(page, 'add-world-rule'); await w(300);
+  await fillField(page, 'world-rule-field', 'rule_statement', r.statement);
+  await fillField(page, 'world-rule-field', 'scope', r.scope);
+  await w(150);
+}
+await w(1500);
+await page.screenshot({ path: path.join(SHOTS, '06-library-rules.png'), fullPage: true });
+
+// 5.5.3 伏笔追踪 — 加 3 个
+await page.locator('button[data-action="locks-tab"][data-id="setups"]').click(); await w(300);
+const setups = [
+  { summary: '父亲遗物里的录音笔', window: 'Act3', payoff: '在镇政府台阶公开播放' },
+  { summary: '林知夏当年签的「放弃寻找」声明', window: 'Act3', payoff: '与陈牧最后对话中提到' },
+  { summary: '老周保留的尸检备忘', window: 'Act3', payoff: '台阶上播放片段' }
+];
+for (const s of setups) {
+  await clickById(page, 'add-setup'); await w(300);
+  await fillField(page, 'setup-field', 'setup_summary', s.summary);
+  await fillField(page, 'setup-field', 'expected_payoff_window', s.window);
+  await fillField(page, 'setup-field', 'payoff_summary', s.payoff);
+  await w(150);
+}
+await w(1500);
+await page.screenshot({ path: path.join(SHOTS, '06-library-setups.png'), fullPage: true });
+
+// 5.5.4 类型约束 — 填类型字段 + 常规 + 禁区
+await page.locator('button[data-action="locks-tab"][data-id="genres"]').click(); await w(300);
+await fillField(page, 'genre-field', 'primary_genre', '悬疑');
+await fillField(page, 'genre-field', 'secondary_genres_text', '剧情、家庭');
+await fillField(page, 'genre-field', 'audience_promise', '一场把童年记忆撕开的真相挖掘。');
+await fillField(page, 'genre-field', 'tone_words_text', '冷峻、潮湿、克制');
+// 加 1 条常规 + 1 条禁区
+await clickById(page, 'add-convention'); await w(300);
+// 新加的 convention 用 convention-field name 字段
+const convs = await page.locator('[data-action="convention-field"][data-field="name"]').count();
+if (convs > 0) {
+  await page.evaluate(() => {
+    const inputs = document.querySelectorAll('[data-action="convention-field"][data-field="name"]');
+    const last = inputs[inputs.length - 1];
+    if (last) { last.value = '关键线索的反复出现'; last.dispatchEvent(new Event('input', { bubbles: true })); }
+    const descs = document.querySelectorAll('[data-action="convention-field"][data-field="description"]');
+    const lastDesc = descs[descs.length - 1];
+    if (lastDesc) { lastDesc.value = '录音笔出现至少三次。'; lastDesc.dispatchEvent(new Event('input', { bubbles: true })); }
+  });
+}
+await w(200);
+await clickById(page, 'add-taboo'); await w(300);
+await page.evaluate(() => {
+  const inputs = document.querySelectorAll('[data-action="taboo-field"][data-field="name"]');
+  const last = inputs[inputs.length - 1];
+  if (last) { last.value = '上帝视角揭秘'; last.dispatchEvent(new Event('input', { bubbles: true })); }
+  const descs = document.querySelectorAll('[data-action="taboo-field"][data-field="description"]');
+  const lastDesc = descs[descs.length - 1];
+  if (lastDesc) { lastDesc.value = '禁止任何场景从外部全知视角揭穿。'; lastDesc.dispatchEvent(new Event('input', { bubbles: true })); }
+});
+await w(1500);
+await page.screenshot({ path: path.join(SHOTS, '06-library-genres.png'), fullPage: true });
+
+// 5.5.5 外部知识源（storykb）— 同步 + 搜「场景节拍」 + 导入一条作为参考世界规则
+await page.locator('button[data-action="locks-tab"][data-id="kb"]').click(); await w(800);
+// 若未同步则同步
+const synced = await page.evaluate(() => document.querySelector('.kb-tab__meta')?.textContent?.includes('已同步'));
+if (!synced) {
+  await page.evaluate(() => document.querySelector('[data-action="kb-sync"]')?.click());
+  await w(6000);  // wiki-bundle.json 3.3MB
+}
+await page.locator('input[data-action="kb-search-input"]').fill('节拍'); await w(800);
+const kbItems = await page.locator('.kb-list-item').count();
+console.log(`KB 搜「节拍」结果: ${kbItems}`);
+if (kbItems > 0) {
+  await page.locator('.kb-list-item').first().click();
+  await w(2000); // 远程拉详情
+  // 导入为世界规则
+  await page.locator('button[data-action="kb-import"][data-target="world_rule"]').click();
+  await w(800);
+}
+await page.screenshot({ path: path.join(SHOTS, '06-library-kb.png'), fullPage: true });
+
+// 回项目（kb 在 library 页，需要回到工作流的剧本撰写步骤；
+// stepper 在 library 页 hidden，需先重新进项目）
+await page.locator('#page-project-button').click(); await w(800);
+await page.locator(`[data-action="open-project"][data-id="${projectId}"]`).first().click(); await w(1500);
+
+// =========================================================
+// STAGE 6：剧本撰写 — 单场模板 + AI 单场重写演示 + 批量
+// =========================================================
+console.log('\n=== STAGE 6: 剧本撰写 ===');
 await page.locator('#stepper-nav .step-button[data-id="screenplay"]').click(); await w(1000);
 
 const sceneN = await page.locator('.screenplay-scene-item').count();
 console.log(`UI 显示场景数: ${sceneN}`);
 await page.screenshot({ path: path.join(SHOTS, '06-screenplay-before.png'), fullPage: true });
 
+// 6.1 在第一场点「插入剧本模板」演示手写起手
+await page.locator('.screenplay-scene-item').first().click(); await w(400);
+await page.evaluate(() => { window.confirm = () => true; });
+await clickById(page, 'insert-scene-script-template');
+await w(800);
+await page.screenshot({ path: path.join(SHOTS, '06-screenplay-template.png'), fullPage: true });
+
+// 6.2 启动批量 AI（这一轮会覆盖刚插入的模板，因为我们要 AI 来写第一场）
 await page.evaluate(() => { window.confirm = () => true; });
 await page.locator('button[data-action="ai-write-screenplay-bulk"]').click();
 const start = Date.now();
@@ -473,6 +598,45 @@ while (Date.now() - start < MAX) {
 }
 await page.screenshot({ path: path.join(SHOTS, '07-screenplay-after.png'), fullPage: true });
 
+// 6.3 验证「全本预览」按钮可点（不打开新窗口阻塞，只检查 click 有 popup 触发）
+const popupListener = page.waitForEvent('popup', { timeout: 5000 }).catch(() => null);
+await clickById(page, 'preview-screenplay-full');
+const popup = await popupListener;
+if (popup) {
+  console.log('✓ 全本预览弹出新窗口');
+  await popup.close().catch(() => {});
+} else {
+  note('MEDIUM', 'PD', '全本预览', '点击未触发新窗口');
+}
+
+// 6.4 演示单场 AI 重写（选第 5 场）
+const overwriteTarget = await page.evaluate(() => {
+  const items = Array.from(document.querySelectorAll('.screenplay-scene-item'));
+  return items.length >= 5 ? items[4].getAttribute('data-id') : null;
+});
+if (overwriteTarget) {
+  await page.evaluate((id) => document.querySelector(`[data-action="select-screenplay-scene"][data-id="${id}"]`)?.click(), overwriteTarget);
+  await w(400);
+  // 已成稿场景 AI 重写会弹 confirm，window.confirm 已 mock 为 true
+  const lenBefore = await page.evaluate(() => document.querySelector('[data-action="screenplay-field"][data-field="script_full"]')?.value?.length ?? 0);
+  console.log(`第 5 场重写前字数: ${lenBefore}`);
+  await clickById(page, 'ai-write-scene-script', overwriteTarget);
+  // 等单场完成（约 30-90s）
+  let waited = 0;
+  while (waited < 120000) {
+    await w(3000); waited += 3000;
+    const busy = await page.evaluate((id) => {
+      const btn = document.querySelector(`[data-action="ai-write-scene-script"][data-id="${id}"]`);
+      return btn?.disabled || (btn?.textContent || '').includes('写作中');
+    }, overwriteTarget);
+    if (!busy) break;
+  }
+  const lenAfter = await page.evaluate(() => document.querySelector('[data-action="screenplay-field"][data-field="script_full"]')?.value?.length ?? 0);
+  console.log(`第 5 场重写后字数: ${lenAfter} (Δ${lenAfter - lenBefore})`);
+}
+await page.screenshot({ path: path.join(SHOTS, '07b-screenplay-after-rewrite.png'), fullPage: true });
+
+// 6.5 导出
 const dp = page.waitForEvent('download', { timeout: 10000 }).catch(() => null);
 await page.locator('button[data-action="export-screenplay-fountain"]').click();
 const dl = await dp;
