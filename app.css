@@ -1054,7 +1054,7 @@ a { color: var(--accent); text-decoration: none; }
 
 .relationship-workbench--dual {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-columns: 320px minmax(0, 1fr);
   gap: 14px;
   align-items: start;
 }
@@ -1364,14 +1364,14 @@ a { color: var(--accent); text-decoration: none; }
 
 /* 左侧标签 */
 .struct-act-row__label {
-  width: 80px;
-  min-width: 80px;
+  width: 140px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   gap: 3px;
-  padding: 12px 6px;
+  padding: 12px 8px;
   border-right: 1px solid var(--act-border, var(--border));
   text-align: center;
   background: var(--act-bg, var(--surface-2));
@@ -1387,7 +1387,7 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--muted);
 }
 .struct-act-row__title {
-  font-size: 0.78rem;
+  font-size: 0.86rem;
   font-weight: 500;
   color: var(--ink-2);
   margin-top: 6px;
@@ -1400,6 +1400,7 @@ a { color: var(--accent); text-decoration: none; }
   font-family: var(--font-ui);
   padding: 1px 2px;
   cursor: text;
+  text-overflow: ellipsis;
 }
 .struct-act-row__title:focus { border-bottom-color: var(--act-border, var(--border-strong)); }
 .struct-act-row__title::placeholder { color: var(--muted-2); font-weight: 400; }
@@ -7898,6 +7899,33 @@ body[data-active-step] .char-card:hover {
   .kb-tab__body { grid-template-columns: 1fr; }
   .kb-tab__list { max-height: 280px; }
 }
+
+/* 场景关联剧情卡 — 横向 chip 列表，节省竖向空间 */
+.scene-plot-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.scene-plot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #fbf6ec;
+  border: 1px solid rgba(180, 140, 90, 0.3);
+  border-radius: 14px;
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 120ms, border-color 120ms;
+}
+.scene-plot-chip:hover { background: #f4ebd8; }
+.scene-plot-chip.is-active {
+  background: #ece0c3;
+  border-color: rgba(180, 110, 50, 0.6);
+}
+.scene-plot-chip input { margin: 0; }
+.scene-plot-chip span { white-space: nowrap; }
 
 
 
