@@ -256,26 +256,36 @@ function templateFromProject(project) {
       : "feature_film";
 }
 
-function deriveCharacterHub(storyBible) {
+function deriveCharacterHub(storyBible, existingCharHub = null) {
+  // 若已有 character_hub（来自 UI 编辑），优先保留其 UI 字段（name / external_goal 等），
+  // 仅当 story_bible 有新条目而 character_hub 没有时才用 story_bible 派生新条目。
+  const existingById = new Map(list(existingCharHub?.characters).map((c) => [c.id, c]));
   return {
-    characters: list(storyBible.characters).map((character) => ({
-      id: character.id,
-      name: character.name,
-      story_role: character.story_role,
-      external_goal: character.external_want,
-      dramatic_need: character.internal_need,
-      contradiction: unique([character.psychological_flaw, character.moral_flaw]).join("；"),
-      starting_mask: character.public_mask,
-      pressure_point: unique([character.wound, character.core_fear]).join("；"),
-      arc_start: character.arc_start,
-      arc_end: character.arc_end,
-      secret: character.secret,
-      notes: character.notes ?? "",
-      archetype: character.archetype ?? "",
-      traits: list(character.traits),
-      status: "active",
-      linked_plot_ids: []
-    })),
+    characters: list(storyBible.characters).map((character) => {
+      const existing = existingById.get(character.id);
+      // 任意 UI 字段非空都视为「用户已编辑」→ 保留 character_hub 整条记录
+      if (existing && (existing.name || existing.external_goal || existing.dramatic_need || existing.contradiction)) {
+        return existing;
+      }
+      return {
+        id: character.id,
+        name: character.name,
+        story_role: character.story_role,
+        external_goal: character.external_want,
+        dramatic_need: character.internal_need,
+        contradiction: unique([character.psychological_flaw, character.moral_flaw]).join("；"),
+        starting_mask: character.public_mask,
+        pressure_point: unique([character.wound, character.core_fear]).join("；"),
+        arc_start: character.arc_start,
+        arc_end: character.arc_end,
+        secret: character.secret,
+        notes: character.notes ?? "",
+        archetype: character.archetype ?? "",
+        traits: list(character.traits),
+        status: "active",
+        linked_plot_ids: []
+      };
+    }),
     relationship_map: list(storyBible.relationships).map((relationship) => ({
       id: relationship.id,
       source_character_id: relationship.source_character_id,
@@ -633,9 +643,10 @@ export function ensurePlotDrivenProject(sourceProject) {
     conventions: [],
     taboos: []
   });
-  // character_hub 始终从 story_bible 派生（external_goal ← external_want 等字段名映射），
-  // 保留已有的 relationship_map（如果非空）避免覆盖手动添加的关系
-  const derivedHub = deriveCharacterHub(project.story_bible);
+  // character_hub 从 story_bible 派生，但若已有 character_hub（UI 编辑过的）则保留其 UI 字段，
+  // 避免每次 normalize 都把用户在 UI 输入的人物名、外部目标等擦回 story_bible 的旧值。
+  // 保留已有的 relationship_map（如果非空）避免覆盖手动添加的关系。
+  const derivedHub = deriveCharacterHub(project.story_bible, project.character_hub);
   const existingRelMap = list(project.character_hub?.relationship_map);
   project.character_hub = {
     ...derivedHub,
