@@ -515,6 +515,21 @@ export const appState = {
   projectDeleteConfirmId: null,
   characterDesign: { loading: false, error: "" },
   screenplayAi: { busySceneIds: [], bulkRunning: false, bulkProgress: { done: 0, total: 0 }, lastError: "" },
+  knowledge: {
+    sources: [],
+    selectedSourceId: "",
+    query: "",
+    typeFilter: "",
+    items: [],
+    total: 0,
+    loading: false,
+    selectedEntry: null,
+    entryLoading: false,
+    importing: false,
+    lastError: "",
+    lastImportMessage: "",
+    syncing: false
+  },
   proCreation: {
     step: "anchor",
     anchor: "",

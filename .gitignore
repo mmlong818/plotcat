@@ -2,6 +2,9 @@ data/*.db
 data/*.db-journal
 data/*.db-wal
 data/*.db-shm
+
+# 知识源缓存（本地由 sync 写入）
+data/knowledge-cache/
 .tmp/
 node_modules/
 .env

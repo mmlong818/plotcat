@@ -64,6 +64,98 @@ function renderGenresTab(appState) {
   `;
 }
 
+function renderKnowledgeTab(appState) {
+  const k = appState.knowledge ?? {};
+  const sources = k.sources ?? [];
+  const sel = sources.find((s) => s.id === k.selectedSourceId) ?? sources[0];
+
+  if (sources.length === 0) {
+    return `
+      <div class="summary-card">
+        <div class="list-card__head"><h3>外部知识源</h3></div>
+        <p class="scene-summary-hint">尚未加载知识源列表。<button class="button button--ghost button--tiny" data-action="kb-init">立即加载</button></p>
+      </div>
+    `;
+  }
+
+  const sourceOpts = sources.map((s) => `<option value="${escapeHtml(s.id)}" ${s.id === sel?.id ? "selected" : ""}>${escapeHtml(s.name)}（${s.status?.entryCount ?? 0} 条）</option>`).join("");
+
+  const syncMeta = sel?.status?.lastSyncedAt
+    ? `已同步 · ${new Date(sel.status.lastSyncedAt).toLocaleString("zh-CN")}`
+    : "尚未同步，点击「同步」拉取数据。";
+
+  const itemsBody = k.loading
+    ? `<p class="scene-summary-hint">搜索中…</p>`
+    : (k.items.length === 0
+      ? `<p class="scene-summary-hint">${k.query ? `「${escapeHtml(k.query)}」无结果` : "输入关键词搜索条目"}</p>`
+      : `
+        <div class="kb-list">
+          ${k.items.map((it) => `
+            <button class="kb-list-item ${k.selectedEntry?.external_id === it.external_id ? "is-active" : ""}" type="button" data-action="kb-open-entry" data-id="${escapeHtml(it.external_id)}">
+              <strong>${escapeHtml(it.title)}</strong>
+              <span class="kb-list-item__subtitle">${escapeHtml(it.subtitle || "")}</span>
+              <span class="kb-list-item__tags">${(it.tags || []).map((t) => `<em>${escapeHtml(t)}</em>`).join("")}</span>
+            </button>
+          `).join("")}
+        </div>
+        ${k.total > k.items.length ? `<p class="scene-summary-hint">显示前 ${k.items.length} / ${k.total} 条，缩小搜索词以精准定位。</p>` : ""}
+      `);
+
+  const detail = k.selectedEntry;
+  const detailBody = k.entryLoading
+    ? `<p class="scene-summary-hint">加载详情中…</p>`
+    : (detail
+      ? `
+        <article class="kb-detail">
+          <header class="kb-detail__head">
+            <h3>${escapeHtml(detail.title)}</h3>
+            <span class="kb-detail__subtitle">${escapeHtml(detail.subtitle || "")}</span>
+            <div class="kb-detail__tags">${(detail.tags || []).map((t) => `<em>${escapeHtml(t)}</em>`).join("")}</div>
+            ${detail.aliases?.length ? `<p class="kb-detail__aliases">别名：${escapeHtml(detail.aliases.join("、"))}</p>` : ""}
+          </header>
+          <div class="kb-detail__body">${detail.body.split("\n").map((line) => {
+            if (line.startsWith("## ")) return `<h4>${escapeHtml(line.slice(3))}</h4>`;
+            if (!line.trim()) return "";
+            return `<p>${escapeHtml(line)}</p>`;
+          }).join("")}</div>
+          <footer class="kb-detail__foot">
+            <p class="section-label">导入到本地（带源引用）</p>
+            <div class="inline-actions">
+              <button class="button button--ghost button--small" type="button" data-action="kb-import" data-target="world_rule" ${k.importing ? "disabled" : ""}>导入为世界规则</button>
+              <button class="button button--ghost button--small" type="button" data-action="kb-import" data-target="setup" ${k.importing ? "disabled" : ""}>导入为伏笔提醒</button>
+              <button class="button button--ghost button--small" type="button" data-action="kb-import" data-target="timeline_event" ${k.importing ? "disabled" : ""}>导入为时间线参考</button>
+            </div>
+            ${detail.related?.length ? `<p class="kb-detail__related">相关：${detail.related.map((r) => escapeHtml(r)).join("、")}</p>` : ""}
+          </footer>
+        </article>
+      `
+      : `<p class="scene-summary-hint">在左侧选择一个条目查看详情。</p>`);
+
+  const errorBanner = k.lastError ? `<p class="kb-banner kb-banner--error">⚠ ${escapeHtml(k.lastError)}</p>` : "";
+  const importBanner = k.lastImportMessage ? `<p class="kb-banner kb-banner--ok">✓ ${escapeHtml(k.lastImportMessage)}</p>` : "";
+
+  return `
+    <section class="kb-tab">
+      <header class="kb-tab__head">
+        <div class="kb-tab__source">
+          <label class="section-label">知识源</label>
+          <select class="kb-select" data-action="kb-select-source">${sourceOpts}</select>
+          <button class="button button--ghost button--tiny" type="button" data-action="kb-sync" ${k.syncing ? "disabled" : ""}>${k.syncing ? "同步中…" : "同步"}</button>
+          ${sel?.homepage ? `<a class="kb-link" href="${escapeHtml(sel.homepage)}" target="_blank" rel="noopener">↗ 源仓库</a>` : ""}
+        </div>
+        <input class="kb-search-input" type="search" placeholder="搜索条目（中英文标题或别名）" value="${escapeHtml(k.query)}" data-action="kb-search-input" />
+      </header>
+      <p class="kb-tab__meta">${escapeHtml(sel?.description || "")} · ${escapeHtml(syncMeta)}</p>
+      ${errorBanner}
+      ${importBanner}
+      <div class="kb-tab__body">
+        <aside class="kb-tab__list">${itemsBody}</aside>
+        <main class="kb-tab__detail">${detailBody}</main>
+      </div>
+    </section>
+  `;
+}
+
 export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule, getSetup }) {
   const activeTab = appState.locksActiveTab || "timeline";
   const lockedCards = list(appState.project.plot_board?.cards).filter((card) => card.status === "locked");
@@ -165,17 +257,7 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
   } else if (activeTab === "genres") {
     tabContent = renderGenresTab(appState);
   } else if (activeTab === "kb") {
-    tabContent = `
-      <div class="summary-card">
-        <div class="list-card__head">
-          <h3>外部知识源</h3>
-        </div>
-        <p class="scene-summary-hint">
-          这里将接入可插拔的外部知识库（如 storykb 等编剧知识库），用作创作时的参考资料。
-          搜索 / 浏览 / 一键导入到本地条目的能力将在下一阶段交付。
-        </p>
-      </div>
-    `;
+    tabContent = renderKnowledgeTab(appState);
   }
 
   const allEmpty = lockedCards.length === 0 && timeline.length === 0 && rules.length === 0 && setups.length === 0;
