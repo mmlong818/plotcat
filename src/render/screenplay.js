@@ -20,8 +20,29 @@ function sceneStatusLabel(scene) {
   return { tag: "未撰写", cls: "is-empty" };
 }
 
+// 启发式判定室内/外景：先用显式标记 → 再判定明显外景词 → 最后判定室内关键词
+const OUTDOOR_HINTS = [
+  "门口", "门外", "街", "路", "巷", "桥", "湖", "海", "山", "林", "田", "野",
+  "坝", "墓园", "广场", "公园", "渡口", "码头", "操场", "院子", "草坪",
+  "天台", "屋顶", "阳台"
+];
+const INDOOR_HINTS = [
+  "卧室", "客厅", "厨房", "餐厅", "书房", "办公", "教室", "医院", "派出所",
+  "车里", "车内", "车上", "船舱", "机舱", "电梯", "走廊",
+  "家", "店", "馆", "厅", "室", "屋", "房"
+];
+function isIndoorLocation(location = "") {
+  const s = String(location).trim();
+  if (!s) return false;
+  if (s.startsWith("内") || s.startsWith("内景")) return true;
+  if (s.startsWith("外") || s.startsWith("外景")) return false;
+  // 外景关键词优先（解决「派出所门口」「墓园」这类）
+  if (OUTDOOR_HINTS.some((k) => s.includes(k))) return false;
+  return INDOOR_HINTS.some((k) => s.includes(k));
+}
+
 function fountainHeader(scene, appState) {
-  const intExt = (scene.location || "").trim().startsWith("内") ? "INT." : "EXT.";
+  const intExt = isIndoorLocation(scene.location) ? "INT." : "EXT.";
   const where = scene.location || "未定地点";
   const when = scene.time_of_day || "";
   return `${intExt} ${where}${when ? " - " + when : ""}`.toUpperCase();
@@ -169,12 +190,21 @@ export function buildFountainText(appState) {
 
   const body = scenes.map((scene) => {
     const slug = fountainHeader(scene, appState);
-    const lines = [slug, ""];
-    if (scene.script_full && scene.script_full.trim().length > 0) {
-      lines.push(scene.script_full.trim());
+    const script = (scene.script_full || "").trim();
+    const lines = [];
+    if (script) {
+      // 若 AI 已写出 slug 行（INT./EXT. 或 内景/外景 开头），用启发式判定的 slug 覆盖第一行，
+      // 避免 AI 把内景误判为外景（或反之）；其余正文保留 AI 原文。
+      if (/^(INT\.|EXT\.|内景|外景)/i.test(script)) {
+        const idx = script.indexOf("\n");
+        const rest = idx > -1 ? script.slice(idx) : "";
+        lines.push(slug + rest);
+      } else {
+        lines.push(slug, "", script);
+      }
     } else {
       const summary = scene.beat_summary || scene.purpose || "（本场尚未撰写）";
-      lines.push(`[[ 待撰写：${summary} ]]`);
+      lines.push(slug, "", `[[ 待撰写：${summary} ]]`);
     }
     lines.push("");
     return lines.join("\n");

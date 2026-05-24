@@ -414,7 +414,23 @@ export function buildSceneScriptPrompt(projectContext, options) {
     ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。`
     : "";
 
-  const intExt = (target.location || "").trim().startsWith("内") ? "INT." : "EXT.";
+  const OUTDOOR_HINTS_PROMPT = [
+    "门口", "门外", "街", "路", "巷", "桥", "湖", "海", "山", "林", "田", "野",
+    "坝", "墓园", "广场", "公园", "渡口", "码头", "操场", "院子", "草坪",
+    "天台", "屋顶", "阳台"
+  ];
+  const INDOOR_HINTS_PROMPT = [
+    "卧室", "客厅", "厨房", "餐厅", "书房", "办公", "教室", "医院", "派出所",
+    "车里", "车内", "车上", "船舱", "机舱", "电梯", "走廊",
+    "家", "店", "馆", "厅", "室", "屋", "房"
+  ];
+  const locTrim = String(target.location || "").trim();
+  const isIndoor =
+    locTrim.startsWith("内") || locTrim.startsWith("内景") ? true :
+    locTrim.startsWith("外") || locTrim.startsWith("外景") ? false :
+    OUTDOOR_HINTS_PROMPT.some((k) => locTrim.includes(k)) ? false :
+    INDOOR_HINTS_PROMPT.some((k) => locTrim.includes(k));
+  const intExt = isIndoor ? "INT." : "EXT.";
   const slug = `${intExt} ${(target.location || "未定地点").toUpperCase()}${target.time_of_day ? " - " + (target.time_of_day || "").toUpperCase() : ""}`;
 
   const system = `你是一位专业剧本执笔作家，擅长创作有潜台词、有画面感、有情感张力的场景。
