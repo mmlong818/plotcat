@@ -2031,8 +2031,14 @@ function handleClick(event) {
   if (action === "delete-character") {
     appState.project.character_hub.characters = list(appState.project.character_hub?.characters).filter((item) => item.id !== id);
     appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
+    // 同步从 story_bible.characters 删除，否则 normalize 时 deriveCharacterHub 会从 story_bible 把人物加回来
+    if (appState.project.story_bible) {
+      appState.project.story_bible.characters = list(appState.project.story_bible.characters).filter((item) => item.id !== id);
+      appState.project.story_bible.relationships = list(appState.project.story_bible.relationships).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
+    }
     list(appState.project.plot_board?.cards).forEach((card) => { card.character_ids = list(card.character_ids).filter((characterId) => characterId !== id); });
     list(appState.project.scene_workbench?.scenes).forEach((scene) => { if (scene.pov_character_id === id) scene.pov_character_id = ""; });
+    if (appState.selection.characterId === id) appState.selection.characterId = null;
     normalizeProject(); markDirty(); render();
     return;
   }
@@ -2058,6 +2064,10 @@ function handleClick(event) {
   if (action === "select-relationship") { appState.selection.relationshipId = id; render(); return; }
   if (action === "delete-relationship") {
     appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.id !== id);
+    if (appState.project.story_bible) {
+      appState.project.story_bible.relationships = list(appState.project.story_bible.relationships).filter((item) => item.id !== id);
+    }
+    if (appState.selection.relationshipId === id) appState.selection.relationshipId = null;
     normalizeProject(); markDirty(); render();
     return;
   }
@@ -2136,7 +2146,13 @@ function handleClick(event) {
   if (action === "select-scene") { appState.selection.sceneId = id; render(); return; }
   if (action === "delete-scene") {
     appState.project.scene_workbench.scenes = list(appState.project.scene_workbench?.scenes).filter((item) => item.id !== id);
+    if (appState.project.story_bible) {
+      appState.project.story_bible.scene_cards = list(appState.project.story_bible.scene_cards).filter((item) => item.id !== id);
+    }
+    if (appState.selection.sceneId === id) appState.selection.sceneId = null;
+    if (appState.selection.screenplaySceneId === id) appState.selection.screenplaySceneId = null;
     normalizeProject(); markDirty(); render();
+    return;
   }
   if (action === "select-screenplay-scene") { appState.selection.screenplaySceneId = id; render(); return; }
   if (action === "insert-scene-script-template") {
