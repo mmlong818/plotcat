@@ -1919,7 +1919,13 @@ function handleClick(event) {
     if (card) { card.status = card.status === "locked" ? "review" : "locked"; normalizeProject(); markDirty(); render(); }
     return;
   }
-  if (action === "scene-from-plot") return insertSceneFromPlotCard(id);
+  if (action === "scene-from-plot") {
+    const card = getPlotCard(id);
+    if (card && card.status !== "locked") {
+      if (!confirm("该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。")) return;
+    }
+    return insertSceneFromPlotCard(id);
+  }
   if (action === "delete-plot-card") {
     appState.project.plot_board.cards = list(appState.project.plot_board?.cards).filter((item) => item.id !== id);
     appState.plotEditorOpen = false;
