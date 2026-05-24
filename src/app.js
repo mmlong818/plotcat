@@ -2740,31 +2740,50 @@ async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
 
 async function aiWriteScreenplayBulk() {
   if (appState.screenplayAi.bulkRunning) return;
-  const scenes = list(appState.project.scene_workbench?.scenes)
+  const allScenes = () => list(appState.project.scene_workbench?.scenes)
     .slice()
     .sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
-  const targets = scenes.filter((s) => !s.script_full || s.script_full.trim().length < 50);
-  if (targets.length === 0) {
+  const pickUnwritten = () => allScenes().filter((s) => !s.script_full || s.script_full.trim().length < 50);
+
+  const initialTargets = pickUnwritten();
+  if (initialTargets.length === 0) {
     alert("所有场景都已有剧本内容。若需要重写，请逐场使用「AI 写本场」。");
     return;
   }
-  if (!confirm(`将依次为 ${targets.length} 个未撰写场景生成剧本，可能耗时较长。继续？`)) return;
+  if (!confirm(`将依次为 ${initialTargets.length} 个未撰写场景生成剧本，可能耗时较长。继续？`)) return;
 
   appState.screenplayAi.bulkRunning = true;
-  appState.screenplayAi.bulkProgress = { done: 0, total: targets.length };
+  appState.screenplayAi.bulkProgress = { done: 0, total: initialTargets.length };
   appState.screenplayAi.lastError = "";
   render();
 
-  for (const scene of targets) {
-    const r = await aiWriteSceneScript(scene.id, { silent: true });
+  // 第一轮：顺序生成所有未撰写场景
+  for (const scene of initialTargets) {
+    await aiWriteSceneScript(scene.id, { silent: true });
     appState.screenplayAi.bulkProgress.done += 1;
-    if (!r.ok) {
-      // 错误已记录到 lastError，继续下一场
-    }
     render();
   }
 
+  // 第二轮：重试本轮仍为空的场景（瞬时 API 失败常在长队列尾端集中出现）
+  const stillEmpty = pickUnwritten();
+  if (stillEmpty.length > 0) {
+    appState.screenplayAi.bulkProgress = { done: 0, total: stillEmpty.length };
+    appState.screenplayAi.lastError = `第一轮 ${stillEmpty.length} 场失败，自动重试中...`;
+    render();
+    for (const scene of stillEmpty) {
+      await aiWriteSceneScript(scene.id, { silent: true });
+      appState.screenplayAi.bulkProgress.done += 1;
+      render();
+    }
+  }
+
   appState.screenplayAi.bulkRunning = false;
+  const finalEmpty = pickUnwritten();
+  if (finalEmpty.length > 0) {
+    appState.screenplayAi.lastError = `仍有 ${finalEmpty.length} 场生成失败：${finalEmpty.slice(0, 3).map((s) => s.title).join("、")}${finalEmpty.length > 3 ? "..." : ""}。可逐场点「AI 写本场」单独重试。`;
+  } else {
+    appState.screenplayAi.lastError = "";
+  }
   render();
 }
 
