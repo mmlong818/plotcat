@@ -16,6 +16,7 @@ import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
+import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
@@ -29,7 +30,8 @@ workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
-  { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" }
+  { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
+  { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
 ]);
 
 const dom = {
@@ -67,6 +69,7 @@ const dom = {
   genresContent: document.querySelector("#genres-content"),
   locksContent: document.querySelector("#locks-content"),
   scenesContent: document.querySelector("#scenes-content"),
+  screenplayContent: document.querySelector("#screenplay-content"),
   pagePanels: Array.from(document.querySelectorAll("main [data-page]")),
   stepPanels: Array.from(document.querySelectorAll("[data-step-group]")),
   structureLibraryDialog: document.querySelector("#structure-library-dialog"),
@@ -1243,6 +1246,11 @@ function updateProjectField(action, fieldName, value) {
   if (action === "scene-field" && selectedScene) {
     selectedScene[fieldName] = fieldName === "order_index" ? Number(value) || 1 : value;
   }
+  if (action === "screenplay-field") {
+    const targetId = appState.selection.screenplaySceneId;
+    const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === targetId);
+    if (scene) scene[fieldName] = value;
+  }
   markDirty();
 }
 
@@ -1508,6 +1516,7 @@ function render() {
   renderRelationshipsPage(dom, appState, relationshipGetters);
   renderLocksPage(dom, appState, lockGetters);
   renderScenesPage(dom, appState, sceneGetters);
+  renderScreenplayPage(dom, appState);
   if (appState.creation) renderCreationPage();
   renderPageVisibility();
   schedulePlotInspectorLeadSync();
@@ -2087,6 +2096,59 @@ function handleClick(event) {
   if (action === "delete-scene") {
     appState.project.scene_workbench.scenes = list(appState.project.scene_workbench?.scenes).filter((item) => item.id !== id);
     normalizeProject(); markDirty(); render();
+  }
+  if (action === "select-screenplay-scene") { appState.selection.screenplaySceneId = id; render(); return; }
+  if (action === "insert-scene-script-template") {
+    const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === id);
+    if (!scene) return;
+    if (scene.script_full && scene.script_full.trim().length > 0) {
+      if (!confirm("本场已有内容，插入模板会附加在末尾。继续？")) return;
+    }
+    const intExt = (scene.location || "").trim().startsWith("内") ? "INT." : "EXT.";
+    const where = (scene.location || "未定地点").toUpperCase();
+    const when = (scene.time_of_day || "").toUpperCase();
+    const pov = list(appState.project.character_hub?.characters).find((c) => c.id === scene.pov_character_id)?.name ?? "人物名";
+    const tmpl = [
+      `${intExt} ${where}${when ? " - " + when : ""}`,
+      "",
+      `（${scene.purpose || "本场目标"}。${scene.obstacle || "本场障碍"}。）`,
+      "",
+      pov.toUpperCase(),
+      "（情绪/动作提示）",
+      "（对白...）",
+      ""
+    ].join("\n");
+    scene.script_full = (scene.script_full ? scene.script_full + "\n\n" : "") + tmpl;
+    markDirty(); render();
+    return;
+  }
+  if (action === "ai-write-scene-script" || action === "ai-write-screenplay-bulk") {
+    alert("AI 生成功能将在下一阶段接入（Phase B-2）。当前可使用「插入剧本模板」手写。");
+    return;
+  }
+  if (action === "export-screenplay-fountain") {
+    const text = buildFountainText(appState);
+    const title = (appState.project.project?.title || "screenplay").replace(/[\\/:*?"<>|]/g, "_");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${title}.fountain`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+  if (action === "preview-screenplay-full") {
+    const text = buildFountainText(appState);
+    const w = window.open("", "_blank", "width=900,height=900");
+    if (!w) { alert("浏览器拦截了弹窗，请允许后重试。"); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>剧本预览</title>
+      <style>body{font-family:Courier New,monospace;padding:48px 64px;line-height:1.6;white-space:pre-wrap;max-width:780px;margin:0 auto;color:#1f1d18;background:#fbf8f1}</style>
+      </head><body>${text.replace(/[<>&]/g, (c) => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;" })[c])}</body></html>`);
+    w.document.close();
+    return;
   }
   if (action === "set-plot-view") { setPlotBoardView(target.dataset.id ?? "structure"); return; }
   if (action === "toggle-plot-context") { setPlotContextVisible(!appState.plotContextVisible); return; }

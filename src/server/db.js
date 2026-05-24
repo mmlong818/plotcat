@@ -138,7 +138,9 @@ function migrate(db) {
       output_state TEXT NOT NULL,
       production_tags_json TEXT NOT NULL,
       dialogue_seed TEXT NOT NULL,
-      emotion_stage TEXT NOT NULL
+      emotion_stage TEXT NOT NULL,
+      script_full TEXT NOT NULL DEFAULT '',
+      screenplay_notes TEXT NOT NULL DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS setup_payoffs (
@@ -181,6 +183,14 @@ function migrate(db) {
     db.exec("ALTER TABLE projects ADD COLUMN last_opened_at TEXT");
   }
   db.exec("UPDATE projects SET last_opened_at = COALESCE(last_opened_at, updated_at)");
+
+  const sceneColumns = db.prepare("PRAGMA table_info(scene_cards)").all();
+  if (!sceneColumns.some((column) => column.name === "script_full")) {
+    db.exec("ALTER TABLE scene_cards ADD COLUMN script_full TEXT NOT NULL DEFAULT ''");
+  }
+  if (!sceneColumns.some((column) => column.name === "screenplay_notes")) {
+    db.exec("ALTER TABLE scene_cards ADD COLUMN screenplay_notes TEXT NOT NULL DEFAULT ''");
+  }
 }
 
 export function getDb() {

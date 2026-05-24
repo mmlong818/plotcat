@@ -7617,6 +7617,183 @@ body[data-active-step] .char-card:hover {
   .maslow-row__axis-right { grid-column: 4 / span 1; }
 }
 
+/* ========================================================================== */
+/* 剧本撰写页 (screenplay) */
+/* ========================================================================== */
+.screenplay-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.screenplay-page__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.screenplay-page__metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 12px;
+  flex: 1 1 480px;
+}
+.screenplay-page__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.screenplay-page__body {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: start;
+}
+.screenplay-page__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: calc(100vh - 280px);
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.screenplay-scene-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: #fbf6ec;
+  border: 1px solid rgba(180, 140, 90, 0.25);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 120ms, border-color 120ms;
+}
+.screenplay-scene-item:hover {
+  background: #f4ebd8;
+  border-color: rgba(180, 140, 90, 0.45);
+}
+.screenplay-scene-item.is-active {
+  background: #ece0c3;
+  border-color: rgba(180, 110, 50, 0.6);
+}
+.screenplay-scene-item__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.screenplay-scene-item__order {
+  font-size: 12px;
+  color: rgba(70, 50, 30, 0.55);
+  flex-shrink: 0;
+}
+.screenplay-scene-item__title {
+  font-weight: 600;
+  flex: 1;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.screenplay-scene-item__status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.screenplay-scene-item__status.is-done  { background: #cfe6c8; color: #2c5e2c; }
+.screenplay-scene-item__status.is-draft { background: #f4dfb8; color: #7a4a18; }
+.screenplay-scene-item__status.is-empty { background: #ebe3d3; color: #888070; }
+.screenplay-scene-item__meta {
+  font-size: 12px;
+  color: rgba(70, 50, 30, 0.6);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.screenplay-editor {
+  background: #fdfaf2;
+  border: 1px solid rgba(180, 140, 90, 0.25);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.screenplay-editor__head {
+  border-bottom: 1px solid rgba(180, 140, 90, 0.2);
+  padding-bottom: 10px;
+}
+.screenplay-editor__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.screenplay-editor__title-row h3 {
+  margin: 0;
+  font-size: 18px;
+}
+.screenplay-editor__slug {
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(70, 50, 30, 0.85);
+  margin-top: 6px;
+  letter-spacing: 0.5px;
+}
+.screenplay-editor__meta {
+  font-size: 13px;
+  color: rgba(70, 50, 30, 0.65);
+  margin-top: 4px;
+}
+.screenplay-editor__toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.screenplay-editor__hint {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(70, 50, 30, 0.55);
+}
+.screenplay-editor__body {
+  font-family: "Courier New", "Noto Sans Mono CJK SC", monospace;
+  font-size: 14px;
+  line-height: 1.65;
+  width: 100%;
+  min-height: 480px;
+  padding: 18px 22px;
+  background: #fffdf6;
+  border: 1px solid rgba(180, 140, 90, 0.3);
+  border-radius: 8px;
+  resize: vertical;
+  white-space: pre-wrap;
+}
+.screenplay-editor__foot {
+  border-top: 1px solid rgba(180, 140, 90, 0.2);
+  padding-top: 10px;
+}
+.screenplay-editor__notes-label {
+  font-size: 12px;
+  color: rgba(70, 50, 30, 0.6);
+  margin: 0 0 6px;
+}
+.screenplay-editor__notes {
+  width: 100%;
+  font-size: 13px;
+  padding: 8px 10px;
+  background: #fffdf6;
+  border: 1px solid rgba(180, 140, 90, 0.25);
+  border-radius: 6px;
+  resize: vertical;
+}
+
+@media (max-width: 1100px) {
+  .screenplay-page__body { grid-template-columns: 1fr; }
+  .screenplay-page__list { max-height: 320px; }
+}
+
 
 
 

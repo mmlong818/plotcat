@@ -275,7 +275,7 @@ await shot(page, '02-after-open');
 const stepCount = await page.locator('#stepper-nav .step-button').count();
 const stepLabels = await page.locator('#stepper-nav .step-button__label').allInnerTexts();
 console.log(`步骤数: ${stepCount}, 标签: ${JSON.stringify(stepLabels)}`);
-if (stepCount !== 5) note('HIGH', 'PD', '步骤条', `期望 5 步，实际 ${stepCount}`);
+if (stepCount !== 6) note('HIGH', 'PD', '步骤条', `期望 6 步（含剧本撰写），实际 ${stepCount}`);
 if (stepLabels.some(s => s.includes('沉淀') || s.includes('锁定'))) {
   note('CRITICAL', 'PD', '步骤条', '工作流中仍存在锁定/沉淀步骤');
 }
@@ -283,7 +283,7 @@ await shot(page, '03-workflow-stepper');
 
 // ============== 各步骤页 ==============
 let cPlanConfirmCount = -1;
-for (const stepId of ['structure', 'characters', 'relationships', 'plots', 'scenes']) {
+for (const stepId of ['structure', 'characters', 'relationships', 'plots', 'scenes', 'screenplay']) {
   const btn = page.locator(`#stepper-nav .step-button[data-id="${stepId}"]`);
   if (await btn.count() === 0) {
     note('HIGH', 'PD', stepId, '步骤按钮缺失');
@@ -302,6 +302,28 @@ for (const stepId of ['structure', 'characters', 'relationships', 'plots', 'scen
   if (stepId === 'relationships' && !panelText.includes('童年')) note('MEDIUM', 'SW', '关系张力', '关系内容未渲染或字段缺失');
   if (stepId === 'plots' && !panelText.includes('回到小镇')) note('HIGH', 'SW', '剧情开发', '剧情卡内容未渲染');
   if (stepId === 'scenes' && !panelText.includes('渡口')) note('MEDIUM', 'SW', '场景拆解', '场景内容未渲染');
+  if (stepId === 'screenplay') {
+    // 验证剧本页 — 应有 metrics + scene list + editor
+    if (!panelText.includes('总场景')) note('HIGH', 'PD', '剧本撰写', '剧本页 metrics 未渲染');
+    if (!panelText.includes('导出') && !panelText.includes('.fountain')) note('MEDIUM', 'PD', '剧本撰写', '导出按钮缺失');
+    // 验证编辑器：编辑 script_full 字段
+    const writeOk = await page.evaluate(() => {
+      const ta = document.querySelector('textarea[data-action="screenplay-field"][data-field="script_full"]');
+      if (!ta) return { ok: false, reason: 'no textarea' };
+      ta.value = 'INT. 渡口 - 黄昏\n\n林知夏从船上下来，看见陈牧。\n\n林知夏\n（停顿）\n我以为你不会来。\n\n陈牧\n你父亲...让我代他来。';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      return { ok: true, len: ta.value.length };
+    });
+    console.log(`剧本编辑器写入: ${JSON.stringify(writeOk)}`);
+    await w(400);
+    // 验证 fountain 导出文案
+    const fountainOk = await page.evaluate(() => {
+      // 模拟 click export 按钮，检查 buildFountainText 间接生效（看 onclick blob）
+      const btn = document.querySelector('[data-action="export-screenplay-fountain"]');
+      return !!btn;
+    });
+    if (!fountainOk) note('MEDIUM', 'PD', '剧本撰写', '导出 .fountain 按钮缺失');
+  }
 
   // 在 plots 步骤时立即验证 C 方案
   if (stepId === 'plots') {
