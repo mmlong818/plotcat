@@ -301,6 +301,7 @@ console.log('\n=== STAGE 4: 剧情开发 ===');
 await page.locator('#stepper-nav .step-button[data-id="plots"]').click(); await w(800);
 
 // 按节点类型查询 node_id（每个 node 由 node_type 标识）
+const actIds = acts.map(a => a.id);
 const nodeByType = {};
 nodes.forEach(n => { nodeByType[n.node_type] = n.id; });
 
