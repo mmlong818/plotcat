@@ -31,6 +31,7 @@ import { createId } from "./src/shared/projectFactory.js";
 import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
+import { listSources, getProvider } from "./src/knowledge/registry.js";
 import { spawn } from "node:child_process";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -230,6 +231,56 @@ async function handleApi(request, response, pathname) {
 
   const handledProjects = await handleProjectsApi(request, response, pathname);
   if (handledProjects) {
+    return true;
+  }
+
+  // ── 知识源（可插拔） ────────────────────────────────────────────────────
+  if (pathname === "/api/knowledge/sources" && request.method === "GET") {
+    json(response, 200, { sources: listSources() });
+    return true;
+  }
+  const kbSearchMatch = pathname.match(/^\/api\/knowledge\/([^/]+)\/search$/);
+  if (kbSearchMatch && request.method === "GET") {
+    const provider = getProvider(decodeURIComponent(kbSearchMatch[1]));
+    if (!provider) { json(response, 404, { error: "知识源不存在" }); return true; }
+    const url = new URL(request.url, "http://localhost");
+    try {
+      const result = await provider.listEntries({
+        query: url.searchParams.get("q") || "",
+        type: url.searchParams.get("type") || "",
+        limit: Number(url.searchParams.get("limit")) || 30,
+        offset: Number(url.searchParams.get("offset")) || 0
+      });
+      json(response, 200, result);
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
+    return true;
+  }
+  const kbEntryMatch = pathname.match(/^\/api\/knowledge\/([^/]+)\/entry\/([^/]+)$/);
+  if (kbEntryMatch && request.method === "GET") {
+    const provider = getProvider(decodeURIComponent(kbEntryMatch[1]));
+    if (!provider) { json(response, 404, { error: "知识源不存在" }); return true; }
+    try {
+      const entry = await provider.getEntry(decodeURIComponent(kbEntryMatch[2]));
+      if (!entry) { json(response, 404, { error: "条目不存在或未缓存" }); return true; }
+      json(response, 200, { entry });
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
+    return true;
+  }
+  const kbSyncMatch = pathname.match(/^\/api\/knowledge\/([^/]+)\/sync$/);
+  if (kbSyncMatch && request.method === "POST") {
+    const provider = getProvider(decodeURIComponent(kbSyncMatch[1]));
+    if (!provider) { json(response, 404, { error: "知识源不存在" }); return true; }
+    if (!provider.meta.hasSync) { json(response, 400, { error: "该源不支持 sync" }); return true; }
+    try {
+      const result = await provider.sync();
+      json(response, 200, { ...result, status: typeof provider.meta.status === "function" ? provider.meta.status() : provider.meta.status });
+    } catch (error) {
+      json(response, 500, { error: error.message });
+    }
     return true;
   }
 

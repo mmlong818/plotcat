@@ -2050,7 +2050,20 @@ function handleClick(event) {
     markDirty(); render();
     return;
   }
-  if (action === "locks-tab") { appState.locksActiveTab = id; render(); return; }
+  if (action === "locks-tab") {
+    appState.locksActiveTab = id;
+    if (id === "kb" && appState.knowledge.sources.length === 0) {
+      kbFetchSources().then(() => { if (appState.knowledge.selectedSourceId) kbSearch(); });
+    } else if (id === "kb" && appState.knowledge.items.length === 0) {
+      kbSearch();
+    }
+    render();
+    return;
+  }
+  if (action === "kb-init") { kbFetchSources().then(() => kbSearch()); return; }
+  if (action === "kb-sync") { kbSync(); return; }
+  if (action === "kb-open-entry") { kbOpenEntry(id); return; }
+  if (action === "kb-import") { kbImport(target.dataset.target); return; }
   if (action === "select-timeline") { appState.selection.timelineId = id; render(); return; }
   if (action === "add-world-rule") {
     const item = { id: createId("rule"), rule_statement: "", rule_level: "hard", scope: "", exceptions: [], evidence: [] };
@@ -2181,6 +2194,20 @@ function handleClick(event) {
 function handleInput(event) {
   const action = event.target.dataset.action;
   const fieldName = event.target.dataset.field;
+  // KB tab：搜索输入 / 源切换不需要 fieldName
+  if (action === "kb-search-input") {
+    appState.knowledge.query = event.target.value;
+    clearTimeout(appState.knowledge._searchTimer);
+    appState.knowledge._searchTimer = setTimeout(() => kbSearch(), 280);
+    return;
+  }
+  if (action === "kb-select-source") {
+    appState.knowledge.selectedSourceId = event.target.value;
+    appState.knowledge.selectedEntry = null;
+    appState.knowledge.items = [];
+    kbSearch();
+    return;
+  }
   if (!action || !fieldName) return;
   if (action === "ai-config-field") {
     appState.aiConfigDraft[fieldName] = event.target.value;
@@ -2560,6 +2587,111 @@ async function handleProAssemble() {
     pc.loading = false;
     pc.error = `组装失败：${err.message}`;
     renderCreationPage();
+  }
+}
+
+// ── Knowledge sources ─────────────────────────────────────────────────────────
+
+async function kbFetchSources() {
+  try {
+    const r = await fetch("/api/knowledge/sources");
+    const j = await r.json();
+    appState.knowledge.sources = j.sources ?? [];
+    if (!appState.knowledge.selectedSourceId && appState.knowledge.sources[0]) {
+      appState.knowledge.selectedSourceId = appState.knowledge.sources[0].id;
+    }
+  } catch (e) {
+    appState.knowledge.lastError = `加载知识源列表失败：${e.message}`;
+  }
+  render();
+}
+
+async function kbSearch() {
+  const k = appState.knowledge;
+  if (!k.selectedSourceId) return;
+  k.loading = true;
+  k.lastError = "";
+  render();
+  try {
+    const params = new URLSearchParams({ q: k.query || "", limit: "30" });
+    const r = await fetch(`/api/knowledge/${encodeURIComponent(k.selectedSourceId)}/search?${params}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    k.items = j.items ?? [];
+    k.total = j.total ?? 0;
+    if (j.needsSync) k.lastError = "该源尚未同步本地数据，请先点「同步」。";
+  } catch (e) {
+    k.lastError = `搜索失败：${e.message}`;
+    k.items = [];
+    k.total = 0;
+  } finally {
+    k.loading = false;
+    render();
+  }
+}
+
+async function kbOpenEntry(externalId) {
+  const k = appState.knowledge;
+  if (!k.selectedSourceId) return;
+  k.entryLoading = true;
+  k.selectedEntry = { external_id: externalId, title: "...", body: "", tags: [], related: [] };
+  render();
+  try {
+    const r = await fetch(`/api/knowledge/${encodeURIComponent(k.selectedSourceId)}/entry/${encodeURIComponent(externalId)}`);
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    k.selectedEntry = j.entry;
+  } catch (e) {
+    k.lastError = `加载详情失败：${e.message}`;
+    k.selectedEntry = null;
+  } finally {
+    k.entryLoading = false;
+    render();
+  }
+}
+
+async function kbSync() {
+  const k = appState.knowledge;
+  if (!k.selectedSourceId) return;
+  k.syncing = true;
+  k.lastError = "";
+  render();
+  try {
+    const r = await fetch(`/api/knowledge/${encodeURIComponent(k.selectedSourceId)}/sync`, { method: "POST" });
+    const j = await r.json();
+    if (j.error) throw new Error(j.error);
+    // 刷新 sources status
+    await kbFetchSources();
+    k.lastImportMessage = `同步完成：${j.total} 条条目`;
+    setTimeout(() => { k.lastImportMessage = ""; render(); }, 4000);
+  } catch (e) {
+    k.lastError = `同步失败：${e.message}`;
+  } finally {
+    k.syncing = false;
+    render();
+  }
+}
+
+async function kbImport(target) {
+  const k = appState.knowledge;
+  const detail = k.selectedEntry;
+  if (!detail || !detail.body) return;
+  k.importing = true;
+  render();
+  try {
+    const { buildImportPatch } = await import("./knowledge/importer.js");
+    const { field, item } = buildImportPatch(detail, target);
+    if (!appState.project.story_bible[field]) appState.project.story_bible[field] = [];
+    appState.project.story_bible[field].push(item);
+    normalizeProject();
+    markDirty();
+    k.lastImportMessage = `已导入到本地「${field === "world_rules" ? "世界规则" : field === "setup_payoffs" ? "伏笔追踪" : "时间线"}」。可切到对应 tab 查看。`;
+    setTimeout(() => { k.lastImportMessage = ""; render(); }, 4000);
+  } catch (e) {
+    k.lastError = `导入失败：${e.message}`;
+  } finally {
+    k.importing = false;
+    render();
   }
 }
 
