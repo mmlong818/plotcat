@@ -1243,13 +1243,26 @@ function updateProjectField(action, fieldName, value) {
     else appState.project.genre_profile[fieldName] = value;
   }
   if (action === "timeline-field" && selectedTimeline) {
-    selectedTimeline[fieldName] = fieldName === "story_day" ? Number(value) || 1 : value;
+    const v = fieldName === "story_day" ? Number(value) || 1 : value;
+    selectedTimeline[fieldName] = v;
+    // 双写 story_bible：ensurePlotDrivenProject 从 story_bible 派生 lock_layer，否则会擦回
+    const sb = list(appState.project.story_bible?.timeline_events).find((e) => e.id === selectedTimeline.id);
+    if (sb) sb[fieldName] = v;
   }
   if (action === "world-rule-field" && selectedRule) {
     if (fieldName === "exceptions_text") selectedRule.exceptions = splitTags(value);
     else selectedRule[fieldName] = value;
+    const sb = list(appState.project.story_bible?.world_rules).find((r) => r.id === selectedRule.id);
+    if (sb) {
+      if (fieldName === "exceptions_text") sb.exceptions = splitTags(value);
+      else sb[fieldName] = value;
+    }
   }
-  if (action === "setup-field" && selectedSetup) selectedSetup[fieldName] = value;
+  if (action === "setup-field" && selectedSetup) {
+    selectedSetup[fieldName] = value;
+    const sb = list(appState.project.story_bible?.setup_payoffs).find((s) => s.id === selectedSetup.id);
+    if (sb) sb[fieldName] = value;
+  }
   if (action === "scene-field" && selectedScene) {
     selectedScene[fieldName] = fieldName === "order_index" ? Number(value) || 1 : value;
   }
@@ -2084,6 +2097,11 @@ function handleClick(event) {
   if (action === "add-timeline") {
     const item = { id: createId("event"), story_day: list(appState.project.lock_layer?.projections?.timeline_events).length + 1, sequence_index: 1, summary: "", participants: [], location: "", trigger: "", consequence: "" };
     appState.project.lock_layer.projections.timeline_events.push(item);
+    // 双写 story_bible — ensurePlotDrivenProject 从 story_bible 派生 lock_layer.projections，
+    // 不写就会被擦回
+    appState.project.story_bible = appState.project.story_bible || {};
+    appState.project.story_bible.timeline_events = list(appState.project.story_bible.timeline_events);
+    appState.project.story_bible.timeline_events.push(item);
     appState.selection.timelineId = item.id;
     markDirty(); render();
     return;
@@ -2106,6 +2124,9 @@ function handleClick(event) {
   if (action === "add-world-rule") {
     const item = { id: createId("rule"), rule_statement: "", rule_level: "hard", scope: "", exceptions: [], evidence: [] };
     appState.project.lock_layer.projections.world_rules.push(item);
+    appState.project.story_bible = appState.project.story_bible || {};
+    appState.project.story_bible.world_rules = list(appState.project.story_bible.world_rules);
+    appState.project.story_bible.world_rules.push(item);
     appState.selection.worldRuleId = item.id;
     markDirty(); render();
     return;
@@ -2114,6 +2135,9 @@ function handleClick(event) {
   if (action === "add-setup") {
     const item = { id: createId("setup"), setup_summary: "", setup_scene_id: "", expected_payoff_window: "", status: "open", payoff_scene_id: "", payoff_summary: "" };
     appState.project.lock_layer.projections.setup_payoffs.push(item);
+    appState.project.story_bible = appState.project.story_bible || {};
+    appState.project.story_bible.setup_payoffs = list(appState.project.story_bible.setup_payoffs);
+    appState.project.story_bible.setup_payoffs.push(item);
     appState.selection.setupId = item.id;
     markDirty(); render();
     return;
