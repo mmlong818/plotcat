@@ -2698,9 +2698,11 @@ async function kbImport(target) {
 // ── Screenplay AI ─────────────────────────────────────────────────────────────
 
 async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
-  const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
-  if (!scene) return { ok: false, reason: "scene not found" };
-  if (scene.script_full && scene.script_full.trim().length > 50 && !silent) {
+  // 先确认场景存在 + 取标题（不要持有引用 — render() 调用 normalizeProject 会替换 project 对象）
+  const peekScene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+  if (!peekScene) return { ok: false, reason: "scene not found" };
+  const sceneTitle = peekScene.title;
+  if (peekScene.script_full && peekScene.script_full.trim().length > 50 && !silent) {
     if (!confirm("本场已有剧本内容，AI 生成将覆盖。继续？")) return { ok: false, reason: "user cancel" };
   }
   appState.screenplayAi.busySceneIds = unique([...appState.screenplayAi.busySceneIds, sceneId]);
@@ -2712,20 +2714,23 @@ async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
     const data = result.choices?.[0]?.data ?? {};
     const script = (data.script ?? "").trim();
     if (!script) throw new Error("AI 返回了空剧本");
-    scene.script_full = script;
+    // 关键：重新查找而非用 captured 引用，因为 render() 期间 normalizeProject 会替换 appState.project
+    const liveScene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+    if (!liveScene) throw new Error("场景在生成期间被移除");
+    liveScene.script_full = script;
     if (data.end_hook || data.emotion_arc) {
       const notesParts = [
-        scene.screenplay_notes,
+        liveScene.screenplay_notes,
         data.emotion_arc ? `情感弧：${data.emotion_arc}` : "",
         data.end_hook ? `结尾钩子：${data.end_hook}` : "",
         data.reasoning ? `AI 思路：${data.reasoning}` : ""
       ].filter(Boolean);
-      scene.screenplay_notes = notesParts.join("\n");
+      liveScene.screenplay_notes = notesParts.join("\n");
     }
     markDirty();
     return { ok: true };
   } catch (error) {
-    appState.screenplayAi.lastError = `场景「${scene.title || sceneId}」生成失败：${error.message}`;
+    appState.screenplayAi.lastError = `场景「${sceneTitle || sceneId}」生成失败：${error.message}`;
     return { ok: false, reason: error.message };
   } finally {
     appState.screenplayAi.busySceneIds = appState.screenplayAi.busySceneIds.filter((id) => id !== sceneId);
