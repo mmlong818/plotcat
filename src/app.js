@@ -575,20 +575,27 @@ async function loadProjectFromServer(projectId) {
 
 async function saveProjectToServer() {
   appState.runtime.saving = true;
+  // 标记 PUT 期间用户是否新增了改动；若有则 PUT 返回后不可覆盖本地最新状态
+  appState.runtime.dirty = false;
   renderRuntimeStatus();
   const payload = await fetchJson(`/api/projects/${encodeURIComponent(appState.project.project.id)}`, {
     method: "PUT",
     body: JSON.stringify({ project: appState.project })
   });
-  appState.project = ensurePlotDrivenProject(payload.project);
+  // 关键：PUT 完成时若 dirty 已被新编辑置 true，说明本地有 PUT 之外的新数据，
+  // 不要用 server 返回值覆盖 appState.project，否则会丢失这段时间内用户的输入。
+  if (!appState.runtime.dirty) {
+    appState.project = ensurePlotDrivenProject(payload.project);
+  }
   appState.projectList = payload.projects ?? appState.projectList;
   appState.runtime.serverAvailable = true;
   appState.runtime.saving = false;
-  appState.runtime.dirty = false;
   appState.runtime.lastSavedAt = new Date().toISOString();
   normalizeProject();
   saveLocalSnapshot();
   render();
+  // 若期间有 dirty，再排一次 autosave 把最新状态推上去
+  if (appState.runtime.dirty) scheduleAutosave();
 }
 
 function scheduleAutosave() {
@@ -1954,8 +1961,9 @@ function handleClick(event) {
     return;
   }
   if (action === "add-character") {
+    const newId = createId("char");
     const character = {
-      id: createId("char"),
+      id: newId,
       name: "新人物",
       story_role: "supporting",
       external_goal: "",
@@ -1974,7 +1982,18 @@ function handleClick(event) {
       linked_plot_ids: []
     };
     appState.project.character_hub.characters.push(character);
-    appState.selection.characterId = character.id;
+    // 同步写入 story_bible.characters，否则 normalizeProject → deriveCharacterHub 会用 story_bible 派生覆盖回来
+    appState.project.story_bible = appState.project.story_bible || {};
+    appState.project.story_bible.characters = list(appState.project.story_bible.characters);
+    appState.project.story_bible.characters.push({
+      id: newId,
+      name: "新人物",
+      story_role: "supporting",
+      external_want: "", internal_need: "", psychological_flaw: "", moral_flaw: "",
+      public_mask: "", core_fear: "", wound: "", arc_start: "", arc_end: "",
+      voice_rules: [], secret: ""
+    });
+    appState.selection.characterId = newId;
     appState.characterDesign = { loading: false, error: "" };
     normalizeProject(); markDirty(); render();
     return;

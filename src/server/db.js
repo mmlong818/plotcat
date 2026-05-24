@@ -56,7 +56,7 @@ function migrate(db) {
     );
 
     CREATE TABLE IF NOT EXISTS characters (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       name TEXT NOT NULL,
       story_role TEXT NOT NULL,
@@ -71,11 +71,12 @@ function migrate(db) {
       arc_end TEXT NOT NULL,
       voice_rules_json TEXT NOT NULL,
       secret TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS relationships (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       source_character_id TEXT NOT NULL,
       target_character_id TEXT NOT NULL,
@@ -84,22 +85,24 @@ function migrate(db) {
       power_balance TEXT NOT NULL,
       shared_history TEXT NOT NULL,
       hidden_information TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS world_rules (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       rule_statement TEXT NOT NULL,
       rule_level TEXT NOT NULL,
       scope TEXT NOT NULL,
       exceptions_json TEXT NOT NULL,
       evidence_json TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS timeline_events (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       story_day INTEGER NOT NULL,
       sequence_index INTEGER NOT NULL,
@@ -107,21 +110,23 @@ function migrate(db) {
       participants_json TEXT NOT NULL,
       location TEXT NOT NULL,
       trigger TEXT NOT NULL,
-      consequence TEXT NOT NULL
+      consequence TEXT NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS beats (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       framework TEXT NOT NULL,
       slot TEXT NOT NULL,
       purpose TEXT NOT NULL,
       linked_scene_ids_json TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS scene_cards (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       order_index INTEGER NOT NULL,
       title TEXT NOT NULL,
@@ -140,11 +145,12 @@ function migrate(db) {
       dialogue_seed TEXT NOT NULL,
       emotion_stage TEXT NOT NULL,
       script_full TEXT NOT NULL DEFAULT '',
-      screenplay_notes TEXT NOT NULL DEFAULT ''
+      screenplay_notes TEXT NOT NULL DEFAULT '',
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS setup_payoffs (
-      id TEXT PRIMARY KEY,
+      id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
       setup_summary TEXT NOT NULL,
       setup_scene_id TEXT NOT NULL,
@@ -152,7 +158,8 @@ function migrate(db) {
       status TEXT NOT NULL,
       payoff_scene_id TEXT NOT NULL,
       payoff_summary TEXT NOT NULL,
-      sort_order INTEGER NOT NULL
+      sort_order INTEGER NOT NULL,
+      PRIMARY KEY (project_id, id)
     );
 
     CREATE TABLE IF NOT EXISTS project_versions (
@@ -191,6 +198,44 @@ function migrate(db) {
   if (!sceneColumns.some((column) => column.name === "screenplay_notes")) {
     db.exec("ALTER TABLE scene_cards ADD COLUMN screenplay_notes TEXT NOT NULL DEFAULT ''");
   }
+
+  // 把单列 PK (id) 迁移为复合 PK (project_id, id)，让同结构项目可共存。
+  migrateToCompositePk(db, "characters");
+  migrateToCompositePk(db, "relationships");
+  migrateToCompositePk(db, "world_rules");
+  migrateToCompositePk(db, "timeline_events");
+  migrateToCompositePk(db, "beats");
+  migrateToCompositePk(db, "scene_cards");
+  migrateToCompositePk(db, "setup_payoffs");
+}
+
+function migrateToCompositePk(db, table) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all();
+  // 复合 PK 的判断：pk 列里 id 和 project_id 都标记为 PK 成员（pk > 0）
+  const pkCols = cols.filter((c) => c.pk > 0).map((c) => c.name).sort();
+  const isCompositePk = pkCols.length === 2 && pkCols.includes("id") && pkCols.includes("project_id");
+  if (isCompositePk) return;
+
+  // 取 CREATE 语句中的列定义（去掉旧的 `id TEXT PRIMARY KEY` 改为 `id TEXT NOT NULL`）
+  const colNames = cols.map((c) => c.name);
+  const colDefs = cols.map((c) => {
+    const notNull = c.notnull ? "NOT NULL" : "";
+    const dflt = c.dflt_value !== null && c.dflt_value !== undefined ? `DEFAULT ${c.dflt_value}` : "";
+    const refClause = c.name === "project_id" ? "REFERENCES projects(id) ON DELETE CASCADE" : "";
+    return `${c.name} ${c.type} ${notNull} ${dflt} ${refClause}`.replace(/\s+/g, " ").trim();
+  });
+  const newTable = `__new_${table}`;
+  db.exec(`DROP TABLE IF EXISTS ${newTable}`);
+  db.exec(`
+    CREATE TABLE ${newTable} (
+      ${colDefs.join(",\n      ")},
+      PRIMARY KEY (project_id, id)
+    );
+  `);
+  db.exec(`INSERT INTO ${newTable} (${colNames.join(", ")}) SELECT ${colNames.join(", ")} FROM ${table}`);
+  db.exec(`DROP TABLE ${table}`);
+  db.exec(`ALTER TABLE ${newTable} RENAME TO ${table}`);
+  console.log(`[migrate] ${table}: single PK → 复合 PK (project_id, id)`);
 }
 
 export function getDb() {
