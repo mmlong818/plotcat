@@ -49,7 +49,7 @@ async function fillField(page, action, fieldName, value) {
 // 通过 data-id 定位特定行的字段（例如 act-field/title 对应某幕）
 async function fillFieldWithId(page, action, fieldName, dataId, value) {
   const sel = `[data-action="${action}"][data-field="${fieldName}"][data-id="${dataId}"]`;
-  return await page.evaluate((args) => {
+  const ok = await page.evaluate((args) => {
     const [s, v] = args;
     const el = document.querySelector(s);
     if (!el) return false;
@@ -58,6 +58,8 @@ async function fillFieldWithId(page, action, fieldName, dataId, value) {
     el.dispatchEvent(new Event('change', { bubbles: true }));
     return true;
   }, [sel, value]);
+  if (!ok) note('MEDIUM', 'PD', '字段缺失', `${action}/${fieldName}#${dataId.slice(-6)}`);
+  return ok;
 }
 
 async function clickById(page, action, id = null) {
@@ -125,12 +127,22 @@ const nodeNotes = {
   finale: '陈牧在派出所门口承认意外细节；A 不原谅但放下愤怒。',
   aftershock: '渡口清晨，与开场对位。她独自上船离开。'
 };
+// 节点 note textarea 只在 drawer 打开（selected node）时存在 — 先 click 节点卡，再 fill note，最后关 drawer
 for (const node of nodes) {
   const note_ = nodeNotes[node.node_type] || nodeNotes[node.key];
-  if (note_) {
-    await fillFieldWithId(page, 'node-field', 'note', node.id, note_);
-    await w(80);
-  }
+  if (!note_) continue;
+  // 打开 drawer
+  await page.evaluate((nid) => {
+    const card = document.querySelector(`[data-action="select-node"][data-node-id="${nid}"]`);
+    if (card) card.click();
+  }, node.id);
+  await w(250);
+  // 现在 drawer textarea 已渲染（data-action="node-field" data-field="note" data-id=node.id）
+  await fillFieldWithId(page, 'node-field', 'note', node.id, note_);
+  await w(120);
+  // 关闭 drawer
+  await page.evaluate(() => document.querySelector('[data-action="close-node-drawer"]')?.click());
+  await w(150);
 }
 await w(2000);  // autosave
 await page.screenshot({ path: path.join(SHOTS, '01-structure.png'), fullPage: true });
