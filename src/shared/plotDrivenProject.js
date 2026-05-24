@@ -421,6 +421,8 @@ function deriveSceneWorkbench(project, structureProfile, plotBoard) {
       exit_state: scene.output_state,
       status: linkedPlotCardIds.length > 0 ? "outline" : "draft",
       script_excerpt: scene.dialogue_seed ?? "",
+      script_full: scene.script_full ?? "",
+      screenplay_notes: scene.screenplay_notes ?? "",
       notes: scene.emotion_stage ?? ""
     };
   });
@@ -549,7 +551,9 @@ function syncLegacyStoryBible(project) {
           output_state: scene.exit_state ?? legacy.output_state ?? "",
           production_tags: legacy.production_tags ?? [],
           dialogue_seed: scene.script_excerpt ?? legacy.dialogue_seed ?? "",
-          emotion_stage: scene.notes ?? legacy.emotion_stage ?? ""
+          emotion_stage: scene.notes ?? legacy.emotion_stage ?? "",
+          script_full: scene.script_full ?? legacy.script_full ?? "",
+          screenplay_notes: scene.screenplay_notes ?? legacy.screenplay_notes ?? ""
         };
       }),
     beats: list(project.structure_profile?.nodes)

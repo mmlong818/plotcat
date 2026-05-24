@@ -291,7 +291,9 @@ export function loadProject(projectId = null) {
           output_state: item.output_state,
           production_tags: parseJson(item.production_tags_json, []),
           dialogue_seed: item.dialogue_seed,
-          emotion_stage: item.emotion_stage
+          emotion_stage: item.emotion_stage,
+          script_full: item.script_full ?? "",
+          screenplay_notes: item.screenplay_notes ?? ""
         })),
       setup_payoffs: db
         .prepare("SELECT * FROM setup_payoffs WHERE project_id = ? ORDER BY sort_order ASC")
@@ -533,8 +535,8 @@ export function saveProject(project) {
         INSERT INTO scene_cards (
           id, project_id, order_index, title, pov_character_id, location, time_of_day, goal,
           obstacle, tactic, turn, value_shift, new_information_json, input_state, output_state,
-          production_tags_json, dialogue_seed, emotion_stage
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          production_tags_json, dialogue_seed, emotion_stage, script_full, screenplay_notes
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `
       );
       nextProject.story_bible.scene_cards.forEach((item) => {
@@ -556,7 +558,9 @@ export function saveProject(project) {
           item.output_state,
           stringify(item.production_tags),
           item.dialogue_seed ?? "",
-          item.emotion_stage ?? ""
+          item.emotion_stage ?? "",
+          item.script_full ?? "",
+          item.screenplay_notes ?? ""
         );
       });
     });
