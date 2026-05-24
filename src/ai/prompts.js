@@ -383,11 +383,36 @@ export function buildSceneScriptPrompt(projectContext, options) {
   }
 
   const pov = charById.get(target.pov_character_id)?.name ?? "未指定 POV";
+
+  // 收集本场所有出场人物（POV + 关联剧情卡里的人物），并整理画像供 AI 使用
+  const plotCards = ctx?.plot_board?.cards ?? [];
+  const linkedPlotIds = Array.isArray(target.linked_plot_card_ids) ? target.linked_plot_card_ids : [];
+  const sceneCharIds = new Set([target.pov_character_id, ...linkedPlotIds.flatMap((pid) => {
+    const card = plotCards.find((c) => c.id === pid);
+    return Array.isArray(card?.character_ids) ? card.character_ids : [];
+  })].filter(Boolean));
+  const sceneCharLines = Array.from(sceneCharIds).map((cid) => {
+    const c = charById.get(cid);
+    if (!c) return null;
+    const traits = [
+      c.story_role && `角色定位 ${c.story_role}`,
+      c.external_goal || c.external_want,
+      c.starting_mask || c.public_mask,
+      c.voice_traits
+    ].filter(Boolean).join(" / ");
+    return `- ${c.name}${cid === target.pov_character_id ? "（POV）" : ""}${traits ? "：" + traits : ""}`;
+  }).filter(Boolean).join("\n") || `- ${pov}（仅 POV 已知）`;
+
   const lockedRules = (ctx?.lock_layer?.projections?.world_rules ?? ctx?.story_bible?.world_rules ?? [])
     .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}（${r.scope ?? ""}）`).join("\n") || "（无）";
   const lockedTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? ctx?.story_bible?.timeline_events ?? [])
     .slice(0, 6)
     .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n") || "（无）";
+
+  const allowedNames = Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean);
+  const namesGuard = allowedNames.length > 0
+    ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。`
+    : "";
 
   const intExt = (target.location || "").trim().startsWith("内") ? "INT." : "EXT.";
   const slug = `${intExt} ${(target.location || "未定地点").toUpperCase()}${target.time_of_day ? " - " + (target.time_of_day || "").toUpperCase() : ""}`;
@@ -409,6 +434,9 @@ ${DRAMA_PRINCIPLES}`;
 - 出场状态：${target.exit_state ?? target.output_state ?? ""}
 - 创作笔记：${target.notes ?? target.emotion_stage ?? ""}
 
+本场出场人物（必须使用这些名字，不得替换）：
+${sceneCharLines}${namesGuard}
+
 已锁定世界规则（须遵守）：
 ${lockedRules}
 
@@ -421,7 +449,7 @@ ${lockedTimeline}
 请写本场完整的剧本格式文本，严格遵守：
 - 第一行必须是场景头（slug line）：${slug}
 - 动作描述左对齐段落，每段不超过 3 行，写画面而非感受
-- 人物名单独成行（建议大写名字，提示如「（停顿）」用括号）
+- 人物名单独成行${allowedNames.length > 0 ? `（只能从 ${allowedNames.join("、")} 中选）` : "（建议大写名字）"}，提示如「（停顿）」用括号
 - 对白下一行接说话内容，不超过 3 行
 - 对白不能解释性、说教式
 - 潜台词：角色说 X 实际要 Y
