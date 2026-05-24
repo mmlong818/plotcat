@@ -6,6 +6,7 @@ import {
   buildBeatSheetPrompt,
   buildSceneOutlinePrompt,
   buildSceneWeavePrompt,
+  buildSceneScriptPrompt,
   buildDiagnosisPrompt,
   buildPulsePrompt,
   buildConceptPrompt,
@@ -335,6 +336,12 @@ const FORMATTERS = {
   beat_sheet: formatBeatSheetChoices,
   scene_outline: formatSceneOutlineChoices,
   scene_weave: formatSceneWeaveChoices,
+  scene_script: (parsed) => [{
+    id: makeId(),
+    label: '剧本',
+    content: (parsed.script ?? '').slice(0, 80),
+    data: parsed
+  }],
   diagnosis: formatDiagnosisChoices,
   concept: formatConceptChoices,
   synopsis: formatSynopsisChoices,
@@ -356,6 +363,7 @@ const PROMPT_BUILDERS = {
   beat_sheet: (ctx, opts, gd, bd) => buildBeatSheetPrompt(ctx, opts, gd, bd),
   scene_outline: (ctx, opts) => buildSceneOutlinePrompt(ctx, opts),
   scene_weave: (ctx, opts) => buildSceneWeavePrompt(ctx, opts),
+  scene_script: (ctx, opts) => buildSceneScriptPrompt(ctx, opts),
   diagnosis: (ctx) => buildDiagnosisPrompt(ctx),
   concept: (_ctx, opts) => buildConceptPrompt(opts),
   synopsis: (ctx, opts) => buildSynopsisPrompt(ctx, opts),

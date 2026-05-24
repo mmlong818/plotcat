@@ -514,6 +514,7 @@ export const appState = {
   createModePickerOpen: false,
   projectDeleteConfirmId: null,
   characterDesign: { loading: false, error: "" },
+  screenplayAi: { busySceneIds: [], bulkRunning: false, bulkProgress: { done: 0, total: 0 }, lastError: "" },
   proCreation: {
     step: "anchor",
     anchor: "",

@@ -2122,8 +2122,12 @@ function handleClick(event) {
     markDirty(); render();
     return;
   }
-  if (action === "ai-write-scene-script" || action === "ai-write-screenplay-bulk") {
-    alert("AI 生成功能将在下一阶段接入（Phase B-2）。当前可使用「插入剧本模板」手写。");
+  if (action === "ai-write-scene-script") {
+    aiWriteSceneScript(id);
+    return;
+  }
+  if (action === "ai-write-screenplay-bulk") {
+    aiWriteScreenplayBulk();
     return;
   }
   if (action === "export-screenplay-fountain") {
@@ -2557,6 +2561,74 @@ async function handleProAssemble() {
     pc.error = `组装失败：${err.message}`;
     renderCreationPage();
   }
+}
+
+// ── Screenplay AI ─────────────────────────────────────────────────────────────
+
+async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
+  const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+  if (!scene) return { ok: false, reason: "scene not found" };
+  if (scene.script_full && scene.script_full.trim().length > 50 && !silent) {
+    if (!confirm("本场已有剧本内容，AI 生成将覆盖。继续？")) return { ok: false, reason: "user cancel" };
+  }
+  appState.screenplayAi.busySceneIds = unique([...appState.screenplayAi.busySceneIds, sceneId]);
+  appState.screenplayAi.lastError = "";
+  render();
+  try {
+    const result = await callGenerateAPI("scene_script", appState.project, { sceneId });
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    const script = (data.script ?? "").trim();
+    if (!script) throw new Error("AI 返回了空剧本");
+    scene.script_full = script;
+    if (data.end_hook || data.emotion_arc) {
+      const notesParts = [
+        scene.screenplay_notes,
+        data.emotion_arc ? `情感弧：${data.emotion_arc}` : "",
+        data.end_hook ? `结尾钩子：${data.end_hook}` : "",
+        data.reasoning ? `AI 思路：${data.reasoning}` : ""
+      ].filter(Boolean);
+      scene.screenplay_notes = notesParts.join("\n");
+    }
+    markDirty();
+    return { ok: true };
+  } catch (error) {
+    appState.screenplayAi.lastError = `场景「${scene.title || sceneId}」生成失败：${error.message}`;
+    return { ok: false, reason: error.message };
+  } finally {
+    appState.screenplayAi.busySceneIds = appState.screenplayAi.busySceneIds.filter((id) => id !== sceneId);
+    render();
+  }
+}
+
+async function aiWriteScreenplayBulk() {
+  if (appState.screenplayAi.bulkRunning) return;
+  const scenes = list(appState.project.scene_workbench?.scenes)
+    .slice()
+    .sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+  const targets = scenes.filter((s) => !s.script_full || s.script_full.trim().length < 50);
+  if (targets.length === 0) {
+    alert("所有场景都已有剧本内容。若需要重写，请逐场使用「AI 写本场」。");
+    return;
+  }
+  if (!confirm(`将依次为 ${targets.length} 个未撰写场景生成剧本，可能耗时较长。继续？`)) return;
+
+  appState.screenplayAi.bulkRunning = true;
+  appState.screenplayAi.bulkProgress = { done: 0, total: targets.length };
+  appState.screenplayAi.lastError = "";
+  render();
+
+  for (const scene of targets) {
+    const r = await aiWriteSceneScript(scene.id, { silent: true });
+    appState.screenplayAi.bulkProgress.done += 1;
+    if (!r.ok) {
+      // 错误已记录到 lastError，继续下一场
+    }
+    render();
+  }
+
+  appState.screenplayAi.bulkRunning = false;
+  render();
 }
 
 // ── Creation API call ─────────────────────────────────────────────────────────
