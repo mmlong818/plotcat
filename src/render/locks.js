@@ -5,7 +5,8 @@ const LOCKS_TABS = [
   { id: "timeline", label: "时间线" },
   { id: "rules",    label: "世界规则" },
   { id: "setups",   label: "伏笔追踪" },
-  { id: "genres",   label: "类型约束" }
+  { id: "genres",   label: "类型约束" },
+  { id: "kb",       label: "外部知识源" }
 ];
 
 function renderGenreItems(items = [], actionPrefix = "convention", emptyMessage = "还没有内容。") {
@@ -163,12 +164,25 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
     `;
   } else if (activeTab === "genres") {
     tabContent = renderGenresTab(appState);
+  } else if (activeTab === "kb") {
+    tabContent = `
+      <div class="summary-card">
+        <div class="list-card__head">
+          <h3>外部知识源</h3>
+        </div>
+        <p class="scene-summary-hint">
+          这里将接入可插拔的外部知识库（如 storykb 等编剧知识库），用作创作时的参考资料。
+          搜索 / 浏览 / 一键导入到本地条目的能力将在下一阶段交付。
+        </p>
+      </div>
+    `;
   }
 
   const allEmpty = lockedCards.length === 0 && timeline.length === 0 && rules.length === 0 && setups.length === 0;
   const zeroGuide = allEmpty ? `
     <p class="scene-summary-hint" style="margin: 6px 2px 12px">
-      这里汇集你锁定的剧情、时间节点、世界规则与伏笔——相当于这部戏的「宪法」。从下方任一页签开始添加，或回到「剧情开发」把关键剧情卡设为「锁定」。
+      资料库汇集本作品的时间节点、世界规则、伏笔、类型约束，以及未来对接的外部知识源。
+      左侧的「已锁定剧情卡」来自「剧情开发」页面，可作为参考；勾选页签开始填写或导入资料。
     </p>
   ` : "";
 

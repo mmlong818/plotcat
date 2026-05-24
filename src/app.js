@@ -29,8 +29,7 @@ workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
-  { id: "locks",         label: "沉淀锁定", description: "把确认的事实沉淀为时间线、世界规则、伏笔回收和类型约束。" },
-  { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列。" }
+  { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" }
 ]);
 
 const dom = {
@@ -43,6 +42,7 @@ const dom = {
   resetButton: document.querySelector("#reset-button"),
   resetConfirmArea: document.querySelector("#reset-confirm-area"),
   pageProjectButton: document.querySelector("#page-project-button"),
+  pageLibraryButton: document.querySelector("#page-library-button"),
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
   stepPrevButton: document.querySelector("#step-prev-button"),
@@ -1313,6 +1313,14 @@ function renderHero() {
   }
   dom.hero.classList.add("is-topbar", "is-compact");
   dom.heroSide.hidden = false;
+  if (appState.currentPage === "library") {
+    dom.heroEyebrow.textContent = "资料库";
+    dom.heroEyebrow.title = "资料库";
+    dom.heroTitle.textContent = "";
+    dom.saveButton.hidden = false;
+    dom.resetButton.hidden = true;
+    return;
+  }
   const projectTitle = appState.project.project.title || "未命名项目";
   dom.heroEyebrow.textContent = `《${projectTitle}》`;
   dom.heroEyebrow.title = projectTitle;
@@ -1323,6 +1331,10 @@ function renderHero() {
 
 function renderPageVisibility() {
   dom.pageProjectButton.classList.toggle("is-active", appState.currentPage === "project");
+  if (dom.pageLibraryButton) {
+    dom.pageLibraryButton.classList.toggle("is-active", appState.currentPage === "library");
+    dom.pageLibraryButton.hidden = appState.currentPage === "creation";
+  }
   dom.pagePanels.forEach((panel) => {
     panel.hidden = panel.dataset.page !== appState.currentPage;
   });
@@ -2257,6 +2269,12 @@ dom.pageProjectButton.addEventListener("click", () => {
   if (appState.currentPage === "creation") appState.creation = null;
   setCurrentPage("project");
 });
+if (dom.pageLibraryButton) {
+  dom.pageLibraryButton.addEventListener("click", () => {
+    if (appState.currentPage === "creation") appState.creation = null;
+    setCurrentPage("library");
+  });
+}
 dom.openSettingsButton.addEventListener("click", () => {
   appState.createAssistant.message = "";
   appState.createAssistant.warning = "";
