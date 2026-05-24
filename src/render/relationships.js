@@ -1,5 +1,5 @@
-import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState } from "../utils.js";
-import { relationshipStatusLabels, RELATIONSHIP_TYPE_OPTIONS } from "../state.js";
+import { escapeHtml, inputField, textareaField, field, list, renderEmptyState } from "../utils.js";
+import { RELATIONSHIP_TYPE_OPTIONS } from "../state.js";
 
 function relStatusDot(status) {
   const map = { active: "active", locked: "locked", retired: "discard" };
@@ -97,10 +97,7 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
                 </section>
                 <section>
                   <p class="section-label">关系定义</p>
-                  <div class="form-grid form-grid--compact">
-                    ${selectField("状态", "relationship-field", "status", selectedRelationship.status, Object.entries(relationshipStatusLabels))}
-                  </div>
-                  <div class="chip-wrap" style="margin-top:10px">
+                  <div class="chip-wrap">
                     ${RELATIONSHIP_TYPE_OPTIONS.map((t) => `
                       <button class="ref-chip ${selectedRelationship.relationship_type === t ? "is-active" : ""}"
                         type="button" data-action="select-rel-type-chip" data-id="${escapeHtml(t)}">
