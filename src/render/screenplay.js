@@ -120,8 +120,41 @@ function renderEditor(appState, scene) {
   `;
 }
 
+// 在 innerHTML 替换前后保留聚焦 textarea 的光标位置 + 滚动位置，
+// 否则 autosave 触发的 re-render 会让正在打字的用户被弹回内容开头。
+function captureFocusState(root) {
+  const active = document.activeElement;
+  if (!active || !root.contains(active)) return null;
+  const action = active.dataset?.action;
+  const field = active.dataset?.field;
+  const id = active.dataset?.id || "";
+  if (!action || !field) return null;
+  return {
+    action, field, id,
+    selectionStart: active.selectionStart,
+    selectionEnd: active.selectionEnd,
+    scrollTop: active.scrollTop,
+    parentScrollTop: active.parentElement?.scrollTop
+  };
+}
+
+function restoreFocusState(root, captured) {
+  if (!captured) return;
+  const sel = `[data-action="${captured.action}"][data-field="${captured.field}"]` +
+    (captured.id ? `[data-id="${captured.id}"]` : "");
+  const el = root.querySelector(sel);
+  if (!el) return;
+  el.focus();
+  if (typeof captured.selectionStart === "number" && el.setSelectionRange) {
+    try { el.setSelectionRange(captured.selectionStart, captured.selectionEnd); } catch {}
+  }
+  if (typeof captured.scrollTop === "number") el.scrollTop = captured.scrollTop;
+  if (typeof captured.parentScrollTop === "number" && el.parentElement) el.parentElement.scrollTop = captured.parentScrollTop;
+}
+
 export function renderScreenplayPage(dom, appState) {
   if (!dom.screenplayContent) return;
+  const focusState = captureFocusState(dom.screenplayContent);
   const scenes = getOrderedScenes(appState);
   const activeId = appState.selection.screenplaySceneId
     || scenes[0]?.id
@@ -173,6 +206,7 @@ export function renderScreenplayPage(dom, appState) {
       </div>
     </section>
   `;
+  restoreFocusState(dom.screenplayContent, focusState);
 }
 
 export function buildFountainText(appState) {

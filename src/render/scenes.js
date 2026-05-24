@@ -150,11 +150,11 @@ function renderSceneWeavingSection(scene) {
 function renderPlotChecklist(appState, selectedIds = []) {
   const selected = new Set(list(selectedIds));
   return `
-    <div class="check-list">
+    <div class="scene-plot-chips">
       ${list(appState.project.plot_board?.cards)
         .map(
           (card) => `
-            <label class="check-list__item">
+            <label class="scene-plot-chip ${selected.has(card.id) ? "is-active" : ""}">
               <input
                 type="checkbox"
                 data-action="scene-plot-toggle"

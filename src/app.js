@@ -1827,6 +1827,15 @@ function handleClick(event) {
     render();
     return;
   }
+  // 点击节点 card 内的 title input 时也展开 drawer（之前点击只让 input 聚焦，看起来「无反应」）
+  if (action === "node-field" && target.dataset.field === "title") {
+    const nodeCard = target.closest("[data-action='select-node']");
+    if (nodeCard && appState.selection.nodeId !== nodeCard.dataset.nodeId) {
+      appState.selection.nodeId = nodeCard.dataset.nodeId;
+      render();
+    }
+    return;
+  }
   if (action === "close-node-drawer") {
     appState.selection.nodeId = null;
     render();
