@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 
 const CLAUDE_TIMEOUT_MS = 300_000;
 
-function callClaudeSubprocess(prompt) {
+function callClaudeSubprocessOnce(prompt) {
   return new Promise((resolve, reject) => {
     const proc = spawn("claude", ["-p", "--output-format", "text"], {
       stdio: ["pipe", "pipe", "pipe"]
@@ -28,6 +28,23 @@ function callClaudeSubprocess(prompt) {
     });
     proc.on("error", (err) => { clearTimeout(timer); reject(err); });
   });
+}
+
+// 带重试的封装：遇到非零退出 / 超时时短暂等待后重试，避免限流瞬时失败导致整轮 bulk 报废
+async function callClaudeSubprocess(prompt, { retries = 2, retryDelayMs = 4000 } = {}) {
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await callClaudeSubprocessOnce(prompt);
+    } catch (err) {
+      lastError = err;
+      if (attempt < retries) {
+        console.warn(`[claude] attempt ${attempt + 1}/${retries + 1} failed: ${err.message.slice(0, 120)}, retrying in ${retryDelayMs}ms...`);
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+      }
+    }
+  }
+  throw lastError;
 }
 
 function extractJsonCandidate(text) {
