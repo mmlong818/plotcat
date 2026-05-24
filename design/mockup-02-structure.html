@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>原点编剧 · 结构骨架</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --cream: #FAF7F2;
+  --cream-mid: #F2EDE4;
+  --cream-border: #E0D8CC;
+  --ink: #2A2018;
+  --ink-mid: #4A3E30;
+  --ink-light: #8A7A68;
+  --accent: #B05110;
+  --accent-light: #D4703A;
+  --accent-dim: rgba(176,81,16,0.10);
+  --sidebar-bg: #221A11;
+  --sidebar-text: #C8B89A;
+  --sidebar-active: #FAF7F2;
+  --sidebar-hover: rgba(255,255,255,0.06);
+  --radius: 6px;
+  --radius-sm: 4px;
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.10);
+}
+
+body {
+  font-family: 'DM Sans', 'PingFang SC', system-ui, sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px; min-width: 220px;
+  background: var(--sidebar-bg);
+  display: flex; flex-direction: column;
+}
+.sidebar__logo {
+  padding: 20px 18px 16px;
+  font-family: 'EB Garamond', serif;
+  font-size: 17px; color: var(--sidebar-active);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar__logo span { color: var(--accent-light); }
+.sidebar__project {
+  padding: 10px 18px 14px;
+  font-size: 12px; color: var(--sidebar-text); opacity: 0.7;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sidebar__project strong { display: block; font-size: 13px; color: var(--sidebar-text); opacity: 1; margin-top: 2px; }
+.sidebar__nav { padding: 8px 0; flex: 1; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 18px; font-size: 13px; color: var(--sidebar-text);
+  cursor: pointer; border-left: 2px solid transparent;
+}
+.nav-item:hover { background: var(--sidebar-hover); }
+.nav-item.active { color: var(--sidebar-active); border-left-color: var(--accent-light); background: rgba(255,255,255,0.04); }
+.nav-item__icon { font-size: 14px; width: 18px; text-align: center; }
+.sidebar__footer { padding: 14px 18px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 12px; color: var(--sidebar-text); opacity: 0.5; }
+
+/* ── Main ── */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+
+/* ── Top bar ── */
+.topbar {
+  height: 48px; min-height: 48px;
+  background: var(--cream); border-bottom: 1px solid var(--cream-border);
+  display: flex; align-items: center; padding: 0 20px; gap: 12px;
+}
+.topbar__title { font-family: 'EB Garamond', serif; font-size: 16px; color: var(--ink); flex: 1; }
+.topbar__meta { font-size: 13px; color: var(--ink-light); }
+.btn {
+  padding: 5px 14px; border-radius: var(--radius-sm);
+  font-size: 13px; font-family: inherit; cursor: pointer; border: none; font-weight: 500;
+}
+.btn--primary { background: var(--accent); color: #fff; }
+.btn--ghost { background: transparent; color: var(--ink-mid); border: 1px solid var(--cream-border); }
+.btn--ghost:hover { background: var(--cream-mid); }
+.btn--ai { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(176,81,16,0.20); }
+
+/* ── Story core compact bar ── */
+.story-core-bar {
+  background: var(--cream-mid);
+  border-bottom: 1px solid var(--cream-border);
+  padding: 0 20px;
+}
+.story-core-bar summary {
+  list-style: none; display: flex; align-items: center; gap: 10px;
+  padding: 8px 0; cursor: pointer; user-select: none;
+}
+.story-core-bar summary::-webkit-details-marker { display: none; }
+.story-core-bar .sc-label { font-size: 12px; font-weight: 500; color: var(--ink-light); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.story-core-bar .chevron { font-size: 12px; color: var(--ink-light); margin-left: auto; transition: transform 0.2s; }
+details[open] .chevron { transform: rotate(180deg); }
+.chips { display: flex; gap: 6px; flex: 1; overflow: hidden; }
+.chip { background: var(--accent-dim); color: var(--accent); border-radius: 20px; padding: 3px 12px; font-size: 12px; white-space: nowrap; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+.story-core-expanded {
+  padding: 12px 0 16px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;
+}
+.sc-field label { display: block; font-size: 11px; color: var(--ink-light); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.sc-field textarea, .sc-field input, .sc-field select {
+  width: 100%; background: var(--cream); border: 1px solid var(--cream-border);
+  border-radius: var(--radius-sm); padding: 6px 8px;
+  font-family: inherit; font-size: 13px; color: var(--ink); resize: none;
+}
+.sc-field textarea { min-height: 52px; }
+
+/* ── Structure canvas (scrollable) ── */
+.structure-canvas {
+  flex: 1; overflow-y: auto;
+  padding: 14px 20px 20px;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0;
+}
+
+/* ── Act row ── */
+.act-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--cream-border);
+  background: var(--cream);
+  min-height: 0;
+}
+
+/* Left label strip */
+.act-row__label {
+  width: 72px; min-width: 72px;
+  display: flex; flex-direction: column;
+  justify-content: center; align-items: center;
+  gap: 3px;
+  padding: 10px 6px;
+  border-right: 1px solid var(--cream-border);
+  text-align: center;
+}
+.act-row--1 .act-row__label { background: rgba(186,86,22,0.07); }
+.act-row--2 .act-row__label { background: rgba(30,95,168,0.07); }
+.act-row--3 .act-row__label { background: rgba(46,125,82,0.07); }
+
+.act-row__num { font-size: 13px; font-weight: 700; }
+.act-row--1 .act-row__num { color: rgba(186,86,22,0.85); }
+.act-row--2 .act-row__num { color: rgba(30,95,168,0.80); }
+.act-row--3 .act-row__num { color: rgba(46,125,82,0.80); }
+
+.act-row__range { font-size: 11px; color: var(--ink-light); }
+.act-row__title {
+  font-size: 12px; font-weight: 500; color: var(--ink-mid);
+  margin-top: 6px; width: 100%;
+  background: transparent; border: none; outline: none;
+  text-align: center; font-family: inherit; cursor: text;
+}
+.act-row__title::placeholder { color: var(--ink-light); }
+
+/* Nodes area */
+.act-row__nodes {
+  flex: 1; min-width: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  overflow-x: auto;
+  padding: 10px 10px;
+  gap: 8px;
+}
+
+/* ── Node card ── */
+.node-card {
+  flex: 1; min-width: 130px; max-width: 200px;
+  background: var(--cream-mid);
+  border: 1px solid var(--cream-border);
+  border-radius: var(--radius);
+  padding: 9px 10px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  display: flex; flex-direction: column; gap: 4px;
+  position: relative;
+}
+.node-card:hover { box-shadow: var(--shadow-md); border-color: var(--accent); background: #fff; }
+.node-card.is-active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); background: #fff; }
+.node-card.is-empty { opacity: 0.55; border-style: dashed; }
+
+.node-card__seq {
+  position: absolute; top: 7px; right: 8px;
+  font-size: 11px; color: var(--ink-light); font-weight: 600;
+}
+.node-card__type { font-size: 11px; color: var(--ink-light); letter-spacing: 0.03em; }
+.node-card__title { font-size: 14px; font-weight: 600; color: var(--ink); line-height: 1.3; padding-right: 18px; }
+.node-card__preview {
+  font-size: 12px; color: var(--ink-mid); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden; flex: 1;
+}
+.node-card__status {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  align-self: flex-start; margin-top: auto;
+}
+.node-card__status--filled { background: rgba(46,125,82,0.10); color: rgba(46,125,82,0.80); }
+.node-card__status--empty { background: rgba(140,120,90,0.08); color: var(--ink-light); }
+.node-card__status--key { background: var(--accent-dim); color: var(--accent); }
+.node-card__dot { width: 4px; height: 4px; border-radius: 50%; background: currentColor; }
+
+/* ── Bottom drawer ── */
+.node-drawer {
+  border-top: 2px solid var(--accent);
+  background: var(--cream-mid);
+  padding: 14px 20px;
+  display: flex; gap: 14px;
+  position: relative;
+  flex-shrink: 0;
+}
+.node-drawer__info { flex: 0 0 200px; }
+.node-drawer__info-type { font-size: 12px; color: var(--ink-light); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.node-drawer__info-title { font-size: 16px; font-weight: 600; font-family: 'EB Garamond', serif; color: var(--ink); margin-bottom: 8px; }
+.node-drawer__hint {
+  background: rgba(176,81,16,0.06);
+  border-left: 2px solid var(--accent);
+  padding: 7px 10px;
+  font-size: 13px; color: var(--ink-mid);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  line-height: 1.55;
+}
+.node-drawer__edit { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.node-drawer__textarea {
+  flex: 1; min-height: 90px;
+  background: var(--cream); border: 1px solid var(--cream-border);
+  border-radius: var(--radius); padding: 10px 12px;
+  font-family: 'EB Garamond', serif; font-size: 14px; color: var(--ink);
+  line-height: 1.6; resize: none;
+}
+.node-drawer__actions { display: flex; gap: 8px; justify-content: flex-end; }
+.node-drawer__close {
+  position: absolute; right: 16px; top: 12px;
+  font-size: 14px; color: var(--ink-light);
+  cursor: pointer; background: none; border: none; padding: 2px 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="sidebar__logo">原<span>点</span>编剧</div>
+  <div class="sidebar__project">
+    <div>当前项目</div>
+    <strong>《暗涌》</strong>
+  </div>
+  <nav class="sidebar__nav">
+    <div class="nav-item"><span class="nav-item__icon">⊞</span> 项目主页</div>
+    <div class="nav-item active"><span class="nav-item__icon">◫</span> 结构骨架</div>
+    <div class="nav-item"><span class="nav-item__icon">◉</span> 人物核心</div>
+    <div class="nav-item"><span class="nav-item__icon">⊡</span> 情节板块</div>
+    <div class="nav-item"><span class="nav-item__icon">≡</span> 分集大纲</div>
+    <div class="nav-item"><span class="nav-item__icon">✦</span> 场景剧本</div>
+  </nav>
+  <div class="sidebar__footer">v0.1.0 · 本地</div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Top bar -->
+  <div class="topbar">
+    <div class="topbar__title">结构骨架</div>
+    <span class="topbar__meta">三幕结构 · 救猫咪节拍表</span>
+    <button class="btn btn--ai">✦ AI 填写情节点</button>
+    <button class="btn btn--ghost">浏览结构库</button>
+    <button class="btn btn--primary">保存</button>
+  </div>
+
+  <!-- Story core compact bar -->
+  <details class="story-core-bar">
+    <summary>
+      <span class="sc-label">故事核心</span>
+      <div class="chips">
+        <span class="chip">情绪承诺：让观众感受到无处遁形的窒息感</span>
+        <span class="chip">中心问题：林熙能否在背叛与真相之间选择人性？</span>
+        <span class="chip">结局：主角彻底隐退</span>
+      </div>
+      <span class="chevron">▾</span>
+    </summary>
+    <div class="story-core-expanded">
+      <div class="sc-field" style="grid-column:span 2">
+        <label>故事前提</label>
+        <textarea rows="2">缉毒警察林熙卧底犯罪组织三年，身份即将暴露，却发现幕后黑手是自己最信任的搭档。</textarea>
+      </div>
+      <div class="sc-field">
+        <label>中心问题</label>
+        <textarea rows="2">林熙能否在背叛与真相之间选择人性？</textarea>
+      </div>
+      <div class="sc-field" style="grid-column:span 2">
+        <label>核心冲突</label>
+        <textarea rows="2">林熙的职业忠诚与个人情感之间的拉锯，组织内部派系与警方之间的多方博弈。</textarea>
+      </div>
+      <div class="sc-field">
+        <label>结局方向</label>
+        <select>
+          <optgroup label="悲剧 / 失落">
+            <option selected>主角彻底隐退</option>
+            <option>同归于尽</option>
+          </optgroup>
+          <optgroup label="成长 / 救赎">
+            <option>主角得到救赎</option>
+          </optgroup>
+        </select>
+      </div>
+    </div>
+  </details>
+
+  <!-- Structure canvas -->
+  <div class="structure-canvas">
+
+    <!-- 第一幕 -->
+    <div class="act-row act-row--1">
+      <div class="act-row__label">
+        <div class="act-row__num">第一幕</div>
+        <div class="act-row__range">0%–25%</div>
+        <input class="act-row__title" value="建置" placeholder="幕名" />
+      </div>
+      <div class="act-row__nodes">
+        <div class="node-card is-filled">
+          <span class="node-card__seq">①</span>
+          <div class="node-card__type">开场印象</div>
+          <div class="node-card__title">暗夜接头</div>
+          <div class="node-card__preview">林熙以毒贩身份出现在码头，与上线完成货物交接，内心独白揭示卧底三年的代价。</div>
+          <span class="node-card__status node-card__status--filled"><span class="node-card__dot"></span>已填写</span>
+        </div>
+        <div class="node-card is-filled">
+          <span class="node-card__seq">②</span>
+          <div class="node-card__type">基础铺陈</div>
+          <div class="node-card__title">双重生活</div>
+          <div class="node-card__preview">展示林熙在组织内的地位与在警局的秘密联络，两套身份的撕裂感。</div>
+          <span class="node-card__status node-card__status--filled"><span class="node-card__dot"></span>已填写</span>
+        </div>
+        <div class="node-card is-active">
+          <span class="node-card__seq">③</span>
+          <div class="node-card__type">诱发事件</div>
+          <div class="node-card__title">证据出现</div>
+          <div class="node-card__preview">一张照片落入林熙手中，上面的人是他从未怀疑过的搭档陈浩。</div>
+          <span class="node-card__status node-card__status--key"><span class="node-card__dot"></span>关键节点</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第二幕 -->
+    <div class="act-row act-row--2">
+      <div class="act-row__label">
+        <div class="act-row__num">第二幕</div>
+        <div class="act-row__range">25%–75%</div>
+        <input class="act-row__title" value="对抗" placeholder="幕名" />
+      </div>
+      <div class="act-row__nodes">
+        <div class="node-card is-filled">
+          <span class="node-card__seq">④</span>
+          <div class="node-card__type">进入第二幕</div>
+          <div class="node-card__title">独自调查</div>
+          <div class="node-card__preview">林熙决定不上报，私下展开调查，开始怀疑组织内部有警方线人。</div>
+          <span class="node-card__status node-card__status--filled"><span class="node-card__dot"></span>已填写</span>
+        </div>
+        <div class="node-card is-filled">
+          <span class="node-card__seq">⑤</span>
+          <div class="node-card__type">娱乐段落</div>
+          <div class="node-card__title">双面游戏</div>
+          <div class="node-card__preview">林熙同时斡旋于组织老大与陈浩之间，展现出色的情报博弈能力。</div>
+          <span class="node-card__status node-card__status--filled"><span class="node-card__dot"></span>已填写</span>
+        </div>
+        <div class="node-card is-filled">
+          <span class="node-card__seq">⑥</span>
+          <div class="node-card__type">中点翻转</div>
+          <div class="node-card__title">身份危机</div>
+          <div class="node-card__preview">林熙发现组织已怀疑内部有卧底，矛头同时指向自己和另一人。</div>
+          <span class="node-card__status node-card__status--key"><span class="node-card__dot"></span>关键节点</span>
+        </div>
+        <div class="node-card is-empty">
+          <span class="node-card__seq">⑦</span>
+          <div class="node-card__type">压力上升</div>
+          <div class="node-card__title">待填写</div>
+          <div class="node-card__preview">点击填写这个情节点的核心事件与戏剧转变…</div>
+          <span class="node-card__status node-card__status--empty"><span class="node-card__dot"></span>待填写</span>
+        </div>
+        <div class="node-card is-filled">
+          <span class="node-card__seq">⑧</span>
+          <div class="node-card__type">一切尽失</div>
+          <div class="node-card__title">最后筹码</div>
+          <div class="node-card__preview">陈浩亮出底牌，威胁林熙的家人，林熙失去所有回旋余地。</div>
+          <span class="node-card__status node-card__status--key"><span class="node-card__dot"></span>关键节点</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 第三幕 -->
+    <div class="act-row act-row--3">
+      <div class="act-row__label">
+        <div class="act-row__num">第三幕</div>
+        <div class="act-row__range">75%–100%</div>
+        <input class="act-row__title" value="解决" placeholder="幕名" />
+      </div>
+      <div class="act-row__nodes">
+        <div class="node-card is-filled">
+          <span class="node-card__seq">⑨</span>
+          <div class="node-card__type">终局行动</div>
+          <div class="node-card__title">以毒攻毒</div>
+          <div class="node-card__preview">林熙以身为饵，设计让陈浩在组织老大面前暴露，以牺牲自己的方式完成任务。</div>
+          <span class="node-card__status node-card__status--filled"><span class="node-card__dot"></span>已填写</span>
+        </div>
+        <div class="node-card is-filled">
+          <span class="node-card__seq">⑩</span>
+          <div class="node-card__type">结尾印象</div>
+          <div class="node-card__title">隐入暗处</div>
+          <div class="node-card__preview">林熙消失于人群，既未死去，也不再存在——他成为了他亲手打入的那个黑暗的一部分。</div>
+          <span class="node-card__status node-card__status--key"><span class="node-card__dot"></span>关键节点</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /structure-canvas -->
+
+  <!-- Bottom drawer (active node editor) -->
+  <div class="node-drawer">
+    <button class="node-drawer__close">✕</button>
+    <div class="node-drawer__info">
+      <div class="node-drawer__info-type">诱发事件 · ③</div>
+      <div class="node-drawer__info-title">证据出现</div>
+      <div class="node-drawer__hint">
+        <strong>编剧提示：</strong>诱发事件应在故事前10分钟内出现，打破主角的日常平衡，引出核心矛盾。这里的照片将成为全剧最重要的道具。
+      </div>
+    </div>
+    <div class="node-drawer__edit">
+      <textarea class="node-drawer__textarea">一张照片落入林熙手中，上面的人是他从未怀疑过的搭档陈浩。照片时间戳显示就在三天前，陈浩与组织老大秘密会面。林熙的世界在这一刻静止——三年的信任，可能全是一场精心布局的骗局。</textarea>
+      <div class="node-drawer__actions">
+        <button class="btn btn--ai">✦ AI 续写</button>
+        <button class="btn btn--primary">保存</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</body>
+</html>

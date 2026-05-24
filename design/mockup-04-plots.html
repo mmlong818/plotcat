@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>原点编剧 · 剧情开发</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF7F2;
+    --cream-mid:#F2EDE4;
+    --cream-border:#E0D8CC;
+    --ink:#2A2018;
+    --ink-mid:#4A3E30;
+    --ink-light:#8A7A68;
+    --accent:#B05110;
+    --accent-light:#D4703A;
+    --accent-dim:rgba(176,81,16,0.10);
+    --sidebar-bg:#221A11;
+    --track-main:rgba(176,81,16,0.15);
+    --track-main-dot:#B05110;
+    --track-sub:rgba(30,95,168,0.12);
+    --track-sub-dot:#1E5FA8;
+    --track-arc:rgba(46,125,82,0.12);
+    --track-arc-dot:#2E7D52;
+    --track-alt:rgba(130,80,170,0.12);
+    --track-alt-dot:#8250AA;
+    --status-draft:#9A8B7E;
+    --status-explore:#1E5FA8;
+    --status-review:#C97A1E;
+    --status-locked:#2E7D52;
+    --status-trash:#B33A2A;
+    --serif:'EB Garamond','Source Han Serif SC','Songti SC',serif;
+    --sans:'DM Sans','PingFang SC','Hiragino Sans GB',sans-serif;
+    --line:rgba(42,32,24,0.10);
+    --line-soft:rgba(42,32,24,0.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:13px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow:hidden}
+  button{font-family:inherit;cursor:pointer}
+
+  /* App shell */
+  .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+
+  /* Sidebar */
+  .sidebar{background:var(--sidebar-bg);color:#E7DFD2;display:flex;flex-direction:column;padding:22px 0}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:0 22px 24px;border-bottom:1px solid rgba(242,237,229,0.08)}
+  .sidebar .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(176,81,16,0.22)}
+  .sidebar .brand .name{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:0.04em;color:#F2EDE5}
+  .sidebar .proj{padding:16px 22px;border-bottom:1px solid rgba(242,237,229,0.08)}
+  .sidebar .proj .eyebrow{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(231,223,210,0.42);margin-bottom:5px}
+  .sidebar .proj .title{font-family:var(--serif);font-size:18px;color:#F2EDE5}
+  .sidebar nav{padding:12px 0;flex:1;overflow:auto}
+  .nav-group-title{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(231,223,210,0.4);padding:14px 22px 8px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:9px 22px;color:rgba(231,223,210,0.7);font-size:13.5px;position:relative;cursor:pointer;transition:color .15s, background .15s}
+  .nav-item:hover{color:#F2EDE5}
+  .nav-item .num{font-family:var(--serif);font-style:italic;color:rgba(231,223,210,0.4);font-size:13px;width:18px}
+  .nav-item.done .num{color:var(--accent)}
+  .nav-item.active{color:#F2EDE5;background:rgba(242,237,229,0.04)}
+  .nav-item.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--accent)}
+  .nav-item.active .num{color:var(--accent);font-weight:600}
+  .sidebar .foot{padding:14px 22px;font-size:11px;color:rgba(231,223,210,0.35);border-top:1px solid rgba(242,237,229,0.08)}
+
+  /* Main area */
+  main{display:grid;grid-template-rows:48px 1fr;height:100vh;overflow:hidden}
+
+  /* Toolbar */
+  .toolbar{display:flex;align-items:center;gap:14px;padding:0 20px;background:var(--cream-mid);border-bottom:1px solid var(--cream-border);height:48px;flex-shrink:0}
+  .toolbar .left,.toolbar .right{display:flex;align-items:center;gap:10px}
+  .toolbar .center{flex:1;display:flex;justify-content:center;align-items:center;gap:6px;font-family:var(--serif);font-size:15px;color:var(--ink-mid)}
+  .toolbar .center .sep{color:var(--ink-light);opacity:.6}
+  .toolbar .center .cur{color:var(--ink);font-style:italic}
+  .btn-primary{background:var(--ink);color:#F2EDE5;border:none;border-radius:999px;padding:7px 14px;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;transition:background .2s}
+  .btn-primary:hover{background:var(--accent)}
+  .btn-primary .plus{font-size:14px;line-height:1}
+  .select{background:var(--cream);border:1px solid var(--cream-border);border-radius:6px;padding:6px 10px;font-size:12.5px;color:var(--ink-mid);display:inline-flex;align-items:center;gap:6px;font-family:inherit}
+  .select:hover{border-color:var(--ink-light)}
+  .select .label{font-size:11px;color:var(--ink-light);text-transform:uppercase;letter-spacing:0.1em}
+  .select .caret{color:var(--ink-light);font-size:10px}
+  .icon-btn{width:30px;height:30px;border:1px solid var(--cream-border);border-radius:6px;background:var(--cream);display:inline-flex;align-items:center;justify-content:center;color:var(--ink-mid);font-size:14px}
+  .icon-btn:hover{border-color:var(--ink-light);color:var(--ink)}
+
+  /* Workspace */
+  .workspace{display:grid;grid-template-columns:1fr 240px;overflow:hidden;height:100%}
+  .workspace.collapsed{grid-template-columns:1fr 0}
+
+  /* Canvas area — 整体横向滚动容器 */
+  .canvas-wrap{overflow:auto;background:var(--cream);flex:1;min-height:0}
+
+  /* 内部用 table 布局：第一列固定轨道标签，后续列随内容横向扩展 */
+  .canvas-inner{display:table;border-collapse:collapse;min-width:100%}
+
+  /* 每一行：轨道标签 + 所有格子 */
+  .canvas-row{display:table-row}
+  .canvas-row:last-child .track-label,
+  .canvas-row:last-child .cell{border-bottom:none}
+
+  /* 顶部标题行（acts + beats），用 sticky 吸顶 */
+  .header-row{display:table-row}
+  /* 第一 header-row（幕分组）的所有 cell 吸顶 top:0 */
+  .header-row:first-child .track-label,
+  .header-row:first-child .cell,
+  .header-row:first-child .add-col-cell{position:sticky;top:0;z-index:5}
+  /* 第二 header-row（节点名）的所有 cell 吸顶 top:34px */
+  .header-row:nth-child(2) .track-label,
+  .header-row:nth-child(2) .cell,
+  .header-row:nth-child(2) .add-col-cell{position:sticky;top:34px;z-index:4}
+  .header-cell{display:table-cell;position:sticky;top:0;z-index:4;background:var(--cream-mid);border-bottom:1px solid var(--cream-border)}
+  .header-cell.corner{width:88px;min-width:88px;padding:0 10px;vertical-align:bottom;padding-bottom:8px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-light)}
+
+  /* 轨道标签单元格（每行第一格，position:sticky 固定在左侧） */
+  .track-label{
+    display:table-cell;
+    width:88px;min-width:88px;
+    position:sticky;left:0;z-index:3;
+    background:var(--cream-mid);
+    border-right:1px solid var(--cream-border);
+    border-bottom:1px solid var(--line-soft);
+    padding:14px 12px;
+    vertical-align:middle;
+  }
+  .track-label .dot{width:8px;height:8px;border-radius:50%;display:block;margin-bottom:6px}
+  .track-label .dot.main{background:var(--track-main-dot)}
+  .track-label .dot.sub{background:var(--track-sub-dot)}
+  .track-label .dot.arc{background:var(--track-arc-dot)}
+  .track-label .nm{font-family:var(--serif);font-size:14px;color:var(--ink);writing-mode:vertical-rl;letter-spacing:0.15em;line-height:1;display:block}
+  .track-label .ct{font-size:10.5px;color:var(--ink-light);writing-mode:vertical-rl;margin-top:6px;display:block}
+
+  /* Act header strip */
+  .acts-strip{display:flex;height:32px;border-bottom:1px solid var(--cream-border);background:var(--cream-mid);position:sticky;top:0;z-index:3}
+  .act-head{display:flex;align-items:center;gap:10px;padding:0 16px;border-right:2px solid var(--cream-border);font-family:var(--serif);font-size:14px;color:var(--ink-mid);font-style:italic}
+  .act-head:last-child{border-right:none}
+  .act-head .chip{background:var(--cream);border:1px solid var(--cream-border);border-radius:999px;padding:2px 8px;font-size:10.5px;color:var(--ink-light);font-family:var(--sans);font-style:normal;letter-spacing:0.05em}
+
+  /* Beats header strip */
+  .beats-strip{display:flex;height:32px;border-bottom:1px solid var(--cream-border);background:var(--cream);position:sticky;top:32px;z-index:3}
+  .beat-head{width:200px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line-soft);font-size:12px;color:var(--ink-mid);letter-spacing:0.04em;padding:0 8px}
+  .beat-head.act-end{border-right:2px solid var(--cream-border)}
+  .beat-head .num{font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:4px;font-size:11.5px}
+
+  /* 节点列头：悬停显示删除按钮 */
+  .beat-col{position:relative;display:table-cell}
+  .beat-col .del-col{position:absolute;top:4px;right:4px;width:16px;height:16px;background:rgba(179,58,42,0.12);border:none;border-radius:3px;font-size:9px;color:var(--status-trash);cursor:pointer;display:none;align-items:center;justify-content:center;line-height:1}
+  .beat-col:hover .del-col{display:flex}
+  .beat-col:hover{background:rgba(42,32,24,0.03)!important}
+
+  /* 添加节点列按钮 */
+  .add-col-cell{display:table-cell;width:52px;min-width:52px;vertical-align:middle;text-align:center;padding:0 8px;border-bottom:1px solid var(--cream-border);background:var(--cream-mid)}
+  .add-col-btn{width:28px;height:28px;border:1.5px dashed var(--cream-border);border-radius:6px;background:transparent;color:var(--ink-light);font-size:15px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+  .add-col-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+  .add-col-data{display:table-cell;width:52px;min-width:52px;border-bottom:1px solid var(--line-soft);background:transparent}
+
+  /* 格子（table-cell） */
+  .cell{
+    display:table-cell;
+    width:200px;min-width:200px;
+    border-right:1px solid var(--line-soft);
+    border-bottom:1px solid var(--line-soft);
+    padding:10px;
+    vertical-align:top;
+    transition:background .15s;
+  }
+  .canvas-row.bg-main .cell{background-color:rgba(176,81,16,0.04)}
+  .canvas-row.bg-sub .cell{background-color:rgba(30,95,168,0.04)}
+  .canvas-row.bg-arc .cell{background-color:rgba(46,125,82,0.04)}
+  .cell.act-end{border-right:2px solid var(--cream-border)}
+  .cell.empty{text-align:center;vertical-align:middle}
+  .cell.empty .plus-stub{width:34px;height:34px;border:1.5px dashed var(--cream-border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--ink-light);opacity:.7;transition:all .15s}
+  .cell.empty:hover .plus-stub{border-color:var(--accent);color:var(--accent);opacity:1;background:var(--accent-dim)}
+
+  /* Plot card */
+  .pcard{width:100%;background:var(--cream);border:1px solid var(--cream-border);border-radius:8px;padding:11px 12px 12px;box-shadow:0 1px 0 rgba(42,32,24,0.03);position:relative;cursor:grab;transition:border-color .15s, transform .15s, box-shadow .15s}
+  .pcard:hover{border-color:var(--ink-mid);box-shadow:0 4px 12px rgba(42,32,24,0.08);transform:translateY(-1px)}
+  .pcard:hover::before{content:"";position:absolute;left:-1px;top:8px;bottom:8px;width:3px;background:var(--ink-mid);border-radius:2px}
+  .pcard.selected{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-dim),0 4px 12px rgba(176,81,16,0.12)}
+  .pcard .top{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:5px}
+  .pcard .track-tag{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink-light);letter-spacing:0.04em}
+  .pcard .track-tag .d{width:6px;height:6px;border-radius:50%}
+  .pcard .track-tag .d.main{background:var(--track-main-dot)}
+  .pcard .track-tag .d.sub{background:var(--track-sub-dot)}
+  .pcard .track-tag .d.arc{background:var(--track-arc-dot)}
+  .pcard .status{font-size:9.5px;padding:2px 6px;border-radius:999px;letter-spacing:0.06em;border:1px solid currentColor;line-height:1}
+  .status.draft{color:var(--status-draft)}
+  .status.explore{color:var(--status-explore)}
+  .status.review{color:var(--status-review)}
+  .status.locked{color:var(--status-locked);background:rgba(46,125,82,0.08)}
+  .status.trash{color:var(--status-trash)}
+  .pcard .ttl{font-family:var(--serif);font-size:14px;font-weight:500;color:var(--ink);line-height:1.25;margin-bottom:4px;letter-spacing:0.01em}
+  .pcard .sm{font-size:12px;color:var(--ink-mid);line-height:1.5;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+  .pcard .change{font-size:11.5px;color:var(--ink-light);line-height:1.4;margin-top:6px;padding-top:6px;border-top:1px solid var(--cream-border);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .pcard .change-label{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-light);opacity:0.7;display:block;margin-bottom:2px}
+
+  /* Right panel — Card Library */
+  .rpanel{background:var(--cream-mid);border-left:1px solid var(--cream-border);overflow:hidden;display:flex;flex-direction:column}
+  .rpanel header{padding:14px 16px 12px;border-bottom:1px solid var(--cream-border);display:flex;align-items:center;justify-content:space-between}
+  .rpanel header h3{font-family:var(--serif);font-size:16px;font-weight:500;color:var(--ink)}
+  .rpanel .close{background:transparent;border:none;color:var(--ink-light);font-size:14px;line-height:1}
+  .rpanel .search{padding:10px 14px;border-bottom:1px solid var(--line-soft)}
+  .rpanel .search input{width:100%;background:var(--cream);border:1px solid var(--cream-border);border-radius:6px;padding:7px 10px;font-size:12.5px;font-family:inherit;color:var(--ink)}
+  .rpanel .search input::placeholder{color:var(--ink-light)}
+  .rpanel .body{overflow:auto;flex:1;padding:4px 0 16px}
+  .grp{padding:12px 14px 4px}
+  .grp .gh{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-light);margin-bottom:8px;cursor:pointer}
+  .grp .gh .car{font-size:9px;color:var(--ink-light);transition:transform .15s}
+  .grp .gh .ct{margin-left:auto;font-family:var(--serif);font-style:italic;font-size:12px;color:var(--ink-light);text-transform:none;letter-spacing:0}
+  .grp.unplaced .gh{color:var(--accent)}
+  .grp.unplaced .gh .ct{color:var(--accent)}
+
+  .mini{display:flex;gap:9px;padding:8px 10px;background:var(--cream);border:1px solid var(--cream-border);border-radius:6px;margin-bottom:6px;cursor:grab;position:relative;overflow:hidden;transition:border-color .15s, transform .15s}
+  .mini:hover{border-color:var(--ink-mid);transform:translateX(-2px)}
+  .mini::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+  .mini.main::before{background:var(--track-main-dot)}
+  .mini.sub::before{background:var(--track-sub-dot)}
+  .mini.arc::before{background:var(--track-arc-dot)}
+  .mini .info{padding-left:6px;flex:1;min-width:0}
+  .mini .info .t{font-family:var(--serif);font-size:13px;color:var(--ink);line-height:1.25;letter-spacing:0.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .mini .info .m{font-size:11px;color:var(--ink-light);margin-top:2px}
+
+  /* Detail-edit state (one card in lib shown as detail) */
+  .detail{margin:10px 14px;background:var(--cream);border:1px solid var(--accent);box-shadow:0 0 0 2px var(--accent-dim);border-radius:8px;padding:12px 12px 14px}
+  .detail .back{font-size:11.5px;color:var(--ink-light);display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;margin-bottom:8px}
+  .detail .back:hover{color:var(--accent)}
+  .detail .meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+  .detail .meta .track-tag{font-size:10.5px;color:var(--ink-light);display:inline-flex;align-items:center;gap:5px}
+  .detail .meta .track-tag .d{width:7px;height:7px;border-radius:50%;background:var(--track-arc-dot)}
+  .detail .status-pick{font-size:10.5px;border:1px solid var(--status-draft);color:var(--status-draft);border-radius:999px;padding:2px 8px;background:transparent}
+  .field{margin-bottom:11px}
+  .field label{font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--ink-light);display:block;margin-bottom:4px}
+  .field input,.field textarea,.field .pseudo{width:100%;background:var(--cream-mid);border:1px solid var(--cream-border);border-radius:5px;padding:6px 8px;font-size:12.5px;font-family:inherit;color:var(--ink);resize:none}
+  .field textarea{min-height:54px;line-height:1.5}
+  .field.titlef input{font-family:var(--serif);font-size:14px;background:var(--cream)}
+  .mountrow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .mountrow .pseudo{display:flex;align-items:center;justify-content:space-between;color:var(--ink);font-size:12px}
+  .mountrow .pseudo .car{color:var(--ink-light);font-size:10px}
+  .actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft)}
+  .actions button{font-size:11.5px;padding:6px 10px;border-radius:5px;border:1px solid var(--cream-border);background:var(--cream-mid);color:var(--ink-mid);font-family:inherit}
+  .actions button.primary{background:var(--accent);color:#FAF7F2;border-color:var(--accent)}
+  .actions button.primary:hover{background:#9A4710}
+  .actions button.ghost{background:transparent}
+  .actions button.danger{color:var(--status-trash);border-color:rgba(179,58,42,0.3);margin-left:auto}
+
+  /* Subtle scrollbar */
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:rgba(42,32,24,0.18);border-radius:10px;border:2px solid var(--cream-mid)}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(42,32,24,0.32)}
+  ::-webkit-scrollbar-track{background:transparent}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="dot"></span>
+      <span class="name">原点编剧</span>
+    </div>
+    <div class="proj">
+      <div class="eyebrow">当前项目</div>
+      <div class="title"><em>暗涌</em></div>
+    </div>
+    <nav>
+      <div class="nav-group-title">创作流程</div>
+      <div class="nav-item done"><span class="num">01</span>故事核心</div>
+      <div class="nav-item done"><span class="num">02</span>结构骨架</div>
+      <div class="nav-item done"><span class="num">03</span>人物核心</div>
+      <div class="nav-item active"><span class="num">04</span>剧情开发</div>
+      <div class="nav-item"><span class="num">05</span>分集大纲</div>
+      <div class="nav-item"><span class="num">06</span>场景设计</div>
+      <div class="nav-item"><span class="num">07</span>剧本正文</div>
+      <div class="nav-group-title">资料</div>
+      <div class="nav-item"><span class="num">·</span>世界观</div>
+      <div class="nav-item"><span class="num">·</span>资料柜</div>
+    </nav>
+    <div class="foot">v0.7.2 · 自动保存于 14:32</div>
+  </aside>
+
+  <!-- Main -->
+  <main>
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="left">
+        <button class="btn-primary"><span class="plus">+</span> 新建剧情卡</button>
+        <button class="select"><span class="label">视图</span> 结构网格 <span class="caret">▾</span></button>
+      </div>
+      <div class="center">
+        <span>暗涌</span><span class="sep">/</span><span>剧情开发</span><span class="sep">/</span><span class="cur">结构网格</span>
+      </div>
+      <div class="right">
+        <button class="select"><span class="label">筛选</span> 全部轨道 <span class="caret">▾</span></button>
+        <button class="icon-btn" title="收起卡片库">⇥</button>
+      </div>
+    </div>
+
+    <!-- Workspace -->
+    <div class="workspace">
+
+      <!-- Canvas：整体横向滚动，table 布局保证行高同步 -->
+      <div class="canvas-wrap">
+        <div class="canvas-inner">
+
+          <!-- 标题行1：幕分组 -->
+          <div class="canvas-row header-row">
+            <div class="track-label" style="border-bottom:1px solid var(--cream-border);background:var(--cream-mid);vertical-align:bottom;padding-bottom:8px;font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--ink-light)">轨道</div>
+            <!-- 第一幕 spans 3 cols -->
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);border-right:2px solid var(--cream-border);padding:0 16px;vertical-align:middle;font-family:var(--serif);font-size:14px;color:var(--ink-mid);font-style:italic;width:200px;min-width:200px"></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0 16px;vertical-align:middle;font-family:var(--serif);font-size:14px;color:var(--ink-mid);font-style:italic;width:200px;min-width:200px">第一幕 · 建立 <span style="background:var(--cream);border:1px solid var(--cream-border);border-radius:999px;padding:2px 8px;font-size:10.5px;font-style:normal;margin-left:8px">3 节点</span></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);border-right:2px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <!-- 第二幕 spans 5 cols -->
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0 16px;vertical-align:middle;font-family:var(--serif);font-size:14px;color:var(--ink-mid);font-style:italic;width:200px;min-width:200px">第二幕 · 对抗 <span style="background:var(--cream);border:1px solid var(--cream-border);border-radius:999px;padding:2px 8px;font-size:10.5px;font-style:normal;margin-left:8px">5 节点</span></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);border-right:2px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <!-- 第三幕 spans 2 cols -->
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0 16px;vertical-align:middle;font-family:var(--serif);font-size:14px;color:var(--ink-mid);font-style:italic;width:200px;min-width:200px">第三幕 · 解决 <span style="background:var(--cream);border:1px solid var(--cream-border);border-radius:999px;padding:2px 8px;font-size:10.5px;font-style:normal;margin-left:8px">2 节点</span></div>
+            <div class="cell" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border);padding:0;width:200px;min-width:200px"></div>
+            <!-- 添加列按钮 -->
+            <div class="add-col-cell" style="background:var(--cream-mid);vertical-align:bottom;padding-bottom:8px;border-bottom:1px solid var(--cream-border)"></div>
+          </div>
+
+          <!-- 标题行2：节点名（可删除） -->
+          <div class="canvas-row header-row">
+            <div class="track-label" style="background:var(--cream-mid);border-bottom:1px solid var(--cream-border)"></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">01</span>开场印象<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">02</span>日常铺陈<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell act-end" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">03</span>诱发事件<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">04</span>第一关口<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">05</span>基础铺陈<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">06</span>中点翻转<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">07</span>坏人逼近<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell act-end" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">08</span>一切尽失<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">09</span>高潮决战<button class="del-col" title="删除此列">✕</button></div>
+            <div class="beat-col cell" style="background:var(--cream);border-bottom:1px solid var(--cream-border);text-align:center;font-size:12px;color:var(--ink-mid);padding:8px 6px;position:relative"><span style="font-family:var(--serif);font-style:italic;color:var(--ink-light);margin-right:3px">10</span>新均衡<button class="del-col" title="删除此列">✕</button></div>
+            <!-- 添加列按钮 -->
+            <div class="add-col-cell"><button class="add-col-btn" title="添加节点列">+</button></div>
+          </div>
+
+          <!-- Row: 主线 -->
+          <div class="canvas-row bg-main">
+            <div class="track-label">
+              <span class="dot main"></span>
+              <span class="nm">主线</span>
+              <span class="ct">5 卡</span>
+            </div>
+            <!-- 01 -->
+            <div class="cell">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status locked">已锁定</span></div>
+                <div class="ttl">暗夜接头</div>
+                <div class="sm">林熙以毒贩身份出现在码头，与买家完成接头。镜头在最后一刻交代她衣领内侧隐藏的警徽，奠定双重身份的基调。</div>
+                <div class="change"><span class="change-label">核心变化</span>观众与主角建立秘密同盟关系</div>
+              </div>
+            </div>
+            <!-- 02 -->
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <!-- 03 -->
+            <div class="cell act-end">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status review">待审</span></div>
+                <div class="ttl">证据出现</div>
+                <div class="sm">一张旧照片从档案袋掉落，照片里的人不该出现在这个时间这个地点——林熙第一次真正开始怀疑陈浩，但还没有确信。</div>
+                <div class="change"><span class="change-label">核心变化</span>信任出现第一道裂缝，调查方向转向内部</div>
+              </div>
+            </div>
+            <!-- 04 -->
+            <div class="cell">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status explore">探索中</span></div>
+                <div class="ttl">越线决定</div>
+                <div class="sm">林熙瞒着上级独自跟踪陈浩，深夜进入废弃仓库区，在货柜后发现一个她不应该看到的接头现场。第一次真正跨越职责边界。</div>
+                <div class="change"><span class="change-label">核心变化</span>从被动观察者变为主动调查者，无法回头</div>
+              </div>
+            </div>
+            <!-- 05 -->
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <!-- 06 -->
+            <div class="cell">
+              <div class="pcard selected">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status draft">草稿</span></div>
+                <div class="ttl">身份危机</div>
+                <div class="sm">陈浩在天台正面揭穿林熙的卧底身份。他早就知道了——一直在配合演出。林熙意识到这三年里她以为掌握的信息，全是对方喂给她的。</div>
+                <div class="change"><span class="change-label">核心变化</span>主动权彻底易位，林熙从猎人变成猎物</div>
+              </div>
+            </div>
+            <!-- 07 -->
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <!-- 08 -->
+            <div class="cell act-end">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status review">待审</span></div>
+                <div class="ttl">线人之死</div>
+                <div class="sm">唯一能证明陈浩身份的线人，在正式审讯前十二小时被灭口。林熙赶到现场只看到一张空椅子。手中最后一条证据链彻底断裂。</div>
+                <div class="change"><span class="change-label">核心变化</span>系统性失败——孤立无援，只剩林熙一人对抗</div>
+              </div>
+            </div>
+            <!-- 09 -->
+            <div class="cell">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d main"></span>主线</span><span class="status explore">探索中</span></div>
+                <div class="ttl">码头终局</div>
+                <div class="sm">回到故事开始的码头。同一个地点，同一场雨，但这次林熙没有藏着警徽。她选择了公开身份面对陈浩。枪响之后，没有人赢。</div>
+                <div class="change"><span class="change-label">核心变化</span>以牺牲换取真相曝光，完成悲剧性的自我实现</div>
+              </div>
+            </div>
+            <!-- 10 -->
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="add-col-data"></div>
+          </div>
+
+          <!-- Row: 支线A -->
+          <div class="canvas-row bg-sub">
+            <div class="track-label">
+              <span class="dot sub"></span>
+              <span class="nm">支线A</span>
+              <span class="ct">2 卡</span>
+            </div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d sub"></span>支线A</span><span class="status locked">已锁定</span></div>
+                <div class="ttl">搭档情谊</div>
+                <div class="sm">林熙与陈浩三年共事的几个片段剪辑：审讯室的默契、凌晨三点的外卖、雨夜分一根烟。这段情义是真实的，这让后来的背叛更痛。</div>
+                <div class="change"><span class="change-label">核心变化</span>观众对陈浩产生情感投入，为背叛铺设情绪底色</div>
+              </div>
+            </div>
+            <div class="cell act-end empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d sub"></span>支线A</span><span class="status draft">草稿</span></div>
+                <div class="ttl">旧案重提</div>
+                <div class="sm">陈浩的旧搭档登门，喝酒时无意提起三年前一桩被内部压下去的"误判案"。陈浩的表情只变了一秒，但林熙记住了。这是他动机的第一块拼图。</div>
+                <div class="change"><span class="change-label">核心变化</span>陈浩从单纯的"叛徒"变成有来历的复杂人物</div>
+              </div>
+            </div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell act-end empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="add-col-data"></div>
+          </div>
+
+          <!-- Row: 角色弧 -->
+          <div class="canvas-row bg-arc">
+            <div class="track-label">
+              <span class="dot arc"></span>
+              <span class="nm">角色弧</span>
+              <span class="ct">1 卡</span>
+            </div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell act-end empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell act-end">
+              <div class="pcard">
+                <div class="top"><span class="track-tag"><span class="d arc"></span>角色弧</span><span class="status explore">探索中</span></div>
+                <div class="ttl">信念崩塌</div>
+                <div class="sm">深夜，林熙把警徽放在打火机上方，停了三秒，放下了。她意识到自己三年来信奉的"程序正义"在这个系统里是一个笑话，但她还没准备好放弃它。</div>
+                <div class="change"><span class="change-label">核心变化</span>信仰受到终极考验，角色弧来到最低点</div>
+              </div>
+            </div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="cell empty"><div class="plus-stub">+</div></div>
+            <div class="add-col-data"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Right panel: Card Library (default state) + one detail card -->
+      <aside class="rpanel">
+        <header>
+          <h3>卡片库</h3>
+          <button class="close" title="收起">×</button>
+        </header>
+        <div class="search">
+          <input type="text" placeholder="搜索卡片标题、摘要…">
+        </div>
+        <div class="body">
+
+          <!-- Detail (selected: 信念崩塌, shown as inline detail editor) -->
+          <div class="detail">
+            <button class="back">‹ 返回卡片库</button>
+            <div class="meta">
+              <span class="track-tag"><span class="d"></span>角色弧</span>
+              <button class="status-pick" style="color:var(--status-explore);border-color:var(--status-explore)">探索中 ▾</button>
+            </div>
+            <div class="field titlef">
+              <label>标题</label>
+              <input type="text" value="信念崩塌">
+            </div>
+            <div class="field">
+              <label>内容摘要</label>
+              <textarea>林熙意识到自己一直信奉的"程序正义"在这个系统里失效。在审讯室外，她看到嫌疑人被同事粗暴拷打而无人制止，那一刻她第一次想烧掉警徽。</textarea>
+            </div>
+            <div class="field">
+              <label>核心变化</label>
+              <textarea>从"体制内的理想主义者"转向"开始相信只能靠自己"。这一转变是她后续独自调查陈浩的心理基础。</textarea>
+            </div>
+            <div class="field">
+              <label>挂载位置</label>
+              <div class="mountrow">
+                <div class="pseudo">第二幕 <span class="car">▾</span></div>
+                <div class="pseudo">一切尽失 <span class="car">▾</span></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button class="primary">锁定</button>
+              <button>生成场景</button>
+              <button class="ghost">复制</button>
+              <button class="danger">删除</button>
+            </div>
+          </div>
+
+          <!-- Group: 主线 -->
+          <div class="grp">
+            <div class="gh"><span class="car">▾</span>主线<span class="ct">5</span></div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">暗夜接头</div>
+                <div class="m">第一幕 · 开场印象</div>
+              </div>
+            </div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">证据出现</div>
+                <div class="m">第一幕 · 诱发事件</div>
+              </div>
+            </div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">越线决定</div>
+                <div class="m">第二幕 · 第一关口</div>
+              </div>
+            </div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">身份危机</div>
+                <div class="m">第二幕 · 中点翻转</div>
+              </div>
+            </div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">码头终局</div>
+                <div class="m">第三幕 · 高潮决战</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group: 支线A -->
+          <div class="grp">
+            <div class="gh"><span class="car">▾</span>支线A<span class="ct">2</span></div>
+            <div class="mini sub">
+              <div class="info">
+                <div class="t">搭档情谊</div>
+                <div class="m">第一幕 · 日常铺陈</div>
+              </div>
+            </div>
+            <div class="mini sub">
+              <div class="info">
+                <div class="t">旧案重提</div>
+                <div class="m">第二幕 · 基础铺陈</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group: 角色弧 -->
+          <div class="grp">
+            <div class="gh"><span class="car">▾</span>角色弧<span class="ct">1</span></div>
+            <div class="mini arc">
+              <div class="info">
+                <div class="t">信念崩塌</div>
+                <div class="m">第二幕 · 一切尽失</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Group: 未归位 -->
+          <div class="grp unplaced">
+            <div class="gh"><span class="car">▾</span>未归位<span class="ct">2</span></div>
+            <div class="mini main">
+              <div class="info">
+                <div class="t">审讯室对峙</div>
+                <div class="m">未挂载 · 拖入画布</div>
+              </div>
+            </div>
+            <div class="mini sub">
+              <div class="info">
+                <div class="t">陈浩的过去</div>
+                <div class="m">未挂载 · 拖入画布</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </aside>
+
+    </div>
+  </main>
+</div>
+</body>
+</html>
