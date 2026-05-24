@@ -427,12 +427,14 @@ a { color: var(--accent); text-decoration: none; }
 
 .panel--workflow,
 .panel--projects,
-.panel--bible {
+.panel--bible,
+.panel--library {
   grid-column: 1 / -1;
 }
 
 /* workflow 面板不加外框，直接融入页面背景 */
-.panel--workflow {
+.panel--workflow,
+.panel--library {
   background: transparent;
   border: none;
   box-shadow: none;
