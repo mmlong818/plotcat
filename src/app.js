@@ -1792,6 +1792,19 @@ function handleClick(event) {
     return;
   }
   if (action === "open-structure-library") { openStructureLibrary(); return; }
+  if (action === "open-structure-config") { openStructureLibrary(); return; }
+  if (action === "select-node") {
+    const nid = target.dataset.nodeId ?? "";
+    appState.selection.nodeId = appState.selection.nodeId === nid ? null : nid;
+    render();
+    return;
+  }
+  if (action === "close-node-drawer") {
+    appState.selection.nodeId = null;
+    render();
+    return;
+  }
+  if (action === "ai-gen-structure-notes") { return; }
   if (action === "filter-library") {
     libraryFilterTag = target.dataset.tag ?? "all";
     dom.structureLibraryContent.innerHTML = renderStructureLibraryDialog(libraryFilterTag);
@@ -1837,12 +1850,17 @@ function handleClick(event) {
   if (action === "open-plot-editor") { appState.plotEditorOpen = true; render(); return; }
   if (action === "close-plot-editor") { appState.plotEditorOpen = false; render(); return; }
   if (action === "add-plot-card") {
+    const laneId = target.dataset.laneId ?? "";
+    const actId = target.dataset.actId ?? "";
     const targetNode = getNode(nodeId) ?? list(appState.project.structure_profile?.nodes)[0];
+    const defaultLane = getVisibleLanes()[0];
     const newCard = {
       id: createId("plot"),
       title: "新剧情卡",
-      act_id: targetNode?.act_id ?? appState.project.structure_profile.acts[0]?.id ?? "",
-      node_id: targetNode?.id ?? "",
+      act_id: (actId || targetNode?.act_id) ?? list(appState.project.structure_profile?.acts)[0]?.id ?? "",
+      node_id: (nodeId || targetNode?.id) ?? "",
+      lane_id: (laneId || defaultLane?.id) ?? "",
+      lane_kind: defaultLane?.kind ?? "canonical_mainline",
       type: "mainline",
       status: "draft",
       summary: "",
@@ -1862,6 +1880,38 @@ function handleClick(event) {
     normalizeProject();
     markDirty();
     render();
+    return;
+  }
+  if (action === "delete-plot-node-col") {
+    const delNodeId = target.dataset.nodeId ?? "";
+    if (!delNodeId) return;
+    if (!confirm("删除此节点列？该列内的剧情卡不会删除，但将解除挂载。")) return;
+    const acts = list(appState.project.structure_profile?.acts);
+    for (const act of acts) {
+      act.nodes = list(act.nodes).filter((n) => n.id !== delNodeId);
+    }
+    list(appState.project.plot_board?.cards).forEach((c) => {
+      if (c.node_id === delNodeId) c.node_id = "";
+    });
+    normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "add-plot-node-col") {
+    const acts = list(appState.project.structure_profile?.acts);
+    if (acts.length === 0) return;
+    const lastAct = acts[acts.length - 1];
+    const newNode = {
+      id: createId("node"),
+      act_id: lastAct.id,
+      title: "新节点",
+      node_type: "custom",
+      required: false,
+      note: "",
+      order_index: (list(lastAct.nodes).length + 1) * 10,
+    };
+    if (!lastAct.nodes) lastAct.nodes = [];
+    lastAct.nodes.push(newNode);
+    normalizeProject(); markDirty(); render();
     return;
   }
   if (action === "toggle-plot-lock") {

@@ -474,7 +474,8 @@ export const appState = {
     timelineId: null,
     worldRuleId: null,
     setupId: null,
-    sceneId: null
+    sceneId: null,
+    nodeId: null
   },
   runtime: {
     serverAvailable: false,
