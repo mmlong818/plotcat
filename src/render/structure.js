@@ -216,7 +216,8 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
       <!-- 顶部工具栏 -->
       <div class="struct-topbar">
         <div class="struct-topbar__left">
-          <button class="struct-topbar__template-chip" type="button" data-action="open-structure-library" title="点击切换结构模板">
+          <span class="struct-topbar__template-label">叙事结构</span>
+          <button class="struct-topbar__template-chip" type="button" data-action="open-structure-library" title="点击切换叙事结构模板">
             <span class="struct-topbar__template-name">${escapeHtml(templateLabel)}</span>
             <span class="struct-topbar__template-caret">▾</span>
           </button>

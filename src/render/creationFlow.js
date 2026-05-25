@@ -5,7 +5,7 @@ const CREATION_STEPS = [
   { id: 2, label: "结构" },
   { id: 3, label: "人物" },
   { id: 4, label: "情节大纲" },
-  { id: 5, label: "确认" }
+  { id: 5, label: "进入创作" }
 ];
 
 
@@ -177,8 +177,8 @@ function renderStep1(creation) {
             <button class="cf-ai-btn" type="button"
               data-action="cf-step1-ai-suggest"
               ${isLoadingConcept ? "disabled" : ""}
-              title="基于已填字段，让 AI 生成 3 个方向">
-              ${isLoadingConcept ? "AI 思考中…" : "✨ AI 帮我想几个"}
+              title="基于已填的类型和标题，AI 给 3 个方向作参考（不会覆盖你已写的）">
+              ${isLoadingConcept ? "AI 正在想（约 20-40 秒）…" : "✨ 看看 AI 的 3 个方向"}
             </button>
           </div>
           <textarea class="cf-textarea" rows="3"

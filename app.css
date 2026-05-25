@@ -789,6 +789,28 @@ a { color: var(--accent); text-decoration: none; }
 .project-card__delete:hover {
   color: var(--critical);
 }
+/* 删除按钮降权为 ⋯ 图标，hover 才完全显示，避免误点 */
+.project-card__more {
+  width: 28px; height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  color: var(--muted-2);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 180ms, background 180ms, color 180ms, border-color 180ms;
+}
+.project-card:hover .project-card__more {
+  opacity: 0.8;
+}
+.project-card__more:hover {
+  opacity: 1;
+  background: rgba(180, 60, 60, 0.08);
+  border-color: rgba(180, 60, 60, 0.3);
+  color: var(--critical);
+}
 .project-card__logline {
   font-size: 0.82rem;
   color: var(--muted);
@@ -1288,6 +1310,12 @@ a { color: var(--accent); text-decoration: none; }
 .struct-topbar__left { display: flex; align-items: center; gap: 10px; }
 .struct-topbar__right { display: flex; align-items: center; gap: 8px; }
 .struct-topbar__meta { font-size: 0.82rem; color: var(--muted); }
+.struct-topbar__template-label {
+  font-size: 0.7rem;
+  color: var(--muted-2);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
 .struct-topbar__template-chip {
   display: inline-flex; align-items: center; gap: 4px;
   padding: 5px 12px;

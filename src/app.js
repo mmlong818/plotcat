@@ -639,6 +639,11 @@ function setCurrentStep(stepId) {
   appState.currentStepId = hasPanel
     ? nextStepId
     : workflowSteps.find((item) => dom.stepPanels.some((panel) => panel.dataset.stepGroup === item.id))?.id ?? workflowSteps[0].id;
+  // 记录用户已访问的步骤 — 仅访问过的才会被判定为「已完成」
+  appState.visitedSteps = list(appState.visitedSteps);
+  if (!appState.visitedSteps.includes(appState.currentStepId)) {
+    appState.visitedSteps.push(appState.currentStepId);
+  }
   render();
 }
 
@@ -1294,6 +1299,8 @@ function renderRuntimeStatus() {
 function isStepCompleted(stepId) {
   const p = appState.project;
   if (!p) return false;
+  // 用户未访问过的步骤永远不算「已完成」，避免 AI 预填导致全勾的错觉
+  if (!list(appState.visitedSteps).includes(stepId)) return false;
   switch (stepId) {
     case "structure":
       return list(p.structure_profile?.nodes).some((n) => n.note && n.note.trim().length > 0);
