@@ -1381,8 +1381,10 @@ a { color: var(--accent); text-decoration: none; }
   color: var(--act-num-color, var(--accent));
 }
 .struct-act-row__range {
-  font-size: 0.72rem;
-  color: var(--muted);
+  font-size: 0.62rem;
+  color: var(--muted-2);
+  opacity: 0.55;
+  margin-top: 4px;
 }
 .struct-act-row__title {
   font-size: 0.86rem;
@@ -7614,6 +7616,31 @@ body[data-active-step] .char-card:hover {
   .maslow-row__axis-left { grid-column: 1 / span 2; }
   .maslow-row__axis-mid { grid-column: 3 / span 1; text-align: left; }
   .maslow-row__axis-right { grid-column: 4 / span 1; }
+}
+
+/* 步骤完成态 + 下一步 CTA */
+.step-button.is-completed .step-button__count {
+  background: #cfe6c8;
+  color: #2c5e2c;
+}
+.step-button.is-completed { opacity: 0.85; }
+.step-next-cta {
+  margin-left: 12px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #c25d2c 0%, #a8451d 100%);
+  color: white;
+  border: none;
+  border-radius: 22px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(165, 70, 30, 0.25);
+  transition: transform 120ms, box-shadow 120ms;
+}
+.step-next-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(165, 70, 30, 0.4);
 }
 
 /* ========================================================================== */

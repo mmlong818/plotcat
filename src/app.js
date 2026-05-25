@@ -1291,25 +1291,62 @@ function renderRuntimeStatus() {
   }
 }
 
+function isStepCompleted(stepId) {
+  const p = appState.project;
+  if (!p) return false;
+  switch (stepId) {
+    case "structure":
+      return list(p.structure_profile?.nodes).some((n) => n.note && n.note.trim().length > 0);
+    case "characters":
+      return list(p.character_hub?.characters).length > 1 ||
+        list(p.character_hub?.characters).some((c) => c.external_goal || c.dramatic_need);
+    case "relationships":
+      return list(p.character_hub?.relationship_map).length > 0;
+    case "plots":
+      return list(p.plot_board?.cards).some((c) => (c.summary || c.title !== "新剧情卡") && c.title !== "开场场景");
+    case "scenes":
+      return list(p.scene_workbench?.scenes).some((s) => s.purpose || s.beat_summary);
+    case "screenplay":
+      return list(p.scene_workbench?.scenes).some((s) => (s.script_full || "").length > 200);
+    default: return false;
+  }
+}
+
 function renderStepperNav() {
+  const activeIdx = workflowSteps.findIndex((s) => s.id === appState.currentStepId);
+  const nextStep = workflowSteps[activeIdx + 1];
   const stepButtons = workflowSteps
     .map(
-      (item, index) => `
+      (item, index) => {
+        const completed = isStepCompleted(item.id);
+        const isActive = item.id === appState.currentStepId;
+        const cls = [
+          "step-button",
+          `step-button--${item.id}`,
+          isActive ? "is-active" : "",
+          completed && !isActive ? "is-completed" : ""
+        ].filter(Boolean).join(" ");
+        return `
         <button
-          class="step-button step-button--${escapeHtml(item.id)} ${item.id === appState.currentStepId ? "is-active" : ""}"
+          class="${cls}"
           type="button"
           data-action="go-step"
           data-id="${escapeHtml(item.id)}"
-          ${item.id === appState.currentStepId ? 'aria-current="step"' : ""}
+          ${isActive ? 'aria-current="step"' : ""}
         >
-          <span class="step-button__count">${index + 1}</span>
+          <span class="step-button__count">${completed && !isActive ? "✓" : index + 1}</span>
           <span class="step-button__label">${escapeHtml(item.label)}</span>
           <span class="step-button__hint">${escapeHtml(item.description)}</span>
         </button>
-      `
+      `;
+      }
     )
     .join("");
-  dom.stepperNav.innerHTML = stepButtons;
+  // 末尾「下一步」CTA（最后一步则不显示）
+  const nextCta = nextStep
+    ? `<button class="step-next-cta" type="button" data-action="go-step" data-id="${escapeHtml(nextStep.id)}">进入「${escapeHtml(nextStep.label)}」 →</button>`
+    : "";
+  dom.stepperNav.innerHTML = stepButtons + nextCta;
   dom.stepperNav.hidden = appState.currentPage !== "workflow";
 }
 

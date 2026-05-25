@@ -128,13 +128,15 @@ function renderActRow(act, index, nodes) {
     const typeLabel = escapeHtml(NODE_TYPE_LABELS[node.node_type] ?? node.node_type);
     const isEmpty = !node.note;
     const isRequired = node.required;
-    const statusClass = isRequired ? "node-card__status--key" : (isEmpty ? "node-card__status--empty" : "node-card__status--filled");
-    const statusText = isRequired ? "关键节点" : (isEmpty ? "待填写" : "已填写");
     const cardClass = ["struct-node-card", isEmpty ? "is-empty" : "", isRequired ? "is-required" : ""].filter(Boolean).join(" ");
+
+    // 状态徽章：只在「待填写」时显示（提示用户还要做的事）；已填写则去掉噪音
+    const statusBadge = isEmpty
+      ? `<span class="struct-node-card__status node-card__status--empty"><span class="struct-node-card__dot"></span>待填写</span>`
+      : "";
 
     return `
       <div class="${cardClass}" data-node-id="${escapeHtml(node.id)}" data-action="select-node">
-        <span class="struct-node-card__seq">${seq}</span>
         <div class="struct-node-card__type">${typeLabel}</div>
         <div class="struct-node-card__title">
           <input class="struct-node-card__title-input"
@@ -142,9 +144,7 @@ function renderActRow(act, index, nodes) {
             value="${escapeHtml(node.title)}" placeholder="节点名称…" />
         </div>
         <div class="struct-node-card__preview">${escapeHtml(node.note || "点击填写核心事件与戏剧转变…")}</div>
-        <span class="struct-node-card__status ${statusClass}">
-          <span class="struct-node-card__dot"></span>${statusText}
-        </span>
+        ${statusBadge}
       </div>
     `;
   }).join("");
@@ -153,10 +153,10 @@ function renderActRow(act, index, nodes) {
     <div class="struct-act-row" style="--act-bg:${color.bg};--act-border:${color.border};--act-num-color:${color.num}">
       <div class="struct-act-row__label">
         <div class="struct-act-row__num">第${chineseNum}幕</div>
-        <div class="struct-act-row__range">${start}%–${end}%</div>
         <input class="struct-act-row__title"
           data-action="act-field" data-id="${escapeHtml(act.id)}" data-field="title"
           value="${escapeHtml(act.title)}" placeholder="幕名" />
+        <div class="struct-act-row__range" title="结构比例">${start}–${end}%</div>
       </div>
       <div class="struct-act-row__nodes">
         ${nodes.length > 0 ? nodeCards : `<p class="struct-act-row__empty">此幕暂无叙事节点</p>`}
