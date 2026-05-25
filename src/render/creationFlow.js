@@ -69,7 +69,6 @@ function renderStepper(creation) {
     return `
       <div class="cf-tl-node ${cls}">${inner}<span class="cf-tl-label">${escapeHtml(step.label)}</span></div>${sep}`;
   });
-  const cur = creation.currentStep ?? 1;
   return `
     <nav class="cf-timeline" aria-label="新建项目进度">
       <div class="cf-tl-meta">
