@@ -3958,6 +3958,26 @@ a { color: var(--accent); text-decoration: none; }
   flex-direction: column;
   gap: 8px;
 }
+.cf-field--collapsible details summary {
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cf-field--collapsible details summary::-webkit-details-marker { display: none; }
+.cf-field--collapsible details summary::before {
+  content: "▸";
+  display: inline-block;
+  width: 12px;
+  font-size: 0.7rem;
+  color: var(--cf-text-3);
+  transition: transform 150ms;
+}
+.cf-field--collapsible details[open] summary::before { transform: rotate(90deg); }
+.cf-label--summary { font-weight: 500; opacity: 0.75; }
+.cf-field--collapsible details[open] .cf-label--summary { opacity: 1; }
 
 .cf-label {
   font-size: 0.75rem;

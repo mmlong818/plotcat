@@ -149,31 +149,32 @@ function renderStep1(creation) {
   return `
     <div class="cf-section">
       <div class="cf-deco-header">
-        <p class="cf-eyebrow">第一步</p>
         <h2 class="cf-deco-title">
           <span class="cf-deco-line"></span>
           <span class="cf-deco-text">故事核心</span>
           <span class="cf-deco-line"></span>
         </h2>
-        <p class="cf-step-sub">告诉 AI 你要讲什么故事 — 也可以让 AI 先帮你想几个方向</p>
+        <p class="cf-step-sub">先告诉 AI 你想讲什么故事，接下来的 5 步会一气呵成产出结构 / 人物 / 情节 / 场景的全套内容 — 所有内容随后都可自由修改。</p>
       </div>
 
       <div class="cf-form-stack">
         <div class="cf-field">
-          <label class="cf-label">作品形态</label>
+          <label class="cf-label">这是什么类型的作品？ <span class="cf-label-opt">（决定篇幅与节奏）</span></label>
           <select class="cf-input" data-action="cf-set-draft-field" data-field="format">
             ${FORMAT_OPTIONS.map(([val, label]) =>
-              `<option value="${val}" ${fmt === val ? "selected" : ""}>${escapeHtml(label)}</option>`
+              `<option value="${val}" ${fmt === val ? "selected" : ""}>${escapeHtml(label)}${val === "feature" ? "（最常用）" : ""}</option>`
             ).join("")}
           </select>
         </div>
 
-        <div class="cf-field">
-          <label class="cf-label">标题 <span class="cf-label-opt">（可选，AI 会建议）</span></label>
-          <input class="cf-input" type="text"
-            placeholder="故事名称"
-            data-action="cf-set-draft-field" data-field="title"
-            value="${escapeHtml(title)}" />
+        <div class="cf-field cf-field--collapsible">
+          <details>
+            <summary class="cf-label cf-label--summary">已有故事名？ <span class="cf-label-opt">（不填就让 AI 起）</span></summary>
+            <input class="cf-input" type="text" style="margin-top:8px;"
+              placeholder="留空让 AI 根据概念建议"
+              data-action="cf-set-draft-field" data-field="title"
+              value="${escapeHtml(title)}" />
+          </details>
         </div>
 
         <div class="cf-field">
@@ -222,12 +223,14 @@ function renderStep1(creation) {
           </div>
         ` : ""}
 
-        <div class="cf-field">
-          <label class="cf-label">主角 <span class="cf-label-opt">（可选）</span></label>
-          <input class="cf-input" type="text"
-            placeholder="主角的身份或特征"
-            data-action="cf-set-draft-field" data-field="protagonist"
-            value="${escapeHtml(protagonist)}" />
+        <div class="cf-field cf-field--collapsible">
+          <details>
+            <summary class="cf-label cf-label--summary">主角的身份或特征？ <span class="cf-label-opt">（不填会从概念里推断）</span></summary>
+            <input class="cf-input" type="text" style="margin-top:8px;"
+              placeholder="如：退役刑警、新晋御史、深空科考站工程师"
+              data-action="cf-set-draft-field" data-field="protagonist"
+              value="${escapeHtml(protagonist)}" />
+          </details>
         </div>
       </div>
 
@@ -256,7 +259,6 @@ function renderStep2(creation) {
   return `
     <div class="cf-section">
       <div class="cf-deco-header">
-        <p class="cf-eyebrow">第二步</p>
         <h2 class="cf-deco-title">
           <span class="cf-deco-line"></span>
           <span class="cf-deco-text">叙事结构</span>
@@ -300,7 +302,6 @@ function renderStep3New(creation) {
   return `
     <div class="cf-section">
       <div class="cf-deco-header">
-        <p class="cf-eyebrow">第三步</p>
         <h2 class="cf-deco-title"><span class="cf-deco-line"></span><span class="cf-deco-text">人物</span><span class="cf-deco-line"></span></h2>
         <p class="cf-step-sub">确认或跳过 AI 提议的人物</p>
       </div>
@@ -468,7 +469,7 @@ function renderStep4New(creation) {
   return `
     <div class="cf-section">
       <div class="cf-deco-header">
-        <p class="cf-eyebrow">第四步 — ${escapeHtml(currentAct.title)}</p>
+        <p class="cf-eyebrow">${escapeHtml(currentAct.title)}</p>
         <h2 class="cf-deco-title">
           <span class="cf-deco-line"></span>
           <span class="cf-deco-text">情节大纲</span>
@@ -529,7 +530,6 @@ function renderStep5New(creation) {
   return `
     <div class="cf-section">
       <div class="cf-deco-header">
-        <p class="cf-eyebrow">第五步</p>
         <h2 class="cf-deco-title">
           <span class="cf-deco-line"></span>
           <span class="cf-deco-text">确认并创建</span>
