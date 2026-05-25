@@ -59,7 +59,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
             <p>${escapeHtml(formatLabels[item.format] ?? item.format)} · ${escapeHtml(projectStatusLabels[item.status] ?? item.status)}</p>
           </div>
           <div class="project-card__actions">
-            <button class="button button--ghost button--tiny" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">
+            <button class="button button--primary button--tiny" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">
               继续创作
             </button>
             ${confirmingDelete ? `
@@ -70,8 +70,8 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
                 取消
               </button>
             ` : `
-              <button class="button button--ghost button--tiny project-card__delete" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}" title="删除项目">
-                删除
+              <button class="project-card__more" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}" title="删除项目" aria-label="删除项目">
+                ⋯
               </button>
             `}
           </div>
@@ -124,22 +124,21 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
       <div class="mode-picker-backdrop" data-action="close-create-mode-picker">
         <div class="mode-picker-panel" onclick="event.stopPropagation()">
           <button class="mode-picker-close" type="button" data-action="close-create-mode-picker" title="关闭（Esc）" aria-label="关闭">×</button>
-          <p class="mode-picker-title">选择创作方式</p>
+          <p class="mode-picker-title">想从哪种方式开始？</p>
           <div class="mode-picker-cards">
             <button class="mode-card" type="button" data-action="open-quick-creation">
               <div class="mode-card__icon">⚡</div>
               <h3>快速创作</h3>
-              <p>选定类型和创意，AI 完成全部步骤。适合快速出框架。</p>
-              <span class="mode-card__tag">约 3 分钟</span>
+              <p>填一句概念，AI 顺着帮你把结构 / 人物 / 情节都铺好。出框架最快。</p>
+              <span class="mode-card__tag">适合：想先看到雏形</span>
             </button>
             <button class="mode-card mode-card--pro" type="button" data-action="open-pro-creation">
               <div class="mode-card__icon">✦</div>
               <h3>精品创作</h3>
-              <p>从一个画面、一句台词或一种感受出发，多轮对话深挖。</p>
-              <span class="mode-card__tag">约 10 分钟</span>
+              <p>从一个画面、一句台词或一种感受出发，AI 反复追问帮你深挖。</p>
+              <span class="mode-card__tag">适合：想认真打磨一个想法</span>
             </button>
           </div>
-          <p class="mode-picker-hint">按 Esc 或点击空白处关闭</p>
         </div>
       </div>
     ` : ""}
