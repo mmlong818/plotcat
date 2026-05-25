@@ -239,7 +239,7 @@ function renderStep1(creation) {
           ${!canProceed ? "disabled" : ""}>
           下一步：选结构 <span class="cf-arrow">→</span>
         </button>
-        ${!canProceed && logline.trim().length > 0 ? `<span class="cf-next-hint">还需 ${10 - logline.trim().length} 字</span>` : ""}
+        ${!canProceed && logline.trim().length > 0 ? `<span class="cf-next-hint">把故事再说具体一点 — 主角是谁、面对什么</span>` : ""}
       </div>
     </div>
   `;
