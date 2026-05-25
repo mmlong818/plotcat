@@ -216,16 +216,14 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
       <!-- 顶部工具栏 -->
       <div class="struct-topbar">
         <div class="struct-topbar__left">
-          <span class="struct-topbar__meta">${escapeHtml(templateLabel)}${rhythmLabel ? ` · ${escapeHtml(rhythmLabel)}` : ""}</span>
+          <button class="struct-topbar__template-chip" type="button" data-action="open-structure-library" title="点击切换结构模板">
+            <span class="struct-topbar__template-name">${escapeHtml(templateLabel)}</span>
+            <span class="struct-topbar__template-caret">▾</span>
+          </button>
+          ${rhythmLabel ? `<span class="struct-topbar__rhythm">${escapeHtml(rhythmLabel)}</span>` : ""}
           ${structure.library_name ? `<span class="chip chip--soft">套用：${escapeHtml(structure.library_name)}</span>` : ""}
         </div>
         <div class="struct-topbar__right">
-          <button class="button button--ghost button--small" type="button" data-action="open-structure-config">
-            结构配置
-          </button>
-          <button class="button button--ghost button--small" type="button" data-action="open-structure-library">
-            浏览结构库
-          </button>
           ${orderedActs.length > 0 ? `
             <button class="button button--primary button--small" type="button" data-action="ai-gen-structure-notes"
               ${appState.structureNodeGen?.loading ? "disabled" : ""}>
@@ -234,6 +232,9 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
                 : "✦ AI 填写情节点"}
             </button>
           ` : ""}
+          <button class="button button--ghost button--tiny" type="button" data-action="open-structure-config" title="结构高级设置">
+            ⚙
+          </button>
         </div>
       </div>
 

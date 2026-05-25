@@ -2555,6 +2555,14 @@ dom.resetButton.addEventListener("click", () => {
 document.addEventListener("click", handleClick);
 document.addEventListener("input", handleInput);
 document.addEventListener("change", handleChange);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    if (appState.createModePickerOpen) { appState.createModePickerOpen = false; render(); return; }
+    if (appState.createDialogOpen) { appState.createDialogOpen = false; render(); return; }
+    if (appState.settingsDialogOpen) { appState.settingsDialogOpen = false; render(); return; }
+    if (appState.selection.nodeId) { appState.selection.nodeId = null; render(); return; }
+  }
+});
 document.addEventListener("dragstart", (event) => {
   const target = event.target.closest("[data-drag-plot-id]");
   if (!target) return;

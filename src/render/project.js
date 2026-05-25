@@ -123,6 +123,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
     ${appState.createModePickerOpen ? `
       <div class="mode-picker-backdrop" data-action="close-create-mode-picker">
         <div class="mode-picker-panel" onclick="event.stopPropagation()">
+          <button class="mode-picker-close" type="button" data-action="close-create-mode-picker" title="关闭（Esc）" aria-label="关闭">×</button>
           <p class="mode-picker-title">选择创作方式</p>
           <div class="mode-picker-cards">
             <button class="mode-card" type="button" data-action="open-quick-creation">
@@ -134,10 +135,11 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
             <button class="mode-card mode-card--pro" type="button" data-action="open-pro-creation">
               <div class="mode-card__icon">✦</div>
               <h3>精品创作</h3>
-              <p>从任意起点出发，与 AI 深入对话，逐步挖掘故事质感。</p>
-              <span class="mode-card__tag">深度模式</span>
+              <p>从一个画面、一句台词或一种感受出发，多轮对话深挖。</p>
+              <span class="mode-card__tag">约 10 分钟</span>
             </button>
           </div>
+          <p class="mode-picker-hint">按 Esc 或点击空白处关闭</p>
         </div>
       </div>
     ` : ""}
