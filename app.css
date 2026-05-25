@@ -6413,7 +6413,13 @@ body[data-mode="creation"] {
   background: var(--surface-3); border-left: 3px solid var(--accent);
   padding: 10px 14px; border-radius: 4px; margin-bottom: 16px;
 }
-.pro-anchor-summary__text { font-size: .82rem; color: var(--muted); margin: 0; }
+.pro-anchor-summary__text {
+  font-size: .82rem;
+  color: var(--muted);
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
 .pro-wb-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
 .pro-wb-tab {
   padding: 7px 16px; border-radius: 20px;
