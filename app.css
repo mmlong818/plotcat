@@ -1285,9 +1285,31 @@ a { color: var(--accent); text-decoration: none; }
   flex-shrink: 0;
   gap: 10px;
 }
-.struct-topbar__left { display: flex; align-items: center; gap: 8px; }
+.struct-topbar__left { display: flex; align-items: center; gap: 10px; }
 .struct-topbar__right { display: flex; align-items: center; gap: 8px; }
 .struct-topbar__meta { font-size: 0.82rem; color: var(--muted); }
+.struct-topbar__template-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 5px 12px;
+  background: rgba(180, 110, 50, 0.08);
+  border: 1px solid rgba(180, 140, 90, 0.35);
+  border-radius: 16px;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.struct-topbar__template-chip:hover { background: rgba(180, 110, 50, 0.16); }
+.struct-topbar__template-name { font-weight: 600; }
+.struct-topbar__template-caret { font-size: 0.7rem; color: var(--muted); }
+.struct-topbar__rhythm {
+  font-size: 0.72rem;
+  color: var(--muted-2);
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.04);
+  border-radius: 4px;
+}
 
 /* 故事核心折叠栏 */
 .story-core-bar {
@@ -6361,6 +6383,22 @@ body[data-mode="creation"] {
   background: var(--surface-1); border: 1px solid var(--border);
   border-radius: 12px; padding: 28px 28px 24px;
   width: min(600px, 92vw);
+  position: relative;
+}
+.mode-picker-close {
+  position: absolute; top: 12px; right: 14px;
+  width: 28px; height: 28px;
+  background: transparent; border: none; border-radius: 14px;
+  font-size: 20px; line-height: 1; cursor: pointer;
+  color: var(--muted);
+  transition: background 120ms;
+}
+.mode-picker-close:hover { background: rgba(0,0,0,0.08); color: var(--ink); }
+.mode-picker-hint {
+  margin: 16px 0 0;
+  font-size: .7rem;
+  color: var(--muted-2);
+  text-align: center;
 }
 .mode-picker-title {
   font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
