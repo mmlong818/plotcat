@@ -1,11 +1,12 @@
 import { escapeHtml } from "../utils.js";
 
+// 「新建项目」准备阶段 5 步（与项目编辑阶段的 6 步 workflow 区分开 — 这是设置阶段不是正式创作）
 const CREATION_STEPS = [
   { id: 1, label: "故事核心" },
   { id: 2, label: "结构" },
   { id: 3, label: "人物" },
   { id: 4, label: "情节大纲" },
-  { id: 5, label: "进入创作" }
+  { id: 5, label: "审核 · 完成" }
 ];
 
 
@@ -26,30 +27,30 @@ const FORMAT_OPTIONS = [
 ];
 
 const TEMPLATE_RECS = {
-  feature:     { template: "feature_film",      reason: "五幕长片模式最适合有完整角色弧光的故事" },
-  pilot:       { template: "pilot_episode",     reason: "试播集模式专为建立剧集引擎和续看钩子设计" },
-  series:      { template: "series_season",     reason: "连续剧季结构支持多线并行和季终高潮" },
-  short:       { template: "short_form",        reason: "短片模式精简为起-转-合三节点" },
-  micro_drama: { template: "micro_drama_serial",reason: "微短剧模式聚焦高钩子和连续追更" }
+  feature:     { template: "three_act",  reason: "好莱坞行业标准 — 建置 / 对抗 / 解决，最普适的电影结构" },
+  pilot:       { template: "four_act",   reason: "电视试播的常规四幕，每幕底部留广告插入点和钩子" },
+  series:      { template: "four_act",   reason: "电视行业惯用四幕结构，便于电视播出节奏" },
+  short:       { template: "three_act",  reason: "三幕剧浓缩版，适合短片的紧凑节奏" },
+  micro_drama: { template: "three_act",  reason: "三幕剧浓缩版，每幕留强钩子" }
 };
 
 const TEMPLATE_LABELS = {
-  feature_film:       "电影长片（五幕）",
-  three_act:          "三幕剧",
-  four_act:           "四幕剧",
-  pilot_episode:      "试播集",
+  three_act:          "三幕（好莱坞标准）",
+  four_act:           "四幕（电视试播常用）",
+  feature_film:       "五幕长片（救猫咪节拍）",
+  pilot_episode:      "试播集模板",
   series_season:      "连续剧季",
-  short_form:         "短片",
-  micro_drama_serial: "微短剧",
+  short_form:         "短片模板",
+  micro_drama_serial: "微短剧模板",
   custom:             "自定义"
 };
 
 const FORMAT_TEMPLATES = {
-  feature:     ["feature_film", "three_act", "four_act"],
-  pilot:       ["pilot_episode", "three_act", "four_act"],
-  series:      ["series_season"],
-  short:       ["short_form"],
-  micro_drama: ["micro_drama_serial"]
+  feature:     ["three_act", "four_act", "feature_film"],
+  pilot:       ["four_act", "three_act", "pilot_episode"],
+  series:      ["four_act", "three_act", "series_season"],
+  short:       ["three_act", "short_form"],
+  micro_drama: ["three_act", "micro_drama_serial"]
 };
 
 // ── Timeline Stepper ──────────────────────────────────────────────────────
@@ -68,8 +69,13 @@ function renderStepper(creation) {
     return `
       <div class="cf-tl-node ${cls}">${inner}<span class="cf-tl-label">${escapeHtml(step.label)}</span></div>${sep}`;
   });
+  const cur = creation.currentStep ?? 1;
   return `
-    <nav class="cf-timeline">
+    <nav class="cf-timeline" aria-label="新建项目进度">
+      <div class="cf-tl-meta">
+        <span class="cf-tl-meta__label">新建项目 · 准备阶段</span>
+        <span class="cf-tl-meta__progress">第 ${cur} 步 / 共 ${CREATION_STEPS.length} 步</span>
+      </div>
       <div class="cf-tl-inner">${items.join("")}</div>
     </nav>`;
 }
