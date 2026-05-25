@@ -867,8 +867,12 @@ async function handleApi(request, response, pathname) {
       });
 
       const assembled = parseJsonFromText(result);
-      const title = assembled.story_core?.premise?.slice(0, 30) ?? anchor.slice(0, 30) ?? "精品项目";
       const logline = assembled.story_core?.premise ?? "";
+      // title 不能用 logline 截断 — 那会是「册封大典前夜深宫女官发现先帝…」这样的破句。
+      // 优先用 AI 显式产出的 title 字段，否则用项目占位标题让用户进去后自己起名。
+      const aiTitle = (assembled.story_core?.title || assembled.title || "").trim();
+      const stamp = new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+      const title = aiTitle || `未命名项目（${stamp}）`;
       const genreList = Array.isArray(genres) ? genres : [];
 
       const projectData = createProject({ title, format: "feature_film", genre: genreList, logline });

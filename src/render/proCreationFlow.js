@@ -115,7 +115,7 @@ function renderWorkbenchesStep(appState) {
       </div>
 
       <div class="pro-anchor-summary">
-        <p class="pro-anchor-summary__text">${escapeHtml(anchor.slice(0, 80))}${anchor.length > 80 ? "…" : ""}</p>
+        <p class="pro-anchor-summary__text">${escapeHtml(anchor)}</p>
       </div>
 
       <div class="pro-wb-tabs">

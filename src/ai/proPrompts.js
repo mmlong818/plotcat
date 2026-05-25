@@ -90,16 +90,18 @@ ${formatQA(characterQA)}
 ${formatQA(sceneQA)}
 
 整合要求：
-1. premise = 一句能激起好奇的故事前提（来自主题台）
-2. core_conflict = 核心冲突（来自主题台，必须包含两方立场）
-3. central_question = 核心困境问题（来自主题台，不能有明显正确答案）
-4. theme_statement = 主题陈述
-5. 提取至少1个核心人物（来自人物台），包含 name/story_role/desire/need/wound/arc_start/arc_end/contradiction/notes
-6. 提取2-4个关键场景（来自场景台），包含 title/goal/conflict/turn/act_position
+1. title = 一个**简短有力**的故事标题（2-8 字，意象/张力词为主，不要包含动词全句、不要把 premise 拿来截断）
+2. premise = 一句能激起好奇的故事前提（来自主题台）
+3. core_conflict = 核心冲突（来自主题台，必须包含两方立场）
+4. central_question = 核心困境问题（来自主题台，不能有明显正确答案）
+5. theme_statement = 主题陈述
+6. 提取至少1个核心人物（来自人物台），包含 name/story_role/desire/need/wound/arc_start/arc_end/contradiction/notes
+7. 提取2-4个关键场景（来自场景台），包含 title/goal/conflict/turn/act_position
 
 只输出以下JSON（必须包含所有字段）：
 {
   "story_core": {
+    "title": "...",
     "premise": "...",
     "core_conflict": "...",
     "central_question": "...",
