@@ -89,12 +89,18 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
       </article>
     `;
   };
+  const totalProjects = sortedProjects.length;
+  const recentLabel = totalProjects === 0
+    ? "还没有项目"
+    : totalProjects <= 3
+      ? `共 ${totalProjects} 个项目`
+      : `按最近打开排序 · 共 ${totalProjects} 个项目`;
   dom.projectList.innerHTML = `
     <section class="project-group">
       <div class="project-group__head project-group__head--row">
         <div>
-          <h3>最近项目</h3>
-          <p>最近打开的三个项目。</p>
+          <h3>${totalProjects === 0 ? "开始你的第一个故事" : "最近项目"}</h3>
+          <p>${escapeHtml(recentLabel)}</p>
         </div>
         <button class="button project-create-btn" type="button" data-action="open-create-mode-picker">
           <span class="project-card__plus">+</span>
@@ -102,7 +108,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
         </button>
       </div>
       <div class="project-list project-list--wide">
-        ${recentProjects.length ? recentProjects.map(renderProjectCard).join("") : `<p class="project-list__empty">还没有项目，点击「新建项目」开始创作。</p>`}
+        ${recentProjects.length ? recentProjects.map(renderProjectCard).join("") : `<p class="project-list__empty">点击右上角「新建项目」开始创作。</p>`}
       </div>
     </section>
     ${
