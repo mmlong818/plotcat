@@ -8,6 +8,9 @@ const NODE_TYPE_LABELS = {
   dark_night: "至暗时刻", reaction: "反应段", attack: "主动进攻",
   crisis: "危机时刻", pressure_wave: "压力波",
   break_into_three: "进入第三幕", finale: "终局行动", final_image: "结尾印象",
+  // 5 幕 / feature_film 模板的节点
+  lock_in: "主线锁定", promise: "故事承诺兑现", reversal: "局势反扑",
+  collapse: "崩塌时刻", final_choice: "最终选择", aftershock: "余波落点"
 };
 
 const NODE_TYPE_HINTS = {
