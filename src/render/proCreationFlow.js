@@ -7,10 +7,15 @@ const GENRE_OPTIONS = [
 function renderActiveWorkbench(appState) {
   const activeWb = appState.proCreation.activeWb;
   const wb = appState.proCreation.workbenches[activeWb];
+  const wbLabel = { theme: "主题", character: "人物", scene: "场景" }[activeWb] || activeWb;
   if (wb.loading) {
     return `
       <div class="pro-wb-panel">
-        <div class="pro-wb-loading">AI 正在思考问题…</div>
+        <div class="pro-wb-loading">
+          <span class="pro-wb-loading__spinner"></span>
+          AI 正在根据你的起点，生成${escapeHtml(wbLabel)}相关的挖掘问题…
+          <span class="pro-wb-loading__hint">通常 10–20 秒</span>
+        </div>
       </div>
     `;
   }
@@ -18,9 +23,10 @@ function renderActiveWorkbench(appState) {
     return `
       <div class="pro-wb-panel">
         <div class="pro-wb-empty">
-          <button class="button button--ghost" type="button"
+          <p class="pro-wb-empty__hint">点击下方按钮，让 AI 根据你的起点生成 4–5 个${escapeHtml(wbLabel)}层面的关键问题。</p>
+          <button class="button button--primary" type="button"
             data-action="pro-gen-questions" data-wb="${escapeHtml(activeWb)}">
-            生成问题
+            ✦ 生成${escapeHtml(wbLabel)}问题
           </button>
         </div>
       </div>
@@ -58,9 +64,9 @@ function renderAnchorStep(appState) {
   return `
     <section class="pro-creation pro-creation--anchor">
       <div class="pro-creation__header">
-        <button class="cf-back-btn" data-action="back-to-projects">← 返回</button>
-        <h2 class="pro-creation__title">精品创作</h2>
-        <p class="pro-creation__subtitle">从任何地方开始——一个人物、一幅画面、一句话、一种感受</p>
+        <button class="cf-back-btn" data-action="back-to-projects" title="放弃当前输入，返回项目中心">← 项目中心</button>
+        <h2 class="pro-creation__title">精品创作 · 写下起点</h2>
+        <p class="pro-creation__subtitle">一个人物、一幅画面、一句台词，或一种感受 — 在下方输入框写下来，AI 会陪你深挖。</p>
       </div>
 
       <div class="pro-anchor-card">
@@ -101,20 +107,25 @@ function renderAnchorStep(appState) {
 function renderWorkbenchesStep(appState) {
   const { anchor, activeWb, workbenches, loading } = appState.proCreation;
   const wbLabels = { theme: "主题台", character: "人物台", scene: "场景台" };
+  const allDone = ["theme", "character", "scene"].every((k) => workbenches[k].done);
+  const assembleBtnLabel = loading
+    ? "AI 正在整合（约 30-60 秒）…"
+    : allDone ? "组装并进入创作 →" : "至少标记一个工作台完成";
   return `
     <section class="pro-creation pro-creation--workbenches">
       <div class="pro-creation__header">
-        <button class="cf-back-btn" data-action="pro-back-to-anchor">← 重新输入</button>
-        <h2 class="pro-creation__title">深度开发</h2>
+        <button class="cf-back-btn" data-action="pro-back-to-anchor" title="返回起点修改输入（已有的 AI 提问会保留）">← 修改起点</button>
+        <h2 class="pro-creation__title">精品创作 · 深度开发</h2>
         <div class="pro-header-actions">
           <button class="button button--primary" type="button" data-action="pro-assemble"
-            ${loading ? "disabled" : ""}>
-            ${loading ? "组装中…" : "进入创作 →"}
+            ${loading || !allDone ? "disabled" : ""}>
+            ${escapeHtml(assembleBtnLabel)}
           </button>
         </div>
       </div>
 
       <div class="pro-anchor-summary">
+        <p class="pro-anchor-summary__label">你的起点</p>
         <p class="pro-anchor-summary__text">${escapeHtml(anchor)}</p>
       </div>
 
@@ -123,9 +134,12 @@ function renderWorkbenchesStep(appState) {
           const wbState = workbenches[wb];
           const isActive = activeWb === wb;
           const isDone = wbState.done;
-          return `<button class="pro-wb-tab ${isActive ? "is-active" : ""} ${isDone ? "is-done" : ""}"
+          const hasQuestions = (wbState.questions || []).length > 0;
+          const status = isDone ? "done" : (hasQuestions ? "ongoing" : "empty");
+          const prefix = isDone ? "✓ " : (hasQuestions ? "● " : "○ ");
+          return `<button class="pro-wb-tab pro-wb-tab--${status} ${isActive ? "is-active" : ""}"
             type="button" data-action="pro-switch-wb" data-wb="${wb}">
-            ${isDone ? "✓ " : ""}${wbLabels[wb]}
+            ${prefix}${wbLabels[wb]}
           </button>`;
         }).join("")}
       </div>

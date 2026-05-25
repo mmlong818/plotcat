@@ -71,27 +71,41 @@ function parseJobs(text) {
  * @returns {Promise<{findings, raw}>}
  */
 export async function jobsReview(page, ctx) {
-  // 1. 抽取页面可见文本（限 4000 字）
+  // 1. 抽取页面可见文本（只看实际渲染给用户的元素，跳过 hidden / display:none）
   const snapshot = await page.evaluate(() => {
-    const visible = (el) => {
+    const isVisible = (el) => {
+      if (!el) return false;
+      if (el.hidden) return false;
       const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return false;
       const s = window.getComputedStyle(el);
-      return r.width > 0 && r.height > 0 && s.display !== 'none' && s.visibility !== 'hidden';
+      if (s.display === 'none' || s.visibility === 'hidden' || s.opacity === '0') return false;
+      // 再沿祖先链检查是否有 hidden 父
+      let n = el.parentElement;
+      while (n) {
+        if (n.hidden) return false;
+        const cs = window.getComputedStyle(n);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+        n = n.parentElement;
+      }
+      return true;
     };
-    // 抓 hero + main 区域的文本
-    const root = document.querySelector('main') || document.body;
     const parts = [];
-    const eyebrow = document.querySelector('#hero-eyebrow')?.textContent?.trim();
-    if (eyebrow) parts.push(`[HERO eyebrow]: ${eyebrow}`);
-    // 步骤条
-    const steps = Array.from(document.querySelectorAll('#stepper-nav .step-button')).map(b => {
-      const label = b.querySelector('.step-button__label')?.textContent?.trim();
-      const active = b.classList.contains('is-active');
-      return active ? `*${label}*` : label;
-    });
-    if (steps.length) parts.push(`[Steps]: ${steps.join(' / ')}`);
-    // 主区文本（去重 + 截断）
-    const text = root.innerText || '';
+    const eyebrow = document.querySelector('#hero-eyebrow');
+    if (eyebrow && isVisible(eyebrow)) parts.push(`[HERO eyebrow]: ${eyebrow.textContent?.trim()}`);
+    const stepperNav = document.querySelector('#stepper-nav');
+    if (stepperNav && isVisible(stepperNav)) {
+      const steps = Array.from(document.querySelectorAll('#stepper-nav .step-button')).map(b => {
+        const label = b.querySelector('.step-button__label')?.textContent?.trim();
+        const active = b.classList.contains('is-active');
+        const done = b.classList.contains('is-completed');
+        return active ? `*${label}*` : (done ? `✓${label}` : label);
+      });
+      if (steps.length) parts.push(`[Steps]: ${steps.join(' / ')}`);
+    }
+    // 主区可见文本
+    const main = Array.from(document.querySelectorAll('main > section')).find(s => isVisible(s));
+    const text = main ? main.innerText : (document.body.innerText || '').slice(0, 4000);
     parts.push(`[Page text]:\n${text.slice(0, 3500)}`);
     return parts.join('\n');
   });
