@@ -85,12 +85,13 @@ export const projectDraftFieldLabels = {
   audience_promise: "观众承诺"
 };
 
-// 好莱坞常规：三幕（Three-Act Structure）是行业默认，四幕（Four-Act Television）多用于电视试播
+// 好莱坞行业标准：三幕（Three-Act Structure）为所有作品形态的默认结构
+// 四幕仅作为电视试播 / 季播的备选，五幕长片（救猫咪）为高级备选
 export const formatDefaultTemplates = {
   feature_or_pilot: "three_act",
   feature: "three_act",
-  pilot: "four_act",
-  series: "four_act",
+  pilot: "three_act",
+  series: "three_act",
   short: "three_act",
   micro_drama: "three_act"
 };
@@ -98,8 +99,8 @@ export const formatDefaultTemplates = {
 export const formatStructureOptions = {
   feature: ["three_act", "four_act", "feature_film", "custom"],
   feature_or_pilot: ["three_act", "four_act", "feature_film", "pilot_episode", "custom"],
-  pilot: ["four_act", "three_act", "pilot_episode", "custom"],
-  series: ["four_act", "series_season", "custom"],
+  pilot: ["three_act", "four_act", "pilot_episode", "custom"],
+  series: ["three_act", "four_act", "series_season", "custom"],
   short: ["three_act", "short_form", "custom"],
   micro_drama: ["three_act", "micro_drama_serial", "custom"]
 };
