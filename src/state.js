@@ -57,13 +57,13 @@ export const formatLabels = {
 export const projectFormatChoices = ["feature", "pilot", "series", "short", "micro_drama"];
 
 export const structureTemplateLabels = {
-  feature_film: "电影长片模式",
-  pilot_episode: "试播集模式",
+  three_act: "三幕（好莱坞标准）",
+  four_act: "四幕（电视试播常用）",
+  feature_film: "五幕长片（救猫咪节拍）",
+  pilot_episode: "试播集模板",
   series_season: "连续剧季结构",
-  short_form: "短片模式",
-  micro_drama_serial: "微短剧模式",
-  three_act: "三幕剧",
-  four_act: "四幕剧",
+  short_form: "短片模板",
+  micro_drama_serial: "微短剧模板",
   custom: "自定义"
 };
 
@@ -85,22 +85,23 @@ export const projectDraftFieldLabels = {
   audience_promise: "观众承诺"
 };
 
+// 好莱坞常规：三幕（Three-Act Structure）是行业默认，四幕（Four-Act Television）多用于电视试播
 export const formatDefaultTemplates = {
-  feature_or_pilot: "feature_film",
-  feature: "feature_film",
-  pilot: "pilot_episode",
-  series: "series_season",
-  short: "short_form",
-  micro_drama: "micro_drama_serial"
+  feature_or_pilot: "three_act",
+  feature: "three_act",
+  pilot: "four_act",
+  series: "four_act",
+  short: "three_act",
+  micro_drama: "three_act"
 };
 
 export const formatStructureOptions = {
-  feature: ["feature_film", "three_act", "four_act", "custom"],
-  feature_or_pilot: ["feature_film", "pilot_episode", "three_act", "four_act", "custom"],
-  pilot: ["pilot_episode", "three_act", "four_act", "custom"],
-  series: ["series_season", "custom"],
-  short: ["short_form", "custom"],
-  micro_drama: ["micro_drama_serial", "custom"]
+  feature: ["three_act", "four_act", "feature_film", "custom"],
+  feature_or_pilot: ["three_act", "four_act", "feature_film", "pilot_episode", "custom"],
+  pilot: ["four_act", "three_act", "pilot_episode", "custom"],
+  series: ["four_act", "series_season", "custom"],
+  short: ["three_act", "short_form", "custom"],
+  micro_drama: ["three_act", "micro_drama_serial", "custom"]
 };
 
 export const projectStatusLabels = {
@@ -279,9 +280,9 @@ export const structurePresets = {
   },
   three_act: {
     acts: [
-      { key: "act_1", title: "第一幕", purpose: "建立世界与问题", range_label: "0% - 25%" },
-      { key: "act_2", title: "第二幕", purpose: "持续升级冲突", range_label: "25% - 75%" },
-      { key: "act_3", title: "第三幕", purpose: "完成最终选择", range_label: "75% - 100%" }
+      { key: "act_1", title: "第一幕 · 建置", purpose: "建立世界、人物、激励事件", range_label: "0% - 25%" },
+      { key: "act_2", title: "第二幕 · 对抗", purpose: "主角面对障碍，矛盾持续升级", range_label: "25% - 75%" },
+      { key: "act_3", title: "第三幕 · 解决", purpose: "高潮决战与角色弧光收束", range_label: "75% - 100%" }
     ],
     nodes: [
       ["opening_image", "act_1", "开场印象", true],
@@ -299,10 +300,10 @@ export const structurePresets = {
   },
   four_act: {
     acts: [
-      { key: "act_1", title: "第一幕", purpose: "立人物与问题", range_label: "0% - 20%" },
-      { key: "act_2", title: "第二幕", purpose: "先反应，后试探", range_label: "20% - 45%" },
-      { key: "act_3", title: "第三幕", purpose: "主动推进再崩塌", range_label: "45% - 75%" },
-      { key: "act_4", title: "第四幕", purpose: "决断与收束", range_label: "75% - 100%" }
+      { key: "act_1", title: "第一幕 · 钩子", purpose: "建立世界 + 强冷开场，前 10 分钟抓住观众", range_label: "0% - 20%" },
+      { key: "act_2", title: "第二幕 · 升级", purpose: "诱发事件后，主角先反应再试探", range_label: "20% - 45%" },
+      { key: "act_3", title: "第三幕 · 重击", purpose: "中点翻转，主角主动推进再被打回原形", range_label: "45% - 75%" },
+      { key: "act_4", title: "第四幕 · 收束", purpose: "最终决断 + 余波 + 季终钩子", range_label: "75% - 100%" }
     ],
     nodes: [
       ["setup", "act_1", "基础铺陈", true],
@@ -376,7 +377,7 @@ export function createDefaultProjectDraft() {
     motif: "",
     setting: "",
     audience_promise: "",
-    structure_template: "feature_film",
+    structure_template: "three_act",
     custom_act_count: "2",
     core_conflict: "",
     external_goal: "",

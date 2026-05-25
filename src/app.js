@@ -80,7 +80,7 @@ const dom = {
 // ── Structure helpers ────────────────────────────────────────────────────────
 
 function getStructureOptionsForFormat(format, currentTemplate = null) {
-  const values = [...(formatStructureOptions[format] ?? ["feature_film", "pilot_episode", "three_act", "four_act", "custom"])];
+  const values = [...(formatStructureOptions[format] ?? ["three_act", "four_act", "feature_film", "pilot_episode", "custom"])];
   if (currentTemplate && !values.includes(currentTemplate)) {
     values.unshift(currentTemplate);
   }
@@ -88,7 +88,7 @@ function getStructureOptionsForFormat(format, currentTemplate = null) {
 }
 
 function getDefaultTemplateForFormat(format) {
-  return formatDefaultTemplates[format] ?? "feature_film";
+  return formatDefaultTemplates[format] ?? "three_act";
 }
 
 function currentStepIndex() {
@@ -3127,7 +3127,7 @@ function handleCreationClick(action, target) {
     const prev = c.draft[field] ?? "";
     c.draft[field] = value;
     if (field === "format") {
-      const recs = { feature: "feature_film", pilot: "pilot_episode", series: "series_season", short: "short_form", micro_drama: "micro_drama_serial" };
+      const recs = { feature: "three_act", pilot: "four_act", series: "four_act", short: "three_act", micro_drama: "three_act" };
       c.draft.structure_template = recs[value] ?? "feature_film";
       renderCreationPage();
       return true;
@@ -3168,7 +3168,7 @@ function handleCreationClick(action, target) {
   }
 
   if (action === "cf-step2-next") {
-    const template = c.draft?.structure_template ?? "feature_film";
+    const template = c.draft?.structure_template ?? "three_act";
     c._structurePreset = structurePresets[template] ?? null;
     c.currentStep = 3;
     c.aiError = "";
@@ -3575,7 +3575,7 @@ async function handleGenerateAct(actKey) {
 async function handleFinalizeNewCreation() {
   const c = appState.creation;
   const draft = c.draft ?? {};
-  const template = draft.structure_template ?? "feature_film";
+  const template = draft.structure_template ?? "three_act";
   const preset = structurePresets[template] ?? buildCustomStructurePreset(2);
 
   const proj = createEmptyProject();
@@ -4036,7 +4036,7 @@ function handleCreationInput(action, target) {
     if (!c.draft) c.draft = {};
     c.draft[field] = value;
     if (field === "format") {
-      const recs = { feature: "feature_film", pilot: "pilot_episode", series: "series_season", short: "short_form", micro_drama: "micro_drama_serial" };
+      const recs = { feature: "three_act", pilot: "four_act", series: "four_act", short: "three_act", micro_drama: "three_act" };
       c.draft.structure_template = recs[value] ?? "feature_film";
     }
     // Re-render only to update button state (canProceed changes with logline length)

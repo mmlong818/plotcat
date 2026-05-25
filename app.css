@@ -3758,12 +3758,34 @@ a { color: var(--accent); text-decoration: none; }
 
 .cf-timeline {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 24px 0 28px;
+  gap: 8px;
+}
+.cf-tl-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 0 4px;
+}
+.cf-tl-meta__label {
+  font-size: 0.78rem;
+  color: var(--cf-text-3);
+  letter-spacing: 0.08em;
+}
+.cf-tl-meta__progress {
+  font-size: 0.72rem;
+  color: var(--cf-text-3);
+  opacity: 0.7;
+}
+.cf-tl-inner {
+  display: flex;
   align-items: flex-start;
-  padding: 36px 0 32px;
   overflow-x: auto;
   scrollbar-width: none;
 }
-.cf-timeline::-webkit-scrollbar { display: none; }
+.cf-tl-inner::-webkit-scrollbar { display: none; }
 
 .cf-tl-node {
   display: flex;
