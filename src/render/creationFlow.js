@@ -27,11 +27,11 @@ const FORMAT_OPTIONS = [
 ];
 
 const TEMPLATE_RECS = {
-  feature:     { template: "three_act",  reason: "好莱坞行业标准 — 建置 / 对抗 / 解决，最普适的电影结构" },
-  pilot:       { template: "four_act",   reason: "电视试播的常规四幕，每幕底部留广告插入点和钩子" },
-  series:      { template: "four_act",   reason: "电视行业惯用四幕结构，便于电视播出节奏" },
-  short:       { template: "three_act",  reason: "三幕剧浓缩版，适合短片的紧凑节奏" },
-  micro_drama: { template: "three_act",  reason: "三幕剧浓缩版，每幕留强钩子" }
+  feature:     { template: "three_act", reason: "好莱坞行业标准 — 建置 / 对抗 / 解决，最普适的故事结构" },
+  pilot:       { template: "three_act", reason: "三幕剧适配试播集 — 第一幕立人物，第二幕推升级，第三幕留续看钩子" },
+  series:      { template: "three_act", reason: "三幕剧适配单集叙事节奏，剧情清晰" },
+  short:       { template: "three_act", reason: "三幕剧浓缩版，适合短片的紧凑节奏" },
+  micro_drama: { template: "three_act", reason: "三幕剧浓缩版，每幕留强钩子" }
 };
 
 const TEMPLATE_LABELS = {

@@ -3127,7 +3127,7 @@ function handleCreationClick(action, target) {
     const prev = c.draft[field] ?? "";
     c.draft[field] = value;
     if (field === "format") {
-      const recs = { feature: "three_act", pilot: "four_act", series: "four_act", short: "three_act", micro_drama: "three_act" };
+      const recs = { feature: "three_act", pilot: "three_act", series: "three_act", short: "three_act", micro_drama: "three_act" };
       c.draft.structure_template = recs[value] ?? "feature_film";
       renderCreationPage();
       return true;
@@ -4036,7 +4036,7 @@ function handleCreationInput(action, target) {
     if (!c.draft) c.draft = {};
     c.draft[field] = value;
     if (field === "format") {
-      const recs = { feature: "three_act", pilot: "four_act", series: "four_act", short: "three_act", micro_drama: "three_act" };
+      const recs = { feature: "three_act", pilot: "three_act", series: "three_act", short: "three_act", micro_drama: "three_act" };
       c.draft.structure_template = recs[value] ?? "feature_film";
     }
     // Re-render only to update button state (canProceed changes with logline length)
