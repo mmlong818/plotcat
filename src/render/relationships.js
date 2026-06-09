@@ -1,5 +1,16 @@
 import { escapeHtml, inputField, textareaField, field, list, renderEmptyState } from "../utils.js";
-import { RELATIONSHIP_TYPE_OPTIONS } from "../state.js";
+
+// 关系类型分组（图标 + 4 大类语义）
+const RELATIONSHIP_GROUPS = [
+  { key: "love",    icon: "♥",  label: "情感",   tone: "love",
+    types: ["三角恋情", "假面情侣", "强制婚约", "博得芳心", "单向爱意"] },
+  { key: "ally",    icon: "⚔",  label: "同盟",   tone: "ally",
+    types: ["手足战友", "师徒传承", "左膀右臂"] },
+  { key: "rival",   icon: "✕",  label: "对抗",   tone: "rival",
+    types: ["强力对手", "归来宿敌", "反目旧友", "暴躁上司"] },
+  { key: "family",  icon: "⌂",  label: "家庭",   tone: "family",
+    types: ["大家长式"] },
+];
 
 function relStatusDot(status) {
   const map = { active: "active", locked: "locked", retired: "discard" };
@@ -32,7 +43,7 @@ function renderRelationshipRail(characters, relationships, selectedId) {
                 <span class="rel-item__arrow">↔</span>
                 <span class="rel-item__body">
                   <strong>${escapeHtml(other)}</strong>
-                  <span>${escapeHtml(r.relationship_type || "未命名关系")}</span>
+                  <span>${escapeHtml(r.relationship_type || r.relationship_kind || "未命名关系")}</span>
                 </span>
                 ${relStatusDot(r.status)}
               </button>
@@ -97,12 +108,25 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
                 </section>
                 <section>
                   <p class="section-label">关系定义</p>
-                  <div class="chip-wrap">
-                    ${RELATIONSHIP_TYPE_OPTIONS.map((t) => `
-                      <button class="ref-chip ${selectedRelationship.relationship_type === t ? "is-active" : ""}"
-                        type="button" data-action="select-rel-type-chip" data-id="${escapeHtml(t)}">
-                        ${escapeHtml(t)}
-                      </button>
+                  <div class="rel-kind-groups">
+                    ${RELATIONSHIP_GROUPS.map((g) => `
+                      <div class="rel-kind-group rel-kind-group--${g.tone}">
+                        <span class="rel-kind-group__head">
+                          <span class="rel-kind-group__icon">${g.icon}</span>
+                          <span class="rel-kind-group__label">${escapeHtml(g.label)}</span>
+                        </span>
+                        <div class="rel-kind-group__chips">
+                          ${g.types.map((t) => {
+                            // kind 是类型槽的唯一真相（normalize 已迁移旧数据），不再从 type 反推
+                            const activeKind = selectedRelationship.relationship_kind || "";
+                            return `
+                            <button class="rel-seg ${activeKind === t ? "is-active" : ""}"
+                              type="button" data-action="select-rel-type-chip" data-id="${escapeHtml(t)}">
+                              ${escapeHtml(t)}
+                            </button>
+                          `; }).join("")}
+                        </div>
+                      </div>
                     `).join("")}
                   </div>
                   <div class="form-grid form-grid--compact" style="margin-top:8px">

@@ -46,8 +46,43 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
     const rightValue = Date.parse(right.last_opened_at || right.updated_at || 0);
     return rightValue - leftValue;
   });
-  const recentProjects = sortedProjects.slice(0, 3);
-  const oldProjects = sortedProjects.slice(3);
+  const heroProject = sortedProjects[0];
+  const recentProjects = sortedProjects.slice(1, 4);
+  const oldProjects = sortedProjects.slice(4);
+  const renderHeroCard = (item) => {
+    if (!item) return "";
+    const safeTitle = isBrokenPlaceholderText(item.title) ? "未命名项目" : item.title;
+    const safeLogline = /^[A-Z_]+_\d+$/.test(item.logline ?? "") ? "" : (item.logline || "");
+    const charCount = item.character_count ?? 0;
+    const sceneCount = item.scene_count ?? 0;
+    const writtenCount = item.scene_written_count ?? 0;
+    const progress = sceneCount > 0 ? Math.round((writtenCount / sceneCount) * 100) : 0;
+    return `
+      <article class="project-hero">
+        <div class="project-hero__left">
+          <p class="project-hero__eyebrow">最近打开 · ${escapeHtml(formatTime(item.last_opened_at || item.updated_at))}</p>
+          <h2 class="project-hero__title">${escapeHtml(safeTitle)}</h2>
+          <p class="project-hero__logline">${escapeHtml(safeLogline) || "<span class=\"project-hero__placeholder\">还没写 logline</span>"}</p>
+          <div class="project-hero__tags">
+            <span class="chip chip--soft">${escapeHtml(formatLabels[item.format] ?? item.format)}</span>
+            ${list(item.genre).slice(0,3).map((g) => `<span class="tag">${escapeHtml(g)}</span>`).join("")}
+          </div>
+        </div>
+        <div class="project-hero__right">
+          <div class="project-hero__metric"><span class="project-hero__metric-num">${charCount}</span><span class="project-hero__metric-label">人物</span></div>
+          <div class="project-hero__metric"><span class="project-hero__metric-num">${writtenCount}/${sceneCount || "—"}</span><span class="project-hero__metric-label">已写/总场景</span></div>
+          ${sceneCount > 0 ? `
+            <div class="project-hero__progress" role="progressbar" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+              <div class="project-hero__progress-bar" style="width: ${progress}%"></div>
+            </div>
+            <span class="project-hero__progress-label">进度 ${progress}%</span>
+          ` : ""}
+          <button class="button button--primary" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">继续创作 →</button>
+        </div>
+      </article>
+    `;
+  };
+
   const renderProjectCard = (item) => {
     const safeTitle = isBrokenPlaceholderText(item.title) ? "未命名项目" : item.title;
     const confirmingDelete = appState.projectDeleteConfirmId === item.id;
@@ -107,9 +142,8 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
           <span>新建项目</span>
         </button>
       </div>
-      <div class="project-list project-list--wide">
-        ${recentProjects.length ? recentProjects.map(renderProjectCard).join("") : `<p class="project-list__empty">点击右上角「新建项目」开始创作。</p>`}
-      </div>
+      ${heroProject ? renderHeroCard(heroProject) : ""}
+      ${recentProjects.length ? `<div class="project-list project-list--wide">${recentProjects.map(renderProjectCard).join("")}</div>` : (!heroProject ? `<p class="project-list__empty">点击右上角「新建项目」开始创作。</p>` : "")}
     </section>
     ${
       oldProjects.length === 0
@@ -130,19 +164,25 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
       <div class="mode-picker-backdrop" data-action="close-create-mode-picker">
         <div class="mode-picker-panel" onclick="event.stopPropagation()">
           <button class="mode-picker-close" type="button" data-action="close-create-mode-picker" title="关闭（Esc）" aria-label="关闭">×</button>
-          <p class="mode-picker-title">想从哪种方式开始？</p>
+          <p class="mode-picker-title">你手上带着什么开始？</p>
           <div class="mode-picker-cards">
             <button class="mode-card" type="button" data-action="open-quick-creation">
               <div class="mode-card__icon">⚡</div>
-              <h3>快速创作</h3>
-              <p>填一句概念，AI 顺着帮你把结构 / 人物 / 情节都铺好。出框架最快。</p>
-              <span class="mode-card__tag">适合：想先看到雏形</span>
+              <h3>一句话概念</h3>
+              <p>已经有一句 logline。AI 顺着帮你把结构 / 人物 / 情节都铺好。</p>
+              <span class="mode-card__tag">→ 快速生成框架</span>
             </button>
             <button class="mode-card mode-card--pro" type="button" data-action="open-pro-creation">
               <div class="mode-card__icon">✦</div>
-              <h3>精品创作</h3>
-              <p>从一个画面、一句台词或一种感受出发，AI 反复追问帮你深挖。</p>
-              <span class="mode-card__tag">适合：想认真打磨一个想法</span>
+              <h3>一段画面 / 台词 / 感受</h3>
+              <p>还说不清是什么故事。AI 反复追问帮你把这股冲动挖成可写的故事。</p>
+              <span class="mode-card__tag">→ AI 反问挖掘</span>
+            </button>
+            <button class="mode-card" type="button" data-action="open-from-structure">
+              <div class="mode-card__icon">▦</div>
+              <h3>完整故事要重组</h3>
+              <p>故事在脑子里已经成型。直接进结构骨架页，自己摆幕和节点。</p>
+              <span class="mode-card__tag">→ 跳过 AI 入口</span>
             </button>
           </div>
         </div>

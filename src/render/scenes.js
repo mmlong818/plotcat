@@ -1,5 +1,5 @@
-import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState, isBrokenPlaceholderText, sanitizeTextField } from "../utils.js";
-import { sceneStatusLabels, storyRoleLabels, SCENE_GOAL_OPTIONS, SCENE_OUTCOME_OPTIONS, EMOTION_OPTIONS, DIALOGUE_STYLE_OPTIONS, SUBTEXT_OPTIONS, DIALOGUE_POWER_OPTIONS, DIALOGUE_PACE_OPTIONS, DESC_DENSITY_OPTIONS, WRITING_STYLE_OPTIONS } from "../state.js";
+import { escapeHtml, list, renderEmptyState, isBrokenPlaceholderText, sanitizeTextField } from "../utils.js";
+import { sceneStatusLabels } from "../state.js";
 
 function sceneStatusDot(status) {
   const map = { draft: "draft", outline: "active", locked: "locked", scripted: "done" };
@@ -7,162 +7,26 @@ function sceneStatusDot(status) {
   return `<span class="status-dot status-dot--${cls}"></span>`;
 }
 
-function renderEmotionPicker(label, field, selected) {
-  return `
-    <div class="weave-field">
-      <p class="weave-field__label">${label}</p>
-      <div class="chip-wrap chip-wrap--dense">
-        ${EMOTION_OPTIONS.map((e) => `
-          <button class="ref-chip ref-chip--xs ${e === selected ? "is-active" : ""}"
-            type="button" data-action="select-scene-emotion" data-field="${escapeHtml(field)}" data-id="${escapeHtml(e)}">
-            ${escapeHtml(e)}
-          </button>
-        `).join("")}
-      </div>
-    </div>
-  `;
-}
-
-function renderSceneWeavingSection(scene) {
-  return `
-    <div class="scene-weaving-section">
-      <p class="section-label section-label--weaving">场景编织</p>
-
-      <div class="weave-group">
-        <p class="weave-group__title">6.1 场景目标与结局</p>
-        <div class="weave-field">
-          <p class="weave-field__label">场景目标模板</p>
-          <div class="chip-wrap">
-            ${SCENE_GOAL_OPTIONS.map((g) => `
-              <button class="ref-chip ${g === scene.scene_goal_template ? "is-active" : ""}"
-                type="button" data-action="select-scene-goal" data-id="${escapeHtml(g)}">
-                ${escapeHtml(g)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-        <div class="weave-field">
-          <p class="weave-field__label">场景结局</p>
-          <div class="chip-wrap">
-            ${SCENE_OUTCOME_OPTIONS.map((o) => `
-              <button class="ref-chip ${o === scene.scene_outcome ? "is-active" : ""}"
-                type="button" data-action="select-scene-outcome" data-id="${escapeHtml(o)}">
-                ${escapeHtml(o)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-      </div>
-
-      <div class="weave-group">
-        <p class="weave-group__title">6.2 情感节拍</p>
-        ${renderEmotionPicker("起始情绪", "emotion_start", scene.emotion_start)}
-        ${renderEmotionPicker("终止情绪", "emotion_end", scene.emotion_end)}
-        ${scene.emotion_start || scene.emotion_end ? `
-          <div class="emotion-path-preview">
-            <span class="emotion-pill">${escapeHtml(scene.emotion_start || "…")}</span>
-            <span class="emotion-arrow">→</span>
-            <span class="emotion-pill">${escapeHtml(scene.emotion_end || "…")}</span>
-          </div>
-        ` : ""}
-      </div>
-
-      <div class="weave-group">
-        <p class="weave-group__title">6.3 对白与潜台词</p>
-        <div class="weave-field">
-          <p class="weave-field__label">对话风格</p>
-          <div class="chip-wrap">
-            ${DIALOGUE_STYLE_OPTIONS.map((s) => `
-              <button class="ref-chip ${s.key === scene.dialogue_style ? "is-active" : ""}"
-                type="button" data-action="select-scene-dialogue-style" data-id="${escapeHtml(s.key)}"
-                title="${escapeHtml(s.desc)}">
-                ${escapeHtml(s.label)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-        <div class="weave-field">
-          <p class="weave-field__label">潜台词类型</p>
-          <div class="chip-wrap chip-wrap--dense">
-            ${SUBTEXT_OPTIONS.map((s) => `
-              <button class="ref-chip ref-chip--xs ${s === scene.subtext_type ? "is-active" : ""}"
-                type="button" data-action="select-scene-subtext" data-id="${escapeHtml(s)}">
-                ${escapeHtml(s)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-        <div class="weave-row">
-          <div class="weave-field">
-            <p class="weave-field__label">权力关系</p>
-            <div class="chip-wrap">
-              ${DIALOGUE_POWER_OPTIONS.map((p) => `
-                <button class="ref-chip ${p === scene.dialogue_power ? "is-active" : ""}"
-                  type="button" data-action="select-scene-power" data-id="${escapeHtml(p)}">
-                  ${escapeHtml(p)}
-                </button>
-              `).join("")}
-            </div>
-          </div>
-          <div class="weave-field">
-            <p class="weave-field__label">对话节奏</p>
-            <div class="chip-wrap">
-              ${DIALOGUE_PACE_OPTIONS.map((p) => `
-                <button class="ref-chip ${p === scene.dialogue_pace ? "is-active" : ""}"
-                  type="button" data-action="select-scene-pace" data-id="${escapeHtml(p)}">
-                  ${escapeHtml(p)}
-                </button>
-              `).join("")}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="weave-group">
-        <p class="weave-group__title">6.4 行为与描述风格</p>
-        <div class="weave-field">
-          <p class="weave-field__label">描述密度</p>
-          <div class="chip-wrap">
-            ${DESC_DENSITY_OPTIONS.map((d) => `
-              <button class="ref-chip ${d === scene.desc_density ? "is-active" : ""}"
-                type="button" data-action="select-scene-desc-density" data-id="${escapeHtml(d)}">
-                ${escapeHtml(d)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-        <div class="weave-field">
-          <p class="weave-field__label">文笔风格</p>
-          <div class="chip-wrap chip-wrap--dense">
-            ${WRITING_STYLE_OPTIONS.map((s) => `
-              <button class="ref-chip ref-chip--xs ${s === scene.writing_style ? "is-active" : ""}"
-                type="button" data-action="select-scene-writing-style" data-id="${escapeHtml(s)}">
-                ${escapeHtml(s)}
-              </button>
-            `).join("")}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
 function renderPlotChecklist(appState, selectedIds = []) {
   const selected = new Set(list(selectedIds));
   return `
     <div class="scene-plot-chips">
       ${list(appState.project.plot_board?.cards)
+        .filter((c) => !c.deleted_at)
         .map(
           (card) => `
-            <label class="scene-plot-chip ${selected.has(card.id) ? "is-active" : ""}">
-              <input
-                type="checkbox"
-                data-action="scene-plot-toggle"
-                data-id="${escapeHtml(card.id)}"
-                ${selected.has(card.id) ? "checked" : ""}
-              />
-              <span>${escapeHtml(card.title || "未命名剧情卡")}</span>
-            </label>
+            <div class="scene-plot-chip-row ${selected.has(card.id) ? "is-active" : ""}">
+              <label class="scene-plot-chip">
+                <input
+                  type="checkbox"
+                  data-action="scene-plot-toggle"
+                  data-id="${escapeHtml(card.id)}"
+                  ${selected.has(card.id) ? "checked" : ""}
+                />
+                <span>${escapeHtml(card.title || "未命名剧情卡")}</span>
+              </label>
+              ${selected.has(card.id) ? `<button class="scene-plot-jump" type="button" data-action="jump-to-plot-card" data-id="${escapeHtml(card.id)}" title="跳转到该剧情卡">→</button>` : ""}
+            </div>
           `
         )
         .join("")}
@@ -170,7 +34,7 @@ function renderPlotChecklist(appState, selectedIds = []) {
   `;
 }
 
-export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCards, getSceneLinkedCharacters, getSceneLinkedRelationships, getSceneLinkedTimelineEvents, getActTitle, getNode, getCharacterNameById }) {
+export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCards, getSceneLinkedCharacters, getActTitle }) {
   if (!dom.scenesContent) {
     return;
   }
@@ -180,8 +44,6 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
     .sort((left, right) => (left.order_index ?? 0) - (right.order_index ?? 0));
   const linkedPlotCards = getSceneLinkedPlotCards(selectedScene);
   const linkedCharacters = getSceneLinkedCharacters(selectedScene);
-  const linkedRelationships = getSceneLinkedRelationships(selectedScene);
-  const linkedTimeline = getSceneLinkedTimelineEvents(selectedScene);
   dom.scenesContent.innerHTML = `
     <section class="scene-workbench scene-workbench--triple">
       <aside class="workbench-pane workbench-pane--rail">
@@ -197,222 +59,175 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
             ${scenes
               .map(
                 (scene) => `
-                  <button class="list-select ${scene.id === appState.selection.sceneId ? "is-active" : ""}" type="button" data-action="select-scene" data-id="${escapeHtml(scene.id)}">
-                    <strong>${escapeHtml(scene.order_index)} · ${escapeHtml(scene.title || "未命名场景")}</strong>
-                    <span>${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}</span>
+                  <button class="list-select scene-row ${scene.id === appState.selection.sceneId ? "is-active" : ""}" type="button" data-action="select-scene" data-id="${escapeHtml(scene.id)}">
+                    <span class="scene-row__num">${String(scene.order_index || 0).padStart(2, "0")}</span>
+                    <span class="scene-row__body">
+                      <span class="scene-row__title">${escapeHtml(scene.title || "未命名场景")}</span>
+                      <span class="scene-row__meta">${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}</span>
+                    </span>
                   </button>
                 `
               )
               .join("")}
           </div>
         </div>
-        <div class="summary-card summary-card--compact">
-          <div class="list-card__head">
-            <h3>当前场景</h3>
-            <span class="chip chip--soft">${scenes.length} 场</span>
-          </div>
-          ${
-            !selectedScene
-              ? renderEmptyState("先创建一个场景。")
-              : `
-                <div class="summary-strip">
-                  <span class="chip chip--soft">${escapeHtml(getActTitle(selectedScene.act_id))}</span>
-                  <span class="chip chip--soft">${linkedPlotCards.length} 张剧情卡</span>
-                  <span class="chip chip--soft">${linkedCharacters.length} 位人物</span>
-                </div>
-                <div class="stack workbench-mini-stack">
-                  ${selectedScene.location && !isBrokenPlaceholderText(selectedScene.location) ? `
-                  <div class="list-select list-select--static">
-                    <strong>地点</strong>
-                    <span>${escapeHtml(selectedScene.location)}</span>
-                  </div>` : ""}
-                  ${selectedScene.purpose && !isBrokenPlaceholderText(selectedScene.purpose) ? `
-                  <div class="list-select list-select--static">
-                    <strong>场景目的</strong>
-                    <span>${escapeHtml(selectedScene.purpose)}</span>
-                  </div>` : ""}
-                  ${(!selectedScene.location || isBrokenPlaceholderText(selectedScene.location)) && (!selectedScene.purpose || isBrokenPlaceholderText(selectedScene.purpose)) ? `<p class="scene-summary-hint">填写地点和场景目的后将在此显示</p>` : ""}
-                </div>
-              `
-          }
-        </div>
       </aside>
       <div class="workbench-pane workbench-pane--main">
-        <div class="summary-card">
-          <div class="list-card__head">
-            <div>
-              <p class="section-label">主编辑区</p>
-              <h3>${escapeHtml(selectedScene?.title || "未命名场景")}</h3>
-            </div>
-            ${
-              selectedScene
-                ? `<button class="button button--ghost button--tiny" type="button" data-action="delete-scene" data-id="${escapeHtml(selectedScene.id)}">删除场景</button>`
-                : ""
-            }
-          </div>
-          ${
-            !selectedScene
-              ? renderEmptyState("还没有选择场景", "点击左侧列表中的场景开始编辑")
-              : `
-                <div class="form-grid">
-                  ${inputField("场名", "scene-field", "title", selectedScene.title)}
-                  ${field("顺序", `<input type="number" data-action="scene-field" data-field="order_index" value="${escapeHtml(selectedScene.order_index)}" />`)}
-                  ${field(
-                    "所属幕",
-                    `<select data-action="scene-field" data-field="act_id">${list(appState.project.structure_profile?.acts)
-                      .map((act) => `<option value="${escapeHtml(act.id)}" ${act.id === selectedScene.act_id ? "selected" : ""}>${escapeHtml(act.title)}</option>`)
-                      .join("")}</select>`
-                  )}
-                  ${field(
-                    "视角人物",
-                    `<select data-action="scene-field" data-field="pov_character_id">${[
-                      `<option value="">未指定</option>`,
-                      ...list(appState.project.character_hub?.characters).map((character) => `<option value="${escapeHtml(character.id)}" ${character.id === selectedScene.pov_character_id ? "selected" : ""}>${escapeHtml(character.name)}</option>`)
-                    ].join("")}</select>`
-                  )}
-                  ${inputField("地点", "scene-field", "location", isBrokenPlaceholderText(selectedScene.location) ? "" : selectedScene.location)}
-                  ${inputField("时段", "scene-field", "time_of_day", isBrokenPlaceholderText(selectedScene.time_of_day) ? "" : selectedScene.time_of_day)}
-                  ${selectField("状态", "scene-field", "status", selectedScene.status, Object.entries(sceneStatusLabels))}
-                  ${field("关联剧情卡", renderPlotChecklist(appState, selectedScene.linked_plot_card_ids), true)}
-                  ${textareaField("场景目的", "scene-field", "purpose", selectedScene.purpose, { rows: 3 })}
-                  ${textareaField("阻力", "scene-field", "obstacle", selectedScene.obstacle, { rows: 3 })}
-                  ${textareaField("转折 / 变化", "scene-field", "beat_summary", selectedScene.beat_summary, { rows: 3 })}
-                  ${inputField("进入状态", "scene-field", "entry_state", selectedScene.entry_state)}
-                  ${inputField("离开状态", "scene-field", "exit_state", selectedScene.exit_state)}
-                  ${textareaField("台词或片段种子", "scene-field", "script_excerpt", selectedScene.script_excerpt, { rows: 4 })}
-                  ${textareaField("备注", "scene-field", "notes", sanitizeTextField(selectedScene.notes), { rows: 3 })}
-                </div>
-                ${renderSceneWeavingSection(selectedScene)}
-              `
-          }
-        </div>
-      </div>
-      <aside class="workbench-pane workbench-pane--context">
-        <div class="summary-card">
-          <div class="list-card__head">
-            <div>
-              <p class="section-label">速查区</p>
-              <h3>关联剧情卡</h3>
-            </div>
-            <span class="chip chip--soft">${linkedPlotCards.length} 张</span>
-          </div>
-          ${
-            linkedPlotCards.length === 0
-              ? renderEmptyState("当前场景还没挂到剧情卡。")
-              : `
-                <div class="stack workbench-scroll-list">
-                  ${linkedPlotCards
-                    .map(
-                      (card) => `
-                        <button class="list-select" type="button" data-action="jump-to-plot-card" data-id="${escapeHtml(card.id)}">
-                          <strong>${escapeHtml(card.title || "未命名剧情卡")}</strong>
-                          <span>${escapeHtml(getActTitle(card.act_id))} · ${escapeHtml(getNode(card.node_id)?.title ?? "未挂节点")}</span>
-                        </button>
-                      `
-                    )
-                    .join("")}
-                </div>
-              `
-          }
-        </div>
-        <div class="summary-card">
-          <div class="list-card__head">
-            <h3>出场人物</h3>
-            <span class="chip chip--soft">${linkedCharacters.length} 位</span>
-          </div>
-          ${
-            linkedCharacters.length === 0
-              ? renderEmptyState("当前场景还没牵动人物。")
-              : `
-                <div class="stack workbench-scroll-list">
-                  ${linkedCharacters
-                    .map(
-                      (character) => `
-                        <button class="list-select" type="button" data-action="jump-to-character" data-id="${escapeHtml(character.id)}">
-                          <strong>${escapeHtml(character.name || "未命名人物")}</strong>
-                          ${(() => { const roleLabel = storyRoleLabels[character.story_role] ?? character.story_role; return roleLabel && roleLabel !== character.name ? `<span>${escapeHtml(roleLabel)}</span>` : ""; })()}
-                        </button>
-                      `
-                    )
-                    .join("")}
-                </div>
-              `
-          }
-          ${(() => {
-            if (!selectedScene) return "";
-            const allChars = list(appState.project.character_hub?.characters);
-            const linkedIds = new Set(linkedCharacters.map((c) => c.id));
-            const sceneText = [selectedScene.purpose, selectedScene.obstacle, selectedScene.beat_summary, selectedScene.script_excerpt].filter(Boolean).join(" ");
-            if (!sceneText) return "";
-            const mentioned = allChars.filter((c) => {
-              if (linkedIds.has(c.id)) return false;
-              const name = (c.name || "").trim();
-              return name.length >= 2 && sceneText.includes(name);
-            });
-            if (!mentioned.length) return "";
-            return `
-              <div class="mentioned-chars-hint">
-                <p class="scene-summary-hint">⚠ 文本中提到但未加入出场（请关联对应剧情卡或设为视角人物）：</p>
-                <div class="chip-wrap chip-wrap--dense" style="margin-top:6px">
-                  ${mentioned.map((c) => `
-                    <button class="ref-chip" type="button" data-action="jump-to-character" data-id="${escapeHtml(c.id)}" title="点击跳转到该角色">
-                      ${escapeHtml(c.name)}
-                    </button>
-                  `).join("")}
-                </div>
-              </div>
-            `;
-          })()}
-        </div>
-        <div class="summary-card">
-          <div class="list-card__head">
-            <h3>共现场关系</h3>
-            <span class="chip chip--soft">${linkedRelationships.length} 条</span>
-          </div>
-          ${
-            linkedRelationships.length === 0
-              ? renderEmptyState("当前场景里还没有可用的关系。")
-              : `
-                <div class="stack workbench-scroll-list">
-                  ${linkedRelationships
-                    .map(
-                      (relationship) => `
-                        <button class="list-select" type="button" data-action="jump-to-relationship" data-id="${escapeHtml(relationship.id)}">
-                          <strong>${escapeHtml(getCharacterNameById(relationship.source_character_id))} · ${escapeHtml(getCharacterNameById(relationship.target_character_id))}</strong>
-                          <span>${escapeHtml(relationship.relationship_type || "未命名关系")}</span>
-                        </button>
-                      `
-                    )
-                    .join("")}
-                </div>
-              `
-          }
-        </div>
-        <div class="summary-card">
-          <div class="list-card__head">
-            <h3>时间线线索</h3>
-            <span class="chip chip--soft">${linkedTimeline.length} 条</span>
-          </div>
-          ${
-            linkedTimeline.length === 0
-              ? renderEmptyState("当前场景还没有可引用的时间线。")
-              : `
-                <div class="stack workbench-scroll-list">
-                  ${linkedTimeline
-                    .map(
-                      (event) => `
-                        <div class="list-select list-select--static">
-                          <strong>第 ${escapeHtml(event.story_day || "?")} 天 · ${escapeHtml(event.summary || "未命名事件")}</strong>
-                          <span>${escapeHtml(event.location || "未定地点")} · ${escapeHtml(event.trigger || "未定触发")}</span>
+        ${
+          !selectedScene
+            ? `<div class="summary-card">${renderEmptyState("还没有选择场景", "点击左侧列表中的场景开始编辑")}</div>`
+            : (() => {
+                const acts = list(appState.project.structure_profile?.acts);
+                const characters = list(appState.project.character_hub?.characters);
+                const povChar = characters.find((c) => c.id === selectedScene.pov_character_id);
+                const allChars = characters;
+                const linkedIds = new Set(linkedCharacters.map((c) => c.id));
+                const sceneText = [selectedScene.purpose, selectedScene.obstacle, selectedScene.beat_summary, selectedScene.script_excerpt].filter(Boolean).join(" ");
+                const mentioned = sceneText ? allChars.filter((c) => {
+                  if (linkedIds.has(c.id)) return false;
+                  const name = (c.name || "").trim();
+                  return name.length >= 2 && sceneText.includes(name);
+                }) : [];
+                return `
+                  <section class="scene-edv2">
+                    <header class="scene-edv2__topbar">
+                      <nav class="scene-edv2__breadcrumb">
+                        <select class="scene-edv2__bc-select" data-action="scene-field" data-field="act_id" title="所属幕">
+                          ${acts.map((act) => `<option value="${escapeHtml(act.id)}" ${act.id === selectedScene.act_id ? "selected" : ""}>${escapeHtml(act.title)}</option>`).join("")}
+                        </select>
+                        <span class="scene-edv2__bc-sep">·</span>
+                        <span class="scene-edv2__bc-pov-label">视角</span>
+                        <select class="scene-edv2__bc-select" data-action="scene-field" data-field="pov_character_id" title="视角人物">
+                          <option value="">未指定</option>
+                          ${characters.map((c) => `<option value="${escapeHtml(c.id)}" ${c.id === selectedScene.pov_character_id ? "selected" : ""}>${escapeHtml(c.name)}</option>`).join("")}
+                        </select>
+                      </nav>
+                      <div class="scene-edv2__topbar-actions">
+                        <button class="scene-edv2__ai-btn" type="button" data-action="ai-breakdown-scene" data-id="${escapeHtml(selectedScene.id)}" ${appState.sceneBreakdownLoading?.[selectedScene.id] ? "disabled" : ""} title="基于关联剧情卡和 POV 自动填进入/离开状态、阻力、转折">${appState.sceneBreakdownLoading?.[selectedScene.id] ? "拆解中…" : "✦ AI 拆这场"}</button>
+                        <button class="scene-edv2__danger" type="button" data-action="delete-scene" data-id="${escapeHtml(selectedScene.id)}">🗑 删除场景</button>
+                      </div>
+                    </header>
+
+                    <input class="scene-edv2__title" type="text"
+                      data-action="scene-field" data-field="title"
+                      value="${escapeHtml(selectedScene.title)}" placeholder="未命名场景…" />
+
+                    <div class="scene-edv2__meta-row">
+                      <label class="scene-edv2__inline">
+                        <span class="scene-edv2__inline-label">地点</span>
+                        <input class="scene-edv2__inline-input" type="text"
+                          data-action="scene-field" data-field="location"
+                          value="${escapeHtml(isBrokenPlaceholderText(selectedScene.location) ? "" : selectedScene.location)}"
+                          placeholder="—" />
+                      </label>
+                      <label class="scene-edv2__inline">
+                        <span class="scene-edv2__inline-label">时段</span>
+                        <input class="scene-edv2__inline-input" type="text"
+                          data-action="scene-field" data-field="time_of_day"
+                          value="${escapeHtml(isBrokenPlaceholderText(selectedScene.time_of_day) ? "" : selectedScene.time_of_day)}"
+                          placeholder="—" />
+                      </label>
+                      <label class="scene-edv2__inline">
+                        <span class="scene-edv2__inline-label">状态</span>
+                        <select class="scene-edv2__inline-select" data-action="scene-field" data-field="status">
+                          ${Object.entries(sceneStatusLabels).map(([k, label]) => `<option value="${escapeHtml(k)}" ${k === selectedScene.status ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+                        </select>
+                      </label>
+                    </div>
+
+                    <div class="scene-edv2__field">
+                      <label class="scene-edv2__field-label">关联剧情卡 <span class="scene-edv2__field-hint">${linkedPlotCards.length} 张</span></label>
+                      ${renderPlotChecklist(appState, selectedScene.linked_plot_card_ids)}
+                    </div>
+
+                    ${mentioned.length > 0 ? `
+                      <div class="scene-edv2__alert">
+                        <span class="scene-edv2__alert-icon">⚠</span>
+                        <span class="scene-edv2__alert-text">文本中提到但未加入出场：</span>
+                        <div class="scene-edv2__alert-chips">
+                          ${mentioned.map((c) => `<button class="scene-edv2__alert-chip" type="button" data-action="jump-to-character" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`).join("")}
                         </div>
-                      `
-                    )
-                    .join("")}
-                </div>
-              `
-          }
-        </div>
-      </aside>
+                      </div>
+                    ` : ""}
+
+                    <div class="scene-edv2__field">
+                      <label class="scene-edv2__field-label">场景目的</label>
+                      <textarea class="scene-edv2__input" rows="3"
+                        data-action="scene-field" data-field="purpose"
+                        placeholder="本场谁要做什么，赌的是什么">${escapeHtml(selectedScene.purpose || "")}</textarea>
+                    </div>
+
+                    <div class="scene-edv2__field">
+                      <label class="scene-edv2__field-label">阻力</label>
+                      <textarea class="scene-edv2__input" rows="3"
+                        data-action="scene-field" data-field="obstacle"
+                        placeholder="谁挡了路、挡得多狠">${escapeHtml(selectedScene.obstacle || "")}</textarea>
+                    </div>
+
+                    <div class="scene-edv2__field">
+                      <label class="scene-edv2__field-label">转折 / 变化</label>
+                      <textarea class="scene-edv2__input" rows="3"
+                        data-action="scene-field" data-field="beat_summary"
+                        placeholder="进出这场后，世界/角色变了哪里">${escapeHtml(selectedScene.beat_summary || "")}</textarea>
+                    </div>
+
+                    <details class="scene-edv2__drama" ${(selectedScene.conflict_proposition || selectedScene.subtext_goal || selectedScene.arc_beat) ? "open" : ""}>
+                      <summary>戏剧判断 <span class="scene-edv2__field-hint">（AI 写本场会强制使用）</span></summary>
+                      <div class="scene-edv2__field" style="margin-top:10px">
+                        <label class="scene-edv2__field-label">冲突主张</label>
+                        <textarea class="scene-edv2__input" rows="2"
+                          data-action="scene-field" data-field="conflict_proposition"
+                          placeholder="谁要什么 / 谁挡着 / 赌注是什么（三层一齐写）">${escapeHtml(selectedScene.conflict_proposition || "")}</textarea>
+                      </div>
+                      <div class="scene-edv2__field">
+                        <label class="scene-edv2__field-label">潜台词目标</label>
+                        <textarea class="scene-edv2__input" rows="2"
+                          data-action="scene-field" data-field="subtext_goal"
+                          placeholder="角色嘴上说 X，心里要 Y——X 和 Y 分别是什么">${escapeHtml(selectedScene.subtext_goal || "")}</textarea>
+                      </div>
+                      <div class="scene-edv2__field">
+                        <label class="scene-edv2__field-label">弧光位置</label>
+                        <textarea class="scene-edv2__input" rows="2"
+                          data-action="scene-field" data-field="arc_beat"
+                          placeholder="本场主角的弧光从 A 推进到 B（A 是上一场离开时的位置）">${escapeHtml(selectedScene.arc_beat || "")}</textarea>
+                      </div>
+                    </details>
+
+                    <div class="scene-edv2__pair">
+                      <div class="scene-edv2__field">
+                        <label class="scene-edv2__field-label">进入状态</label>
+                        <input class="scene-edv2__input" type="text"
+                          data-action="scene-field" data-field="entry_state"
+                          value="${escapeHtml(selectedScene.entry_state || "")}"
+                          placeholder="开场时角色处境" />
+                      </div>
+                      <div class="scene-edv2__field">
+                        <label class="scene-edv2__field-label">离开状态</label>
+                        <input class="scene-edv2__input" type="text"
+                          data-action="scene-field" data-field="exit_state"
+                          value="${escapeHtml(selectedScene.exit_state || "")}"
+                          placeholder="收场时角色处境" />
+                      </div>
+                    </div>
+
+                    <div class="scene-edv2__field">
+                      <label class="scene-edv2__field-label">台词或片段种子</label>
+                      <textarea class="scene-edv2__input" rows="4"
+                        data-action="scene-field" data-field="script_excerpt"
+                        placeholder="一两句关键对白 / 画面 / 动作">${escapeHtml(selectedScene.script_excerpt || "")}</textarea>
+                    </div>
+
+                    <details class="scene-edv2__notes">
+                      <summary>备注</summary>
+                      <textarea class="scene-edv2__input" rows="3" style="margin-top:8px"
+                        data-action="scene-field" data-field="notes"
+                        placeholder="给未来的自己留点话">${escapeHtml(sanitizeTextField(selectedScene.notes) || "")}</textarea>
+                    </details>
+                  </section>
+                `;
+              })()
+        }
+      </div>
     </section>
   `;
 }

@@ -1,15 +1,16 @@
 import { escapeHtml, field, inputField, textareaField, selectField, list } from "../utils.js";
 import { structureTemplateLabels, formatStructureOptions, ENDING_DIRECTION_OPTIONS } from "../state.js";
 
+// 节拍名采用行业通用术语（Save the Cat / Hero's Journey 通译）
 const NODE_TYPE_LABELS = {
-  opening_image: "开场印象", setup: "基础铺陈", catalyst: "诱发事件",
-  break_into_two: "进入第二幕", b_story: "B 故事", fun_and_games: "娱乐段落",
-  midpoint: "中点翻转", bad_guys_close_in: "压力上升", all_is_lost: "一切尽失",
-  dark_night: "至暗时刻", reaction: "反应段", attack: "主动进攻",
-  crisis: "危机时刻", pressure_wave: "压力波",
-  break_into_three: "进入第三幕", finale: "终局行动", final_image: "结尾印象",
+  opening_image: "开场画面", setup: "铺陈", catalyst: "触发事件",
+  break_into_two: "进入第二幕", b_story: "B 故事", fun_and_games: "承诺段落",
+  midpoint: "中点反转", bad_guys_close_in: "反派逼近", all_is_lost: "一切尽失",
+  dark_night: "灵魂黑夜", reaction: "反应段", attack: "主动进攻",
+  crisis: "危机抉择", pressure_wave: "余震段",
+  break_into_three: "进入第三幕", finale: "终局对决", final_image: "结尾画面",
   // 5 幕 / feature_film 模板的节点
-  lock_in: "主线锁定", promise: "故事承诺兑现", reversal: "局势反扑",
+  lock_in: "主线锁定", promise: "承诺兑现", reversal: "局势反扑",
   collapse: "崩塌时刻", final_choice: "最终选择", aftershock: "余波落点"
 };
 
@@ -87,11 +88,14 @@ function renderStoryCoreBar(storyCore) {
     storyCore.ending_direction && `结局：${storyCore.ending_direction}`,
   ].filter(Boolean).map((t) => `<span class="sc-chip">${escapeHtml(t)}</span>`).join("");
 
+  // 默认展开：故事核心是 showrunner 第一件要写的事，不该藏在折叠栏后
+  const hasContent = !!(storyCore.premise || storyCore.core_conflict || storyCore.central_question || storyCore.emotional_promise || storyCore.theme);
+  const startOpen = !hasContent || chips ? true : true; // 始终默认展开
   return `
-    <details class="story-core-bar" id="story-core-bar">
+    <details class="story-core-bar" id="story-core-bar" ${startOpen ? "open" : ""}>
       <summary>
         <span class="sc-bar-label">故事核心</span>
-        <div class="sc-chips">${chips || '<span class="sc-chips__empty">点击展开填写</span>'}</div>
+        <div class="sc-chips">${chips || '<span class="sc-chips__empty">先写一句话：这部剧凭什么留住观众</span>'}</div>
         <span class="sc-chevron">▾</span>
       </summary>
       <div class="story-core-expanded">
@@ -226,7 +230,7 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
         </div>
         <div class="struct-topbar__right">
           ${orderedActs.length > 0 ? `
-            <button class="button button--primary button--small" type="button" data-action="ai-gen-structure-notes"
+            <button class="button button--ghost button--small" type="button" data-action="ai-gen-structure-notes"
               ${appState.structureNodeGen?.loading ? "disabled" : ""}>
               ${appState.structureNodeGen?.loading
                 ? `生成中… ${appState.structureNodeGen.progress || ""}`

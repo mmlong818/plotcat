@@ -207,6 +207,44 @@ function migrate(db) {
   migrateToCompositePk(db, "beats");
   migrateToCompositePk(db, "scene_cards");
   migrateToCompositePk(db, "setup_payoffs");
+
+  // 决议 4：关系 1 条对称 — 清理反向重复 (b→a 与 a→b 同存)，保留 sort_order 较小的那条
+  dedupeReverseRelationships(db);
+}
+
+function dedupeReverseRelationships(db) {
+  const rows = db.prepare(`
+    SELECT project_id, id, source_character_id, target_character_id, sort_order
+    FROM relationships
+    ORDER BY project_id, sort_order ASC
+  `).all();
+  const seenPairs = new Map(); // key = `${project_id}|${minId}|${maxId}` -> kept row id
+  const toDelete = [];
+  for (const r of rows) {
+    const a = r.source_character_id;
+    const b = r.target_character_id;
+    if (!a || !b) continue;
+    const lo = a < b ? a : b;
+    const hi = a < b ? b : a;
+    const key = `${r.project_id}|${lo}|${hi}`;
+    if (seenPairs.has(key)) {
+      toDelete.push({ project_id: r.project_id, id: r.id });
+    } else {
+      seenPairs.set(key, r.id);
+    }
+  }
+  if (toDelete.length > 0) {
+    const stmt = db.prepare("DELETE FROM relationships WHERE project_id = ? AND id = ?");
+    db.exec("BEGIN");
+    try {
+      for (const it of toDelete) stmt.run(it.project_id, it.id);
+      db.exec("COMMIT");
+    } catch (err) {
+      db.exec("ROLLBACK");
+      throw err;
+    }
+    console.log(`[migration] dedupeReverseRelationships: removed ${toDelete.length} reverse-duplicate row(s)`);
+  }
 }
 
 function migrateToCompositePk(db, table) {

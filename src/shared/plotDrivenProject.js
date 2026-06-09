@@ -244,16 +244,18 @@ function templateFromProject(project) {
     return "custom";
   }
   const format = project.project?.format;
-  if (format === "feature") return "feature_film";
-  if (format === "pilot") return "pilot_episode";
-  if (format === "series") return "series_season";
-  if (format === "short") return "short_form";
-  if (format === "micro_drama") return "micro_drama_serial";
+  // 决议（commit 0d87b15）：三幕统一为所有作品形态的默认
+  if (format === "feature_or_pilot") return "three_act";
+  if (format === "feature") return "three_act";
+  if (format === "pilot") return "four_act"; // 电视试播沿用四幕
+  if (format === "series") return "three_act";
+  if (format === "short") return "three_act";
+  if (format === "micro_drama") return "three_act";
   return list(project.story_bible?.beats).some((beat) => beat.framework === "four_act")
     ? "four_act"
     : list(project.story_bible?.beats).some((beat) => beat.framework === "three_act")
       ? "three_act"
-      : "feature_film";
+      : "three_act";
 }
 
 function deriveCharacterHub(storyBible, existingCharHub = null) {

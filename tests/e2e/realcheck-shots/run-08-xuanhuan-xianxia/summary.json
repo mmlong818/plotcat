@@ -1,0 +1,20 @@
+{
+  "project": "九重霜",
+  "slug": "08-xuanhuan-xianxia",
+  "summary": {
+    "projectId": "project_mpo78v43_jm1afy",
+    "title": "九重霜",
+    "genre": [
+      "玄幻 · 仙侠修真"
+    ],
+    "logline": "上古封印松动时，被流放到凡间的剑修少女发现，封印之下的并不是邪祟，而是她自己三百年前被天道亲手抹去的那段记忆和那个人。",
+    "acts": 3,
+    "nodes": 11,
+    "characters": 3,
+    "relationships": 2,
+    "plotCards": 8,
+    "scenes": 3,
+    "firstSceneScriptLen": 254
+  },
+  "fixCount": 0
+}

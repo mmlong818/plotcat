@@ -1,0 +1,30 @@
+  >> REQ GET http://127.0.0.1:4173/api/status
+  << RES 200 http://127.0.0.1:4173/api/status
+  >> REQ GET http://127.0.0.1:4173/api/projects
+  << RES 200 http://127.0.0.1:4173/api/projects
+  >> REQ GET http://127.0.0.1:4173/api/projects/project_mpt7fudq_1xr73e
+  << RES 200 http://127.0.0.1:4173/api/projects/project_mpt7fudq_1xr73e
+  >> REQ PUT http://127.0.0.1:4173/api/projects/project_mpt7fudq_1xr73e
+  << RES 200 http://127.0.0.1:4173/api/projects/project_mpt7fudq_1xr73e
+--- 点击 cf-step2-next（触发 characters 自动生成）---
+  >> REQ POST http://127.0.0.1:4173/api/generate/stream
+  << RES 200 http://127.0.0.1:4173/api/generate/stream
+  [t+10s] null
+  [t+20s] null
+  [t+30s] null
+  [t+40s] null
+  [t+50s] null
+  [t+60s] null
+  [t+70s] null
+  [t+80s] null
+  [t+90s] null
+  [t+100s] null
+  [t+110s] null
+  [t+120s] null
+  [t+130s] null
+  [t+140s] null
+  [t+150s] null
+  [t+160s] null
+  [t+170s] null
+  [t+180s] null
+  [t+190s] null

@@ -47,13 +47,13 @@ function renderTraitDisplay(character) {
   return `
     <section class="${locked ? "is-locked-section" : ""}">
       <p class="section-label section-label--row">
-        <span>性格特质 <span class="section-label__hint">AI 识别 · 共 ${selected.size} 项</span></span>
+        <span>性格特质 <span class="section-label__hint">点击切换 · 共 ${selected.size} 项</span></span>
         ${lockBadge(character, "traits")}
       </p>
       <div class="chip-wrap trait-pool">
         ${CHARACTER_TRAITS.map((t) => `
-          <span class="ref-chip ref-chip--readonly ${selected.has(t) ? "is-active" : ""}"
-            aria-disabled="true">${escapeHtml(t)}</span>
+          <button class="ref-chip ${selected.has(t) ? "is-active" : ""}"
+            type="button" data-action="toggle-character-trait" data-id="${escapeHtml(t)}">${escapeHtml(t)}</button>
         `).join("")}
       </div>
     </section>
@@ -216,27 +216,28 @@ function renderCharacterEditorFields(character) {
             value="${escapeHtml(character.name)}"
             placeholder="输入人物名…"
           />
+          <select class="char-role-chip" data-action="character-field" data-field="story_role" title="故事角色">
+            ${Object.entries(storyRoleLabels).map(([k, label]) => `<option value="${escapeHtml(k)}" ${k === character.story_role ? "selected" : ""}>${escapeHtml(label)}</option>`).join("")}
+          </select>
           ${lockBadge(character, "name")}
-        </div>
-        <div class="char-identity-meta">
-          ${lockedSelectField(character, "故事角色", "story_role", character.story_role, Object.entries(storyRoleLabels))}
+          ${lockBadge(character, "story_role")}
         </div>
       </section>
       <section>
         <p class="section-label">动机与秘密</p>
         <div class="form-grid form-grid--compact">
-          ${lockedInputField(character, "外部目标", "external_goal", character.external_goal, { full: true })}
-          ${lockedInputField(character, "内部需要", "dramatic_need", character.dramatic_need, { full: true })}
-          ${lockedTextareaField(character, "核心矛盾", "contradiction", character.contradiction, { rows: 3 })}
-          ${lockedInputField(character, "压力点", "pressure_point", character.pressure_point, { full: true })}
-          ${lockedTextareaField(character, "秘密", "secret", character.secret, { rows: 4, full: true })}
+          ${lockedInputField(character, "外部目标", "external_goal", character.external_goal)}
+          ${lockedInputField(character, "内部需要", "dramatic_need", character.dramatic_need)}
+          ${lockedInputField(character, "压力点", "pressure_point", character.pressure_point)}
+          ${lockedTextareaField(character, "核心矛盾", "contradiction", character.contradiction, { rows: 2, full: true })}
+          ${lockedTextareaField(character, "秘密", "secret", character.secret, { rows: 3, full: true })}
         </div>
       </section>
       <section>
         <p class="section-label">弧光变化</p>
         <div class="form-grid form-grid--compact">
-          ${lockedInputField(character, "开场面具", "starting_mask", character.starting_mask, { full: true })}
-          ${lockedInputField(character, "弧光起点", "arc_start", character.arc_start, { full: true })}
+          ${lockedInputField(character, "开场面具", "starting_mask", character.starting_mask)}
+          ${lockedInputField(character, "弧光起点", "arc_start", character.arc_start)}
           ${lockedInputField(character, "弧光终点", "arc_end", character.arc_end, { full: true })}
         </div>
       </section>

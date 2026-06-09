@@ -203,7 +203,13 @@ async function handleProjectsApi(request, response, pathname) {
     try {
       const projectId = decodeSegment(projectMatch[1]);
       const body = await readJsonBody(request);
-      const nextProject = body.project ?? body;
+      // 完整项目文档本身就有 project 元数据键：信封格式 body.project.project 存在，
+      // 裸文档格式 body.project 是元数据对象（无 .project）。按此区分，避免裸文档被误拆。
+      const nextProject = body?.project?.project ? body.project : body;
+      if (!nextProject?.project || typeof nextProject.project !== "object") {
+        json(response, 400, { error: "请求体不是有效的项目文档" });
+        return true;
+      }
       nextProject.project.id = projectId;
       const project = saveProject(nextProject);
       json(response, 200, {
@@ -461,10 +467,20 @@ async function handleApi(request, response, pathname) {
       "Connection": "keep-alive",
       "Access-Control-Allow-Origin": "*"
     });
+    // 立即把响应头/首字节冲刷到客户端：否则 Node 会把 SSE 头缓冲到第一次 body 写入，
+    // 导致重推理步骤（首 token 慢、且常是冷启动的 characters）在客户端/测试侧迟迟收不到响应。
+    response.flushHeaders?.();
+    response.write(": connected\n\n");
+    // 心跳：首 token 到达前每 10s 发一条 SSE 注释，保活连接并重置客户端 idle 计时器。
+    let firstChunkSeen = false;
+    let heartbeat = setInterval(() => {
+      if (!firstChunkSeen && !ended) response.write(": keepalive\n\n");
+    }, 10000);
+    const stopHeartbeat = () => { if (heartbeat) { clearInterval(heartbeat); heartbeat = null; } };
 
     let prompt;
     try { prompt = buildPromptForStep(step, projectContext, options); }
-    catch (e) { response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`); response.end(); return true; }
+    catch (e) { stopHeartbeat(); response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`); response.end(); return true; }
 
     const proc = spawn("claude", ["-p", "--output-format", "text"], { stdio: ["pipe", "pipe", "pipe"] });
     proc.stdout.setEncoding("utf8");
@@ -480,12 +496,15 @@ async function handleApi(request, response, pathname) {
     }, 300_000);
 
     proc.stdout.on("data", (chunk) => {
+      firstChunkSeen = true;
+      stopHeartbeat();
       fullText += chunk;
       response.write(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`);
     });
 
     proc.on("close", (code) => {
       ended = true;
+      stopHeartbeat();
       clearTimeout(streamTimeout);
       if (code !== 0) {
         response.write(`data: ${JSON.stringify({ type: "error", message: "claude CLI 异常退出" })}\n\n`);
@@ -503,12 +522,13 @@ async function handleApi(request, response, pathname) {
 
     proc.on("error", (err) => {
       ended = true;
+      stopHeartbeat();
       clearTimeout(streamTimeout);
       response.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
       response.end();
     });
 
-    request.on("close", () => { ended = true; clearTimeout(streamTimeout); proc.kill(); });
+    request.on("close", () => { ended = true; stopHeartbeat(); clearTimeout(streamTimeout); proc.kill(); });
     return true;
   }
 

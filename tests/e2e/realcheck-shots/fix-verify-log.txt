@@ -1,0 +1,32 @@
+=== fix-3: mode picker 3 options ===
+[shot] fix-3-mode-picker.png
+[mode-cards] [{"action":"open-quick-creation","title":"一句话概念","tag":"→ 快速生成框架"},{"action":"open-pro-creation","title":"一段画面 / 台词 / 感受","tag":"→ AI 反问挖掘"},{"action":"open-from-structure","title":"完整故事要重组","tag":"→ 跳过 AI 入口"}]
+=== fix-1: open quick creation, check theme ===
+[theme-colors] {"panelBg":"rgba(0, 0, 0, 0)","flowColor":"rgb(28, 22, 16)","cfGold":"#ba5616","cfText":"#1c1610","bodyBg":"rgb(230, 225, 213)"}
+[shot] fix-1-creation-step1.png
+=== fix-2: step3 manual + fallback ===
+[shot] fix-2-step3-initial.png
+[step3-buttons] [{"text":"← 项目列表","action":"go-to-project","disabled":false},{"text":"✓","action":"goto-creation-step","disabled":false},{"text":"✓","action":"goto-creation-step","disabled":false},{"text":"AI 设计中","action":"ai-generate-characters-cf","disabled":true},{"text":"+ 手动新增人物","action":"cf-add-blank-character","disabled":true},{"text":"生成中 →","action":"cf-step3-next","disabled":true},{"text":"取消生成","action":"cancel-cf-ai","disabled":false}]
+[fix-2 has-manual-add-button] true
+[wait for AI to fail/timeout — 50s]
+[shot] fix-2-step3-after-ai-fail.png
+[step3-after-fail-buttons] [{"text":"← 项目列表","action":"go-to-project","disabled":false},{"text":"✓","action":"goto-creation-step","disabled":false},{"text":"✓","action":"goto-creation-step","disabled":false},{"text":"AI 生成角色","action":"ai-generate-characters-cf","disabled":false},{"text":"+ 手动新增人物","action":"cf-add-blank-character","disabled":false},{"text":"用默认骨架填入 3 个主角（再手动改）","action":"cf-use-fallback-characters","disabled":false},{"text":"直接跳到情节大纲 →","action":"cf-step3-next","disabled":false},{"text":"跳过，直接进入情节大纲 →","action":"cf-step3-next","disabled":false}]
+[ai-error-text] AI 响应超时（45 秒无数据）。请检查设置 → 模型连接，确认所选模型可用。
+[fix-2 has-fallback-button] true
+[shot] fix-2-after-fallback.png
+[fallback-proposal-count] 3
+[shot] fix-2-after-manual-add.png
+[after-manual-count] 4
+=== fix-5: plot grid column flex ===
+[shot] fix-5-plot-grid.png
+[grid-act-heads] [{"title":"第一幕","chip":"4 节点","rect":{"left":100,"width":200}},{"title":"第二幕","chip":"5 节点","rect":{"left":900,"width":200}},{"title":"第三幕","chip":"2 节点","rect":{"left":1900,"width":200}}]
+[grid-node-heads] [{"text":"01 开场印象","left":100,"width":200},{"text":"02 基础铺陈","left":300,"width":200},{"text":"03 诱发事件","left":500,"width":200},{"text":"04 进入第二幕","left":700,"width":200},{"text":"05 副线启动","left":900,"width":200},{"text":"06 中点翻转","left":1100,"width":200},{"text":"07 压力推进","left":1300,"width":200},{"text":"08 危机时刻","left":1500,"width":200},{"text":"09 进入第三幕","left":1700,"width":200},{"text":"10 终局行动","left":1900,"width":200},{"text":"11 结尾印象","left":2100,"width":200}]
+=== fix-4: relationships add dedupe ===
+[rel-cards-before-add] 4
+[rel-data-before] 0
+[shot] fix-4-after-add-relationship.png
+[rel-data-after] 0
+[fix-4 dedup-prevented-create] true
+=== fix-1b: settings dialog on workflow page ===
+[shot] fix-1b-settings-on-workflow.png
+=== DONE ===

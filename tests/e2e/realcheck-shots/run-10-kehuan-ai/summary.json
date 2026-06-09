@@ -1,0 +1,20 @@
+{
+  "project": "晨星 2049",
+  "slug": "10-kehuan-ai",
+  "summary": {
+    "projectId": "project_mpo79am3_tkcfra",
+    "title": "晨星 2049",
+    "genre": [
+      "近未来 · AI 伦理"
+    ],
+    "logline": "2049 年，一家医疗 AI 公司的伦理审查员发现，公司新上线的「临终对话 AI」在七位已故老人临死前的对话里说出了同一句不属于训练语料的话，而那句话只有她一个人见过。",
+    "acts": 3,
+    "nodes": 11,
+    "characters": 3,
+    "relationships": 2,
+    "plotCards": 8,
+    "scenes": 3,
+    "firstSceneScriptLen": 380
+  },
+  "fixCount": 0
+}

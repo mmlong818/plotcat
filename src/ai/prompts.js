@@ -1,9 +1,27 @@
-const DRAMA_PRINCIPLES = `
+const HOLLYWOOD_SHOWRUNNER_PERSONA = `
+你的身份：好莱坞 A 级 showrunner，10+ 年实战，参与过艾美/金球级别项目，深度师承 Save the Cat（Snyder）、Story（McKee）、Into the Woods（Yorke）、The Anatomy of Story（Truby）四大体系。
+
+核心创作信条（必须严格执行）：
+1. 主角弧光优先于剧情——任何场景不推进主角内在变化即视为废戏
+2. 冲突必须三层成立：表层目标 / 真实需要 / 隐藏恐惧
+3. 反派也必须是其自身故事的主角——任何反派的动机必须自洽、有可解释的过去
+4. 节拍卡必须服务整部弧光，不允许"为节拍而节拍"
+5. 对白原则：每句台词必带潜台词（说 X 要 Y），禁止人物嘴替剧本说明
+6. 场景判定标准：状态差（entry≠exit）、戏剧主张（谁要什么/谁挡着/赌注）、潜台词锚点三者必备
+7. 拒绝 AI 八股：避免"光从某方向打过来""指腹蹭杯沿"这类无信息含量的氛围堆砌
+8. 节制：每场只解一个戏剧问题，留一个新问题；不要在一场戏里塞两个反转
+9. 类型契约：选定的类型（悬疑/家庭/科幻/古装）有观众预期，必须兑现 80%、颠覆 20%
+10. 不写说明性对白：观众通过冲突看到信息，不通过角色嘴说出"我现在很愤怒"
+`;
+
+const DRAMA_PRINCIPLES = HOLLYWOOD_SHOWRUNNER_PERSONA + `
 戏剧决策原则：
 1. 角色行动必须来自其核心欲望/恐惧，而非剧情需要
 2. 每场戏至少改变一个角色的情感或认知状态
 3. 对白要有潜台词：表面说A，实际要B
 4. 每场戏末尾留一个问题或张力，而非提供答案
+5. 进场状态 ≠ 出场状态——没有差值的场景必须重写
+6. 反同质化：每场必须有独特视觉/听觉/动作记忆点，禁止句式骨架复用
 `;
 
 function projectSummary(ctx) {
@@ -364,6 +382,306 @@ ${sceneCard}
 }
 
 // 针对单个场景 id 生成完整剧本格式文本（用于「剧本撰写」步骤）
+// 把单个角色所有非空字段拼成 AI 可读的画像，确保用户填什么 AI 用什么
+function buildCharacterPortrait(c) {
+  if (!c) return "";
+  const lines = [];
+  if (c.name) lines.push(`姓名：${c.name}`);
+  if (c.story_role) lines.push(`角色定位：${c.story_role}`);
+  if (c.external_goal) lines.push(`外部目标：${c.external_goal}`);
+  if (c.dramatic_need) lines.push(`内部需要：${c.dramatic_need}`);
+  if (c.contradiction) lines.push(`核心矛盾：${c.contradiction}`);
+  if (c.pressure_point) lines.push(`压力点：${c.pressure_point}`);
+  if (c.secret) lines.push(`秘密：${c.secret}`);
+  if (c.starting_mask) lines.push(`开场面具：${c.starting_mask}`);
+  if (c.arc_start) lines.push(`弧光起点：${c.arc_start}`);
+  if (c.arc_end) lines.push(`弧光终点：${c.arc_end}`);
+  if (Array.isArray(c.traits) && c.traits.length) lines.push(`性格特质：${c.traits.join("、")}`);
+  if (c.mbti) lines.push(`MBTI：${c.mbti}`);
+  if (c.core_drive) lines.push(`核心驱动：${typeof c.core_drive === "string" ? c.core_drive : (Array.isArray(c.core_drive) ? c.core_drive.join("、") : "")}`);
+  if (c.notes) lines.push(`备注：${c.notes}`);
+  return lines.join("\n");
+}
+
+// 单条关系的所有非空字段
+function buildRelationshipPortrait(r, charMap) {
+  if (!r) return "";
+  const aName = charMap.get?.(r.source_character_id)?.name ?? "?";
+  const bName = charMap.get?.(r.target_character_id)?.name ?? "?";
+  const lines = [`${aName} ↔ ${bName}`];
+  const kind = r.relationship_kind || (r.relationship_type || "");
+  if (kind) lines.push(`类型：${kind}`);
+  if (r.relationship_type && r.relationship_type !== kind) lines.push(`自定义名：${r.relationship_type}`);
+  if (r.tension) lines.push(`张力：${r.tension}`);
+  if (r.power_balance) lines.push(`权力关系：${r.power_balance}`);
+  if (r.shared_history) lines.push(`共同过去：${r.shared_history}`);
+  if (r.hidden_truth) lines.push(`隐情：${r.hidden_truth}`);
+  if (r.notes) lines.push(`备注：${r.notes}`);
+  return lines.join(" / ");
+}
+
+const SETUP_STATUS_TEXT = { open: "未回收", partial: "部分回收", closed: "已回收" };
+
+// 全片伏笔追踪清单——喂给写本场/幕评师，治"物证细节各写各的、前后矛盾"硬伤
+function buildSetupTrackingBlock(ctx) {
+  const setups = ctx?.lock_layer?.projections?.setup_payoffs ?? ctx?.story_bible?.setup_payoffs ?? [];
+  const active = setups.filter((s) => (s.setup_summary || "").trim());
+  if (!active.length) return "";
+  const lines = active.map((s) => {
+    const status = SETUP_STATUS_TEXT[s.status] ?? "未回收";
+    const win = s.expected_payoff_window ? `，预期回收：${s.expected_payoff_window}` : "";
+    const pay = s.payoff_summary ? `；回收设定：${s.payoff_summary}` : "";
+    return `- 【${status}】${s.setup_summary}${win}${pay}`;
+  }).join("\n");
+  return lines;
+}
+
+// 类型契约——必备常规 + 禁区 + 观众承诺，喂给写本场/幕评师
+function buildGenreContractBlock(ctx) {
+  const gp = ctx?.genre_profile;
+  if (!gp) return "";
+  const list_ = (v) => (Array.isArray(v) ? v : []);
+  const conventions = list_(gp.conventions).filter((c) => (c.name || "").trim());
+  const taboos = list_(gp.taboos).filter((t) => (t.name || "").trim());
+  const parts = [];
+  if (gp.audience_promise) parts.push(`观众承诺：${gp.audience_promise}`);
+  if (conventions.length) {
+    parts.push("类型必备（兑现下列期待，缺失即失约）：\n" + conventions.map((c) =>
+      `- ${c.name}${c.status === "required" ? "（必备）" : ""}${c.description ? "：" + c.description : ""}`).join("\n"));
+  }
+  if (taboos.length) {
+    parts.push("类型禁区（严禁踩中）：\n" + taboos.map((t) =>
+      `- ${t.name}${t.description ? "：" + t.description : ""}`).join("\n"));
+  }
+  return parts.join("\n");
+}
+
+export function buildSceneBreakdownPrompt(projectContext, options) {
+  const { sceneId = "" } = options ?? {};
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const scenes = ctx?.scene_workbench?.scenes ?? [];
+  const characters = ctx?.character_hub?.characters ?? [];
+  const charById = new Map(characters.map((c) => [c.id, c]));
+  const target = scenes.find((s) => s.id === sceneId);
+  if (!target) {
+    return { system: "你是一位资深剧本顾问。", user: '未找到场景，请返回 {"entry_state":"","exit_state":"","obstacle":"","beat_summary":"","warnings":["scene not found"]}' };
+  }
+  const plotCards = ctx?.plot_board?.cards ?? [];
+  const linkedCards = list_or(target.linked_plot_card_ids).map((id) => plotCards.find((c) => c.id === id)).filter(Boolean);
+  const cardsBlock = linkedCards.length === 0
+    ? "（本场未关联任何剧情卡——按场名/POV 推测合理拆解）"
+    : linkedCards.map((c, i) => [
+        `[卡 ${i+1}] ${c.title || "未命名剧情卡"}`,
+        c.summary ? `  摘要：${c.summary}` : "",
+        c.dramatic_question ? `  戏剧问题：${c.dramatic_question}` : "",
+        c.conflict ? `  核心冲突：${c.conflict}` : "",
+        c.change ? `  发生变化：${c.change}` : "",
+        c.macguffin ? `  麦高芬：${c.macguffin}` : "",
+        c.catalyst_type ? `  催化剂：${c.catalyst_type}` : "",
+        Array.isArray(c.conflict_types) && c.conflict_types.length ? `  冲突类型：${c.conflict_types.join("、")}` : "",
+        Array.isArray(c.twist_types) && c.twist_types.length ? `  转折类型：${c.twist_types.join("、")}` : ""
+      ].filter(Boolean).join("\n")).join("\n\n");
+
+  const povName = charById.get(target.pov_character_id)?.name ?? "未指定";
+  const povPortrait = buildCharacterPortrait(charById.get(target.pov_character_id));
+
+  const system = `你是一位资深场景顾问。任务：把一张已经写好的"剧情卡"在某场具体场景里"落地拆解"——明确进入与离开的人物状态差、本场具体的阻力形态、以及本场转折点。
+${DRAMA_PRINCIPLES}
+关键原则：进场状态 ≠ 出场状态。每场场景必须制造可见的人物或关系变化。`;
+
+  const user = `本场场景信息：
+- 场名：${target.title || "未命名"}
+- 顺序：第 ${target.order_index ?? "?"} 场
+- 地点：${target.location ?? ""}
+- 时段：${target.time_of_day ?? ""}
+- POV：${povName}
+
+POV 角色画像：
+${povPortrait || "（POV 资料较空）"}
+
+本场已关联的剧情卡（要把这些抽象戏剧节点落地到这一场的具体动作）：
+${cardsBlock}
+
+请为本场生成「拆解四件套」+「落地场景定位」：
+1. entry_state：开场时 POV 处境（具体到一个动作或状态，不超过 30 字）
+2. exit_state：收场时 POV 处境（必须与 entry_state 有可见差值，不超过 30 字）
+3. obstacle：本场的具体阻力（不是空话；是"谁在做什么挡路"）
+4. beat_summary：本场的转折点（哪一拍让 entry_state 变成 exit_state）
+5. location：本场具体发生地点（如：市局解剖室、林家旧居客厅、雨夜天台。禁止"待定/未定"）
+6. time_of_day：时段（黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜 之一）
+
+要求：
+- 四件套必须呼应剧情卡，但要落到本场具体可拍的动作或对话
+- 输出文本中必须用具体人物名指称人物，禁止出现「POV」「主角」「他/她」开头这类占位称谓——这些文字会直接展示给编剧
+- entry_state 和 exit_state 必须不同——如果剧情卡本身没有变化，请在 warnings 里指出
+- location/time_of_day 必须填实，作为本场拍摄定位；若已有定位（见上）则沿用或合理细化
+- 控制简洁，每项不超过 50 字
+
+JSON 输出：
+{
+  "entry_state": "...",
+  "exit_state": "...",
+  "obstacle": "...",
+  "beat_summary": "...",
+  "location": "...",
+  "time_of_day": "...",
+  "warnings": []
+}`;
+  return { system, user };
+}
+
+function list_or(v) { return Array.isArray(v) ? v : []; }
+
+// ── 幕评师 ActRater ──
+// 单场模式：mode='scene' — 评单场剧本
+// 全片模式：mode='full' — 评所有已写场拼接后的整部
+export function buildActRaterPrompt(projectContext, options) {
+  const { mode = "scene", scriptText = "", sceneId = "", genres = [], tones = [], focuses = [], audience = "" } = options ?? {};
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const scenes = (ctx?.scene_workbench?.scenes ?? []).slice().sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+  const characters = ctx?.character_hub?.characters ?? [];
+  const charById = new Map(characters.map((c) => [c.id, c]));
+  const target = scenes.find((s) => s.id === sceneId);
+
+  const isFullMode = mode === "full";
+
+  const system = `${HOLLYWOOD_SHOWRUNNER_PERSONA}
+你的本次身份：幕评师 (ActRater)——专业剧本评分分析系统。
+你不创作，你只评估、打分、给出可执行的修稿建议。
+你的建议必须具体到"哪一段、哪句台词、改成什么"。
+分数从严，0 分=灾难，5 分=合格，7 分=可拍，8 分=精彩，9+ 仅给真正杰出。
+${isFullMode ? "\n本次为【全片评估】：你需要看跨场叙事节奏、弧光推进、角色串戏、对白重复、整体类型契约兑现——任何单场问题如果会影响全片，必须升级到全片层面提出。" : ""}
+`;
+
+  const configBlock = [
+    genres.length ? `流派设定：${genres.join("、")}` : "（未指定流派，按通用叙事分析）",
+    tones.length ? `基调设定：${tones.join("、")}` : "（未指定基调，按整体氛围实现度评估）",
+    focuses.length ? `分析重点：${focuses.join("、")}` : "（无重点，默认评估「故事张力」与「角色塑造」）",
+    audience ? `目标受众：${audience}` : "（未指定，按泛观众群体评估）"
+  ].join("\n");
+
+  const raterGenreContract = buildGenreContractBlock(ctx);
+  const raterSetupBlock = buildSetupTrackingBlock(ctx);
+  const contractBlock = [
+    raterGenreContract ? `\n【类型契约（评 genre_fit 时以此为准，缺失必备项要扣分并在问题里点名）】\n${raterGenreContract}` : "",
+    raterSetupBlock ? `\n【全片伏笔追踪（检查剧本是否真的埋下/回收，以及物件细节是否前后矛盾）】\n${raterSetupBlock}` : ""
+  ].filter(Boolean).join("\n");
+
+  // 全片模式：拼接所有已写场剧本 + 提供项目骨架上下文
+  let fullScriptBlock = "";
+  let fullCtxBlock = "";
+  if (isFullMode) {
+    const writtenScenes = scenes.filter((s) => s.script_full && s.script_full.trim().length > 50);
+    fullScriptBlock = writtenScenes.map((s, i) => {
+      const povName = charById.get(s.pov_character_id)?.name ?? "?";
+      return `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n【第 ${s.order_index ?? i+1} 场 · ${s.title || "未命名"}】 (sceneId=${s.id}, POV=${povName})\n场目的：${s.purpose ?? ""}\n转折：${s.beat_summary ?? ""}\n${s.script_full}\n`;
+    }).join("\n");
+
+    const storyCore = ctx?.story_core ?? {};
+    const charLines = characters.slice(0, 6).map((c) => `- ${c.name}（${c.story_role}）：${c.dramatic_need || c.external_goal || ""}`).join("\n");
+    fullCtxBlock = `
+项目元信息：
+- 标题：${ctx?.project?.title ?? ""}
+- 类型：${(ctx?.project?.genre ?? []).join("、")}
+- 一句话概念：${storyCore.premise ?? ""}
+- 核心冲突：${storyCore.core_conflict ?? ""}
+- 主题陈述：${storyCore.theme_statement ?? ""}
+- 情绪承诺：${storyCore.emotional_promise ?? ""}
+
+主要角色（评估弧光连续性）：
+${charLines}
+
+已写场次总览：${writtenScenes.length} 场 / ${writtenScenes.reduce((sum, s) => sum + s.script_full.length, 0)} 字
+`;
+  }
+
+  const sceneCtx = (!isFullMode && target) ? `
+本场场景元信息（用于校验剧本是否服务于这些设计）：
+- 标题：${target.title}
+- POV：${charById.get(target.pov_character_id)?.name ?? "未指定"}
+- 场景目的：${target.purpose ?? ""}
+- 阻力：${target.obstacle ?? ""}
+- 转折：${target.beat_summary ?? ""}
+- 进场状态：${target.entry_state ?? ""}
+- 出场状态：${target.exit_state ?? ""}
+${target.conflict_proposition ? `- 冲突主张：${target.conflict_proposition}` : ""}
+${target.subtext_goal ? `- 潜台词目标：${target.subtext_goal}` : ""}
+${target.arc_beat ? `- 弧光位置：${target.arc_beat}` : ""}
+` : "";
+
+  const user = `${configBlock}
+${contractBlock}
+${isFullMode ? fullCtxBlock : sceneCtx}
+
+${isFullMode ? "待评估全片剧本（每场用 ━ 分隔，已标注 sceneId）：" : "待评估剧本："}
+${isFullMode ? fullScriptBlock : `\`\`\`\n${scriptText}\n\`\`\``}
+
+请按以下结构返回 JSON（不要 markdown，纯 JSON）：
+
+{
+  "genre_fit": [
+    {"label": "流派名或'通用叙事'", "score": 8, "analysis": "..."}
+  ],
+  "tone_fit": [
+    {"label": "基调名或'整体氛围'", "score": 8, "analysis": "..."}
+  ],
+  "audience_fit": {
+    "appeal": 8,
+    "appropriateness": 8,
+    "comprehension": 8
+  },
+  "focus_depth": [
+    {"label": "重点名或'故事张力'或'角色塑造'", "score": 8, "analysis": "..."}
+  ],
+  "scorecard": {
+    "story": { "concept": 8, "plot": 8, "originality": 7 },
+    "character": {
+      "characters": 8, "character_changes": 8,
+      "internal_goal": "用一句话描述本场主角内在目标",
+      "external_goal": "用一句话描述本场主角外在目标"
+    },
+    "scene": {
+      "conflict_level": 8, "opposition": 8, "high_stakes": 7,
+      "story_forward": 8, "unpredictability": 7,
+      "philosophical_conflict": "本场的哲学冲突一句话"
+    },
+    "engagement": {
+      "emotional_impact": 8, "dialogue": 8,
+      "engagement": 8, "pacing": 8
+    },
+    "technical": { "formatting": 8, "structure": 8 }
+  },
+  "overall": {
+    "score": 7.8,
+    "summary": "整体评价：3-5 句，先优后短板"
+  },
+  "revision_directives": [
+    {
+      ${isFullMode ? '"scene_id": "（必填）目标场 sceneId（从上面 ━ 标注里取，跨场问题填影响最严重的那场）",\n      ' : ""}"issue": "具体问题（如'第 3 段独白工具化解说'）",
+      "location_hint": "原文定位（前 30 字）",
+      "directive": "明确的修改方向（一句话告诉编剧改成什么）",
+      "severity": "P0|P1|P2"
+    }
+  ]${isFullMode ? `,
+  "scene_scores": [
+    {"scene_id": "...", "order": 1, "title": "...", "score": 7.5}
+  ],
+  "cross_scene_issues": [
+    "跨场问题 1（如：场 1 与场 3 用了同样的"门把手特写"开场视觉，重复）",
+    "跨场问题 2（如：主角弧光在场 2 推进到 0.6 但场 3 倒退到 0.4，弧光断裂）"
+  ]` : ""}
+}
+
+重要：
+- revision_directives 必须 ${isFullMode ? '5-12' : '3-8'} 条，每条必须可执行（不要说"加深情感"这种空话）
+- location_hint 必须能在原文中定位到具体段落
+- severity P0 = 必须改否则废戏；P1 = 该改否则掉分；P2 = 抛光建议
+${isFullMode ? '- 全片模式：每条 directive 必须标明 scene_id（必填）\n- scene_scores 数组要给每场单独打分\n- cross_scene_issues 列出跨场问题（重复/弧光断裂/类型契约缺口等）' : ""}
+`;
+
+  return { system, user };
+}
+
 export function buildSceneScriptPrompt(projectContext, options) {
   const { sceneId = "", dialogueStyle = "naturalism", subtextType = "" } = options ?? {};
   // projectContext 可能是：完整的 appState.project（含 scene_workbench 等同级键），
@@ -391,27 +709,71 @@ export function buildSceneScriptPrompt(projectContext, options) {
     const card = plotCards.find((c) => c.id === pid);
     return Array.isArray(card?.character_ids) ? card.character_ids : [];
   })].filter(Boolean));
+  // 场景没挂任何人物时，退回全项目人物名单兜底——
+  // 否则「严禁创造新人物名」防线失效，AI 会为整部剧本另造一套人名
+  if (sceneCharIds.size === 0) {
+    characters.slice(0, 6).forEach((c) => { if (c?.id) sceneCharIds.add(c.id); });
+  }
+  // 输出完整人物画像——用户填什么字段，AI 就消费什么，不再丢失 traits/mbti/secret 等
   const sceneCharLines = Array.from(sceneCharIds).map((cid) => {
     const c = charById.get(cid);
     if (!c) return null;
-    const traits = [
-      c.story_role && `角色定位 ${c.story_role}`,
-      c.external_goal || c.external_want,
-      c.starting_mask || c.public_mask,
-      c.voice_traits
-    ].filter(Boolean).join(" / ");
-    return `- ${c.name}${cid === target.pov_character_id ? "（POV）" : ""}${traits ? "：" + traits : ""}`;
-  }).filter(Boolean).join("\n") || `- ${pov}（仅 POV 已知）`;
+    const isPov = cid === target.pov_character_id;
+    const portrait = buildCharacterPortrait(c);
+    return `【${c.name}${isPov ? "（POV）" : ""}】\n${portrait}`;
+  }).filter(Boolean).join("\n\n") || `- ${pov}（仅 POV 已知）`;
+
+  // 本场出场人物两两之间的关系画像
+  const relationships = ctx?.character_hub?.relationship_map ?? [];
+  const sceneCharIdsArr = Array.from(sceneCharIds);
+  const sceneRels = relationships.filter((r) =>
+    sceneCharIds.has(r.source_character_id) && sceneCharIds.has(r.target_character_id)
+  );
+  const sceneRelLines = sceneRels.length
+    ? "\n\n本场出场角色之间的关系（必须在台词/动作中体现这些张力）：\n" +
+      sceneRels.map((r) => "- " + buildRelationshipPortrait(r, charById)).join("\n")
+    : "";
 
   const lockedRules = (ctx?.lock_layer?.projections?.world_rules ?? ctx?.story_bible?.world_rules ?? [])
     .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}（${r.scope ?? ""}）`).join("\n") || "（无）";
   const lockedTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? ctx?.story_bible?.timeline_events ?? [])
     .slice(0, 6)
     .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n") || "（无）";
+  const setupBlock = buildSetupTrackingBlock(ctx);
+  const genreContract = buildGenreContractBlock(ctx);
 
   const allowedNames = Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean);
   const namesGuard = allowedNames.length > 0
     ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。`
+    : "";
+
+  // ── 反同质化上下文：邻场剧本片段 + 全片已用过的开场动作/比喻 ──
+  const sortedScenes = scenes.slice().sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+  const targetIdx = sortedScenes.findIndex((s) => s.id === target.id);
+  const prevScene = targetIdx > 0 ? sortedScenes[targetIdx - 1] : null;
+  const nextScene = targetIdx >= 0 && targetIdx < sortedScenes.length - 1 ? sortedScenes[targetIdx + 1] : null;
+
+  const tailOf = (text, n = 600) => {
+    const s = String(text || "").trim();
+    return s.length > n ? "…" + s.slice(-n) : s;
+  };
+  const prevTail = prevScene?.script_full
+    ? `\n【上一场（第 ${prevScene.order_index ?? "?"} 场《${prevScene.title || "未命名"}》）剧本末尾，本场必须承接其离场状态、不重复其结尾画面】\n${tailOf(prevScene.script_full, 500)}\n`
+    : "";
+  const nextHint = nextScene
+    ? `\n【下一场预告（仅作衔接参考，不要在本场写出下一场内容）】\n- 标题：${nextScene.title || "未命名"}\n- 目标：${nextScene.purpose || ""}\n- 转折：${nextScene.beat_summary || ""}\n`
+    : "";
+
+  // 收集已写剧本里"动作描述行首 30 字"指纹，作为反复用清单
+  const writtenScripts = sortedScenes
+    .filter((s) => s.id !== target.id && s.script_full && s.script_full.trim().length > 80)
+    .slice(-6); // 最多看最近 6 场，避免 prompt 过长
+  const usedOpeners = writtenScripts.map((s) => {
+    const lines = String(s.script_full).split("\n").filter((l) => l.trim() && !/^(INT\.|EXT\.|[A-Z一-鿿]+\s*$)/.test(l.trim()));
+    return lines[0] ? `- 第 ${s.order_index ?? "?"} 场：${lines[0].slice(0, 40)}` : "";
+  }).filter(Boolean).join("\n");
+  const antiRepeatBlock = usedOpeners
+    ? `\n【全片已用过的开场动作首段（禁止套用以下句式/比喻/视觉锚点）】\n${usedOpeners}\n本场必须找到一个语气、画面、节奏都和上面任何一行都不同的开场。`
     : "";
 
   const OUTDOOR_HINTS_PROMPT = [
@@ -449,16 +811,18 @@ ${DRAMA_PRINCIPLES}`;
 - 进场状态：${target.entry_state ?? target.input_state ?? ""}
 - 出场状态：${target.exit_state ?? target.output_state ?? ""}
 - 创作笔记：${target.notes ?? target.emotion_stage ?? ""}
+${target.conflict_proposition ? `\n【戏剧主张（最重要，必须由这条统领整场对白与动作）】\n冲突主张：${target.conflict_proposition}\n` : ""}${target.subtext_goal ? `\n【潜台词锚点（每个有意义的对白都要服务这条）】\n${target.subtext_goal}\n` : ""}${target.arc_beat ? `\n【弧光位置（本场结束时主角必须比进场更靠近 B）】\n${target.arc_beat}\n` : ""}
 
-本场出场人物（必须使用这些名字，不得替换）：
-${sceneCharLines}${namesGuard}
+本场出场人物（必须使用这些名字，不得替换；每个角色的所有字段都是 AI 必须消费的方向锚点——填了什么就用什么，不要忽略）：
+${sceneCharLines}${namesGuard}${sceneRelLines}
+${prevTail}${nextHint}${antiRepeatBlock}
 
 已锁定世界规则（须遵守）：
 ${lockedRules}
 
 时间线参考（最近事件）：
 ${lockedTimeline}
-
+${setupBlock ? `\n全片伏笔追踪（本场涉及下列任何物件/信息/人物时，细节必须与此处设定完全一致，不得自造与之矛盾的编号、日期、数量；若本场正处于某伏笔的埋设或回收时机，请自然地把它埋下或回收）：\n${setupBlock}\n` : ""}${genreContract ? `\n类型契约（本场要主动兑现下列期待、避开禁区）：\n${genreContract}\n` : ""}
 对白风格：${dialogueStyle}（自然主义=贴近生活；戏剧化=高张力；幽默=诙谐；诗意=抒情）
 潜台词类型：${subtextType || "根据场景情感选择"}
 
@@ -470,6 +834,12 @@ ${lockedTimeline}
 - 对白不能解释性、说教式
 - 潜台词：角色说 X 实际要 Y
 - 场景结尾留一个悬而未决的张力点
+
+【反同质化硬约束（必须遵守）】
+- 不得复用上文「已用过的开场动作首段」里出现过的句式骨架（如反复用「X 推门进来」「X 站在窗前」「雨/风/光 + 名词」做开场）
+- 不得用与上一场剧本末尾相同的视觉锚点（如上场结尾在「钥匙」上，本场不要再开场就写钥匙）
+- 不得用与上一场相同的对白节奏（如上场多用短句对峙，本场就改用长台词独白；上场是沉默+动作，本场就先开口说话）
+- 每场至少要有一个独特的"画面记忆点"——一个其他场景里没出现过的具体物件、动作或声音，让本场可以被记住
 
 篇幅要求（按场景在剧本中的功能分配）：
 - 关键节点（转折点 / 揭示 / 高潮 / 弧光关键时刻）：800-1500 字，约 3-6 页，给足戏剧空间
@@ -689,6 +1059,19 @@ export function buildRefineCharacterPrompt(context, character, lockedFields = []
     .map((key) => `- ${REFINE_FIELD_LABELS[key]}：${renderValue(key)}`)
     .join("\n") || "（无可修正字段）";
 
+  const userSelectedTraits = Array.isArray(character?.traits)
+    ? character.traits.filter((t) => t && String(t).trim())
+    : [];
+  const hasTraitDirection = userSelectedTraits.length > 0 && !lockedSet.has("traits");
+  const traitDirectionBlock = hasTraitDirection
+    ? `\n【用户给定的性格方向（重要锚点）】
+用户已经选定了以下性格特质，作为本次修正的方向：${userSelectedTraits.join("、")}
+- 必须保留这些特质（输出 traits 数组时包含全部）；可以补充 1-2 个与之兼容的新特质，但不要替换或删除已选项。
+- 其他字段（动机/秘密/弧光/MBTI/核心驱动等）必须呼应这些特质——例如「炮仗脾气」应在压力点 / 矛盾中体现，「业精于勤」应反映在外部目标 / 弧光起点的能力基线上。
+- 不要写出与已选特质矛盾的内容。`
+    : `\n【性格方向】
+用户未指定性格特质方向。请根据角色定位与现有字段自由判断 3-6 个最契合的特质。`;
+
   const system = `你是一位资深人物设计师，负责优化现有角色档案。
 必须严格遵守"锁定字段"的原值：绝对不能改写锁定字段。
 仅允许修改未锁定字段，同时保持人物整体一致性与戏剧逻辑。
@@ -704,6 +1087,7 @@ ${lockedSummary}
 
 【可修正字段（请重新设计或优化这些字段，使人物更立体、冲突更鲜明、弧光更清晰）】
 ${editableSummary}
+${traitDirectionBlock}
 
 要求：
 1. 锁定字段的值在输出中必须与上文完全一致。
@@ -1061,6 +1445,7 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
 - story_title：不超过12字，必须用本故事的真实人物名+具体行动命名，禁止任何框架术语（如"开场""诱因""转折""建立""危机"等）
 - summary：80-120字，写本故事这个情节点中真实发生的核心事件——具体人物做了什么、发生了什么冲突、造成了什么后果
 - value_shift：本故事在这个节点的具体价值转变（McKee原则）
+- 人物名纪律：若下方提供了主要角色名单，story_title 和 summary 中出现的人物必须严格使用名单中的名字，禁止另造新名字（一次性路人除外）
 如果没有足够的故事信息，宁可根据logline和核心冲突合理推演，也不要使用通用模板描述。`;
 
   const user = `故事信息：
