@@ -48,6 +48,7 @@ function mapProjectSummaryRow(row) {
     logline: row.logline,
     character_count: row.character_count,
     scene_count: row.scene_count,
+    scene_written_count: row.scene_written_count,
     setup_count: row.setup_count,
     version_count: row.version_count,
     last_opened_at: row.last_opened_at,
@@ -124,6 +125,7 @@ export function listProjects() {
         p.*,
         (SELECT COUNT(*) FROM characters c WHERE c.project_id = p.id) AS character_count,
         (SELECT COUNT(*) FROM scene_cards s WHERE s.project_id = p.id) AS scene_count,
+        (SELECT COUNT(*) FROM scene_cards s WHERE s.project_id = p.id AND LENGTH(s.script_full) >= 200) AS scene_written_count,
         (SELECT COUNT(*) FROM setup_payoffs sp WHERE sp.project_id = p.id) AS setup_count,
         (SELECT COUNT(*) FROM project_versions pv WHERE pv.project_id = p.id) AS version_count,
         (SELECT MAX(created_at) FROM project_versions pv WHERE pv.project_id = p.id) AS last_version_at
@@ -322,6 +324,22 @@ export function loadProject(projectId = null) {
 export function saveProject(project) {
   const nextProject = ensurePlotDrivenProject(project);
   const projectId = nextProject.project.id;
+
+  // 新建项目撞名时自动加序号，避免项目中心出现多个无法区分的同名项目
+  {
+    const db = getDb();
+    const exists = db.prepare("SELECT 1 FROM projects WHERE id = ?").get(projectId);
+    if (!exists) {
+      const baseTitle = nextProject.project.title;
+      let title = baseTitle;
+      let n = 2;
+      while (db.prepare("SELECT 1 FROM projects WHERE title = ? AND id <> ?").get(title, projectId)) {
+        title = `${baseTitle}（${n}）`;
+        n += 1;
+      }
+      nextProject.project.title = title;
+    }
+  }
 
   withTransaction((db) => {
     db.prepare(

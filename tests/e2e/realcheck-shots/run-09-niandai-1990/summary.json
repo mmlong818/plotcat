@@ -1,0 +1,20 @@
+{
+  "project": "南门外的录像厅",
+  "slug": "09-niandai-1990",
+  "summary": {
+    "projectId": "project_mpo792s3_62fxay",
+    "title": "南门外的录像厅",
+    "genre": [
+      "年代 · 90 年代怀旧"
+    ],
+    "logline": "1993 年的小城少女顶替哥哥经营家里那家亏损的录像厅，并在三个月后用一卷别人塞进店里的无名录像带，无意间撞上了整条街道的命运。",
+    "acts": 3,
+    "nodes": 11,
+    "characters": 3,
+    "relationships": 2,
+    "plotCards": 8,
+    "scenes": 3,
+    "firstSceneScriptLen": 283
+  },
+  "fixCount": 0
+}

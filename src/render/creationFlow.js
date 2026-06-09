@@ -312,9 +312,26 @@ function renderStep3New(creation) {
           ${isLoading ? "disabled" : ""}>
           ${isLoading ? loadingDots("AI 设计中") : proposals.length > 0 ? "↺ 重新生成" : "AI 生成角色"}
         </button>
+        <button class="cf-btn-ghost" type="button"
+          data-action="cf-add-blank-character"
+          ${isLoading ? "disabled" : ""}>
+          + 手动新增人物
+        </button>
       </div>
 
-      ${creation.aiError ? `<p class="cf-error">${escapeHtml(creation.aiError)}</p>` : ""}
+      ${creation.aiError ? `
+        <div class="cf-error-block">
+          <p class="cf-error">${escapeHtml(creation.aiError)}</p>
+          <div class="cf-error-actions">
+            <button class="cf-btn-ghost" type="button" data-action="cf-use-fallback-characters">
+              用默认骨架填入 3 个主角（再手动改）
+            </button>
+            <button class="cf-btn-ghost" type="button" data-action="cf-step3-next">
+              直接跳到情节大纲 →
+            </button>
+          </div>
+        </div>
+      ` : ""}
       ${isLoading ? renderStreamPreview(creation) : ""}
 
       ${proposals.length > 0 ? `

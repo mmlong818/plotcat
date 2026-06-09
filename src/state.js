@@ -480,7 +480,6 @@ export const appState = {
     screenplaySceneId: null,
     nodeId: null
   },
-  visitedSteps: [],
   runtime: {
     serverAvailable: false,
     dirty: false,

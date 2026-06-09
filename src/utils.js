@@ -31,17 +31,19 @@ export function field(label, control, full = false) {
 
 export function inputField(label, action, fieldName, value, options = {}) {
   const type = options.type ?? "text";
+  const idAttr = options.dataId ? ` data-id="${escapeHtml(options.dataId)}"` : "";
   return field(
     label,
-    `<input type="${type}" data-action="${action}" data-field="${fieldName}" value="${escapeHtml(value)}" />`,
+    `<input type="${type}" data-action="${action}" data-field="${fieldName}"${idAttr} value="${escapeHtml(value)}" />`,
     options.full
   );
 }
 
 export function textareaField(label, action, fieldName, value, options = {}) {
+  const idAttr = options.dataId ? ` data-id="${escapeHtml(options.dataId)}"` : "";
   return field(
     label,
-    `<textarea data-action="${action}" data-field="${fieldName}" rows="${options.rows ?? 4}">${escapeHtml(value)}</textarea>`,
+    `<textarea data-action="${action}" data-field="${fieldName}"${idAttr} rows="${options.rows ?? 4}">${escapeHtml(value)}</textarea>`,
     options.full ?? true
   );
 }
@@ -53,9 +55,10 @@ export function selectField(label, action, fieldName, value, choices, options = 
         `<option value="${escapeHtml(optionValue)}" ${optionValue === value ? "selected" : ""}>${escapeHtml(optionLabel)}</option>`
     )
     .join("");
+  const idAttr = options.dataId ? ` data-id="${escapeHtml(options.dataId)}"` : "";
   return field(
     label,
-    `<select data-action="${action}" data-field="${fieldName}">${items}</select>`,
+    `<select data-action="${action}" data-field="${fieldName}"${idAttr}>${items}</select>`,
     options.full
   );
 }

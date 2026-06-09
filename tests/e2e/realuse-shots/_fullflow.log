@@ -1,0 +1,151 @@
+  ✓ click 新建项目
+  ✓ click 一句话概念模式
+
+=== Step1 故事核心 ===
+  ✓ click 下一步：选结构
+
+=== Step2 结构 ===
+  generate(characters(auto)) -> 200
+  ✓ click 下一步：生成人物
+
+=== Step3 人物 ===
+  ✓ click confirm char #1
+  ✓ click confirm char #2
+  ✓ click confirm char #3
+  ✓ click confirm char #4
+  已确认角色，剩余 confirm 按钮: 0
+  ✓ click 下一步：情节大纲
+
+=== Step4 情节大纲 ===
+  ✓ 生成本幕 (round 0)
+  generate(act0) -> 200
+  ✓ click 下一幕
+  ✓ 生成本幕 (round 1)
+  generate(act1) -> 200
+  ✓ click 下一幕
+  ✓ 生成本幕 (round 2)
+  generate(act2) -> 200
+  ✓ click 完成节点
+
+=== Step5 确认创建 ===
+  ✓ click 完成创建，进入工作台
+
+=== 工作台 · 剧情开发 ===
+  ✓ click 剧情开发
+  剧情卡数（去重 id）: 11
+  ✓ click 选卡 card_mpt82qu4_xpgip0
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_xpgip0
+  ✓ click 选卡 card_mpt82qu4_vnbo6x
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_vnbo6x
+  ✓ click 选卡 card_mpt82qu4_9onkp3
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_9onkp3
+  ✓ click 选卡 card_mpt82qu4_eab6xl
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_eab6xl
+  ✓ click 选卡 card_mpt82qu4_jduisn
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_jduisn
+  ✓ click 选卡 card_mpt82qu4_qativ1
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_qativ1
+  ✓ click 选卡 card_mpt82qu4_nwfeu0
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_nwfeu0
+  ✓ click 选卡 card_mpt82qu4_dnrp4g
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_dnrp4g
+  ✓ click 选卡 card_mpt82qu4_b67bf1
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_b67bf1
+  ✓ click 选卡 card_mpt82qu4_9f0rfw
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_9f0rfw
+  ✓ click 选卡 card_mpt82qu4_7o1oy9
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mpt82qu4_7o1oy9
+
+=== 工作台 · 场景拆解 ===
+  ✓ click 场景拆解
+  场景数: 12
+  待拆解场景 id 数: 12
+  ✓ click 选场 scene_mpt82qu4_rnfudp
+  ✓ click 拆解 scene_mpt82qu4_rnfudp
+  generate(breakdown-scene_mpt82qu4_rnfudp) -> 200
+  ✓ click 选场 scene_mpt82ty3_jodh5m
+  ✓ click 拆解 scene_mpt82ty3_jodh5m
+  generate(breakdown-scene_mpt82ty3_jodh5m) -> 200
+  ✓ click 选场 scene_mpt82us6_v6sz3d
+  ✓ click 拆解 scene_mpt82us6_v6sz3d
+  generate(breakdown-scene_mpt82us6_v6sz3d) -> 200
+  ✓ click 选场 scene_mpt82vex_ttbzmf
+  ✓ click 拆解 scene_mpt82vex_ttbzmf
+  generate(breakdown-scene_mpt82vex_ttbzmf) -> 200
+  ✓ click 选场 scene_mpt82w21_4bk5dm
+  ✓ click 拆解 scene_mpt82w21_4bk5dm
+  generate(breakdown-scene_mpt82w21_4bk5dm) -> 200
+  ✓ click 选场 scene_mpt82wos_v2qo5z
+  ✓ click 拆解 scene_mpt82wos_v2qo5z
+  generate(breakdown-scene_mpt82wos_v2qo5z) -> 200
+  ✓ click 选场 scene_mpt82xbv_8pc8f1
+  ✓ click 拆解 scene_mpt82xbv_8pc8f1
+  generate(breakdown-scene_mpt82xbv_8pc8f1) -> 200
+  ✓ click 选场 scene_mpt82y6w_7w2vtf
+  ✓ click 拆解 scene_mpt82y6w_7w2vtf
+  generate(breakdown-scene_mpt82y6w_7w2vtf) -> 200
+  ✓ click 选场 scene_mpt82z14_2xby6h
+  ✓ click 拆解 scene_mpt82z14_2xby6h
+  generate(breakdown-scene_mpt82z14_2xby6h) -> 200
+  ✓ click 选场 scene_mpt82zv2_lw289x
+  ✓ click 拆解 scene_mpt82zv2_lw289x
+  generate(breakdown-scene_mpt82zv2_lw289x) -> 200
+  ✓ click 选场 scene_mpt830k1_tv05fo
+  ✓ click 拆解 scene_mpt830k1_tv05fo
+  generate(breakdown-scene_mpt830k1_tv05fo) -> 200
+  ✓ click 选场 scene_mpt8318n_vjbr2q
+  ✓ click 拆解 scene_mpt8318n_vjbr2q
+  generate(breakdown-scene_mpt8318n_vjbr2q) -> 200
+  ✓ click 保存
+
+=== 工作台 · 剧本撰写 ===
+  ✓ click 剧本撰写
+  可写场景 id 数: 12
+  ✓ click 选写 scene_mpt82qu4_rnfudp
+  generate(scene-scene_mpt82qu4_rnfudp) -> 200
+  ✓ click 选写 scene_mpt82ty3_jodh5m
+  generate(scene-scene_mpt82ty3_jodh5m) -> 200
+  ✓ click 选写 scene_mpt82us6_v6sz3d
+  generate(scene-scene_mpt82us6_v6sz3d) -> 200
+  ✓ click 选写 scene_mpt82vex_ttbzmf
+  generate(scene-scene_mpt82vex_ttbzmf) -> 200
+  ✓ click 选写 scene_mpt82w21_4bk5dm
+  generate(scene-scene_mpt82w21_4bk5dm) -> 200
+  ✓ click 选写 scene_mpt82wos_v2qo5z
+  generate(scene-scene_mpt82wos_v2qo5z) -> 200
+  ✓ click 选写 scene_mpt82xbv_8pc8f1
+  generate(scene-scene_mpt82xbv_8pc8f1) -> 200
+  ✓ click 选写 scene_mpt82y6w_7w2vtf
+  generate(scene-scene_mpt82y6w_7w2vtf) -> 200
+  ✓ click 选写 scene_mpt82z14_2xby6h
+  generate(scene-scene_mpt82z14_2xby6h) -> 200
+  ✓ click 选写 scene_mpt82zv2_lw289x
+  generate(scene-scene_mpt82zv2_lw289x) -> 200
+  ✓ click 选写 scene_mpt830k1_tv05fo
+  generate(scene-scene_mpt830k1_tv05fo) -> 200
+  ✓ click 选写 scene_mpt8318n_vjbr2q
+  generate(scene-scene_mpt8318n_vjbr2q) -> 200
+  已写场次: 12
+  ✓ click 保存剧本
+  ✓ click 全本预览
+  ✓ click 导出 .fountain
+  ✓ 产出物已保存: tests/e2e/realuse-shots/deliverable.fountain
+
+===== 专家观察汇总 =====
+  （脚本层未捕获显式问题，详见截图与 pageerror）
+
+===== pageerror 汇总 =====
+  无 pageerror
+
+FULLFLOW DONE

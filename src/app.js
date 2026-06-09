@@ -7,8 +7,11 @@ import {
   formatLabels, projectFormatChoices,
   structureTemplateLabels, formatStructureOptions, formatDefaultTemplates,
   structurePresets, buildCustomStructurePreset,
-  appState, createDefaultProjectDraft
+  appState, createDefaultProjectDraft,
+  RELATIONSHIP_TYPE_OPTIONS
 } from "./state.js";
+
+const RELATIONSHIP_TYPE_KIND_VALUES = new Set(RELATIONSHIP_TYPE_OPTIONS);
 
 import { escapeHtml, list, unique, splitTags, isBrokenPlaceholderText, formatTime } from "./utils.js";
 
@@ -17,6 +20,7 @@ import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
 import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
+import { openFountainPreview } from "./render/fountainViewer.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
@@ -122,8 +126,13 @@ function getOrderedNodes(actId = null) {
 
 // ── Data getters ─────────────────────────────────────────────────────────────
 
+// 未被软删除的剧情卡（废纸篓恢复/清除走原始数组，不经过这里）
+function getLivePlotCards() {
+  return list(appState.project.plot_board?.cards).filter((card) => !card.deleted_at);
+}
+
 function getPlotCard(cardId = appState.selection.plotCardId) {
-  return list(appState.project.plot_board?.cards).find((card) => card.id === cardId) ?? null;
+  return getLivePlotCards().find((card) => card.id === cardId) ?? null;
 }
 
 function getCharacter(characterId = appState.selection.characterId) {
@@ -155,7 +164,7 @@ function getCharacterNameById(characterId = "") {
 }
 
 function getCharacterLinkedPlotCards(characterId) {
-  return list(appState.project.plot_board?.cards)
+  return getLivePlotCards()
     .filter((card) => list(card.character_ids).includes(characterId))
     .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
 }
@@ -170,7 +179,7 @@ function getCharacterRelationships(characterId) {
 function getRelationshipLinkedPlotCards(relationship) {
   if (!relationship) return [];
   const pairIds = [relationship.source_character_id, relationship.target_character_id].filter(Boolean);
-  return list(appState.project.plot_board?.cards)
+  return getLivePlotCards()
     .filter((card) => pairIds.every((characterId) => list(card.character_ids).includes(characterId)))
     .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
 }
@@ -178,7 +187,7 @@ function getRelationshipLinkedPlotCards(relationship) {
 function getSceneLinkedPlotCards(scene) {
   if (!scene) return [];
   const linkedIds = new Set(list(scene.linked_plot_card_ids));
-  return list(appState.project.plot_board?.cards)
+  return getLivePlotCards()
     .filter((card) => linkedIds.has(card.id))
     .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
 }
@@ -293,11 +302,10 @@ appState.plotBoardView = appState.plotBoardView || "structure";
 appState.activeScenarioGroupId = appState.activeScenarioGroupId || null;
 
 const PLOT_BOARD_LANE_PRESETS = [
-  { id: "lane_main", title: "正式主线", kind: "canonical_mainline", sort_order: 10, color_slot: "main", is_canonical: true, scenario_group_id: null, notes: "" },
-  { id: "lane_subplot", title: "支线", kind: "subplot", sort_order: 20, color_slot: "subplot", is_canonical: true, scenario_group_id: null, notes: "" },
-  { id: "lane_undefined", title: "未定义", kind: "undefined", sort_order: 90, color_slot: "undefined", is_canonical: false, scenario_group_id: null, notes: "" },
-  { id: "lane_scenario_a", title: "方案轨 A", kind: "scenario", sort_order: 110, color_slot: "scenario-a", is_canonical: false, scenario_group_id: "scenario_core", notes: "" },
-  { id: "lane_scenario_b", title: "方案轨 B", kind: "scenario", sort_order: 120, color_slot: "scenario-b", is_canonical: false, scenario_group_id: "scenario_core", notes: "" }
+  { id: "lane_main", title: "正式主线", kind: "canonical_mainline", sort_order: 10, color_slot: "orange", is_canonical: true, scenario_group_id: null, notes: "" },
+  { id: "lane_subplot", title: "支线", kind: "subplot", sort_order: 20, color_slot: "blue", is_canonical: true, scenario_group_id: null, notes: "" },
+  { id: "lane_undefined", title: "未定义", kind: "undefined", sort_order: 90, color_slot: "gray", is_canonical: false, scenario_group_id: null, notes: "" },
+  { id: "lane_scenario_a", title: "方案轨", kind: "scenario", sort_order: 110, color_slot: "purple", is_canonical: false, scenario_group_id: "scenario_core", notes: "" }
 ];
 
 const PLOT_SCENARIO_GROUP_PRESETS = [
@@ -344,7 +352,11 @@ function getActiveScenarioGroup() {
 
 function getVisibleLanes() {
   const activeScenarioGroupId = getActiveScenarioGroup()?.id ?? null;
-  return getPlotLanes().filter((lane) => lane.kind !== "scenario" || !activeScenarioGroupId || lane.scenario_group_id === activeScenarioGroupId);
+  return getPlotLanes()
+    .filter((lane) => lane.kind !== "scenario" || !activeScenarioGroupId || lane.scenario_group_id === activeScenarioGroupId)
+    // "未定义"和"方案轨 B"轨道始终不显示在主网格；落在其中的卡片仍可通过底部卡片库访问
+    .filter((lane) => lane.kind !== "undefined")
+    .filter((lane) => lane.id !== "lane_scenario_b");
 }
 
 function getDefaultNodeForAct(actId = "", preferredNodeId = "") {
@@ -375,8 +387,18 @@ function ensurePlotBoardModel(project) {
   }
   project.plot_board.view_mode = project.plot_board.view_mode === "rehearsal" ? "rehearsal" : "structure";
   const lanesById = new Map(list(project.plot_board.lanes).map((lane) => [lane.id, lane]));
+  const nodesById = new Map(list(project.structure_profile?.nodes).map((node) => [node.id, node]));
   const counters = new Map();
   project.plot_board.cards = list(project.plot_board.cards).map((card) => {
+    const node = nodesById.get(card.node_id);
+    // 结构节点是幕归属的真源：卡片挂在节点上，act_id 一律从节点派生，
+    // 修复结构重建后 act_id 变成孤儿 ID / 空值的历史数据
+    if (node?.act_id) card = { ...card, act_id: node.act_id };
+    // 旧版创作流程生成的卡片缺 type/lane_id，被兜底进「未定义」轨导致空板：
+    // 凡是挂在有效结构节点上、又从未被指定类型的卡片，自愈归位到正式主线
+    if (card.lane_id === "lane_undefined" && !card.type && node) {
+      card = { ...card, type: "mainline", lane_id: "lane_main" };
+    }
     const laneId = lanesById.has(card.lane_id) ? card.lane_id : getDefaultLaneIdForType(card.type);
     const lane = lanesById.get(laneId);
     const key = `${laneId}:${card.act_id || ""}`;
@@ -485,8 +507,45 @@ function normalizeProject() {
     if (!isBrokenPlaceholderText(card.title)) return;
     card.title = card.summary?.trim() || card.change?.trim() || structureNodes.get(card.node_id)?.title || "未命名剧情卡";
   });
-  appState.selection.plotCardId = plotCards.some((item) => item.id === appState.selection.plotCardId)
-    ? appState.selection.plotCardId : plotCards[0]?.id ?? null;
+  // 关系字段单一真相：kind=预设类型槽，type=显示名。
+  // 旧数据只有 type（值恰为预设之一）时一次性补全 kind，渲染层从此只读 kind
+  relationships.forEach((rel) => {
+    if (!rel.relationship_kind && RELATIONSHIP_TYPE_KIND_VALUES.has(rel.relationship_type)) {
+      rel.relationship_kind = rel.relationship_type;
+    }
+  });
+
+  // 自动补齐场景 act_id：1) 通过关联剧情卡反查 2) 通过 structure node 反查 3) 兜底到第一幕
+  const acts = list(appState.project.structure_profile?.acts);
+  const validActIds = new Set(acts.map((a) => a.id));
+  const cardById = new Map(plotCards.map((c) => [c.id, c]));
+  const firstActId = acts[0]?.id ?? "";
+  scenes.forEach((scene) => {
+    // 清理指向已不存在卡片的死链（结构重建遗留的孤儿 ID）
+    scene.linked_plot_card_ids = list(scene.linked_plot_card_ids).filter((id) => cardById.has(id));
+    // 清理旧版机械拼接的「xx 场景」后缀（仅当确认是由关联卡片名拼出来的）
+    const suffixSource = scene.linked_plot_card_ids
+      .map((id) => cardById.get(id))
+      .find((card) => card && scene.title === `${card.title} 场景`);
+    if (suffixSource) scene.title = suffixSource.title;
+    // 1) 关联剧情卡的幕是真源：卡片挂在结构节点上，场景跟随卡片，
+    //    修复「场景创建时卡片 act 为空 → 全部兜底进第一幕」的历史数据
+    const linkedCardActId = scene.linked_plot_card_ids
+      .map((id) => cardById.get(id))
+      .filter((card) => card && !card.deleted_at)
+      .map((card) => card.act_id)
+      .find((aid) => aid && validActIds.has(aid));
+    if (linkedCardActId) {
+      scene.act_id = linkedCardActId;
+      return;
+    }
+    if (scene.act_id && validActIds.has(scene.act_id)) return;
+    // 2) 兜底到第一幕（若有）
+    if (firstActId) scene.act_id = firstActId;
+  });
+  const livePlotCards = plotCards.filter((card) => !card.deleted_at);
+  appState.selection.plotCardId = livePlotCards.some((item) => item.id === appState.selection.plotCardId)
+    ? appState.selection.plotCardId : livePlotCards[0]?.id ?? null;
   if (!appState.selection.plotCardId) appState.plotEditorOpen = false;
   appState.selection.characterId = characters.some((item) => item.id === appState.selection.characterId)
     ? appState.selection.characterId : characters[0]?.id ?? null;
@@ -639,10 +698,20 @@ function setCurrentStep(stepId) {
   appState.currentStepId = hasPanel
     ? nextStepId
     : workflowSteps.find((item) => dom.stepPanels.some((panel) => panel.dataset.stepGroup === item.id))?.id ?? workflowSteps[0].id;
-  // 记录用户已访问的步骤 — 仅访问过的才会被判定为「已完成」
-  appState.visitedSteps = list(appState.visitedSteps);
-  if (!appState.visitedSteps.includes(appState.currentStepId)) {
-    appState.visitedSteps.push(appState.currentStepId);
+  // 记录用户已访问的步骤 — 仅访问过的才会被判定为「已完成」。
+  // 持久化在项目文档上（而非会话态），避免重开项目后 ✓ 标记凭空消失。
+  if (appState.project) {
+    if (!appState.project.workflow_meta) {
+      // 旧项目迁移：把已有实际内容的步骤一次性记为「已访问」，避免历史 ✓ 凭空消失
+      appState.project.workflow_meta = {
+        visited_steps: workflowSteps.map((item) => item.id).filter((id) => stepHasContent(id))
+      };
+    }
+    const visited = list(appState.project.workflow_meta.visited_steps);
+    if (!visited.includes(appState.currentStepId)) {
+      appState.project.workflow_meta.visited_steps = [...visited, appState.currentStepId];
+      markDirty();
+    }
   }
   render();
 }
@@ -782,7 +851,7 @@ function insertSceneFromPlotCard(cardId) {
   const scene = {
     id: createId("scene"),
     order_index: list(appState.project.scene_workbench?.scenes).length + 1,
-    title: `${card.title} 场景`,
+    title: card.title || "未命名场景",
     act_id: card.act_id,
     linked_plot_card_ids: [card.id],
     pov_character_id: list(card.character_ids)[0] ?? "",
@@ -902,7 +971,7 @@ function applyProjectDraftToProject(sourceProject) {
   if (firstScene) {
     firstScene.title = firstScene.title || "开场场景";
     firstScene.purpose = appState.projectDraft.logline.trim();
-    firstScene.act_id = list(project.plot_board?.cards)[0]?.act_id ?? firstScene.act_id;
+    firstScene.act_id = list(project.plot_board?.cards).find((card) => !card.deleted_at)?.act_id ?? firstScene.act_id;
     firstScene.pov_character_id = protagonist?.id ?? firstScene.pov_character_id;
   }
   return ensurePlotDrivenProject(project);
@@ -1299,8 +1368,16 @@ function renderRuntimeStatus() {
 function isStepCompleted(stepId) {
   const p = appState.project;
   if (!p) return false;
-  // 用户未访问过的步骤永远不算「已完成」，避免 AI 预填导致全勾的错觉
-  if (!list(appState.visitedSteps).includes(stepId)) return false;
+  // 用户未访问过的步骤永远不算「已完成」，避免 AI 预填导致全勾的错觉。
+  // 访问记录持久化在项目文档（workflow_meta.visited_steps），跨会话稳定。
+  // 旧项目（无 workflow_meta）按数据判断，首次切步骤时在 setCurrentStep 里完成迁移。
+  if (p.workflow_meta && !list(p.workflow_meta.visited_steps).includes(stepId)) return false;
+  return stepHasContent(stepId);
+}
+
+function stepHasContent(stepId) {
+  const p = appState.project;
+  if (!p) return false;
   switch (stepId) {
     case "structure":
       return list(p.structure_profile?.nodes).some((n) => n.note && n.note.trim().length > 0);
@@ -1782,6 +1859,46 @@ function handleClick(event) {
     render();
     return;
   }
+  if (action === "ai-breakdown-scene") {
+    aiBreakdownScene(id);
+    return;
+  }
+  if (action === "ai-rate-scene") {
+    aiRateScene(id);
+    return;
+  }
+  if (action === "ai-rate-screenplay-full") {
+    aiRateScreenplayFull();
+    return;
+  }
+  if (action === "close-rater") {
+    appState.raterResult = null;
+    render();
+    return;
+  }
+  if (action === "apply-rater-revision") {
+    aiReviseSceneWithRater(id);
+    return;
+  }
+  if (action === "apply-rater-revision-full") {
+    aiReviseFullScreenplayWithRater();
+    return;
+  }
+  if (action === "library-back") {
+    setCurrentPage(appState.libraryReturnPage ?? "project");
+    return;
+  }
+  if (action === "toggle-character-trait") {
+    const char = getCharacter();
+    if (!char) return;
+    const traits = list(char.traits);
+    char.traits = traits.includes(id)
+      ? traits.filter((t) => t !== id)
+      : [...traits, id];
+    markDirty();
+    render();
+    return;
+  }
   // ── 情节元件事件处理 ──────────────────────────────────────────
   if (action === "select-plot-macguffin") {
     const card = getPlotCard();
@@ -1813,7 +1930,16 @@ function handleClick(event) {
   }
   if (action === "select-rel-type-chip") {
     const rel = getRelationship();
-    if (rel) { rel.relationship_type = rel.relationship_type === id ? "" : id; markDirty(); render(); }
+    if (rel) {
+      // 类型槽（relationship_kind）独立于自定义名（relationship_type）。
+      // 切换 chip 只影响 kind；用户填的 type 名称保留不变。
+      rel.relationship_kind = rel.relationship_kind === id ? "" : id;
+      // 若用户从未填过自定义名，把 kind 作为默认显示名以保持显示能用
+      if (!rel.relationship_type || RELATIONSHIP_TYPE_KIND_VALUES.has(rel.relationship_type)) {
+        rel.relationship_type = rel.relationship_kind;
+      }
+      markDirty(); render();
+    }
     return;
   }
   if (action === "select-ending-direction") {
@@ -1898,7 +2024,8 @@ function handleClick(event) {
     render();
     return;
   }
-  if (action === "ai-gen-structure-notes") { return; }
+  if (action === "ai-gen-structure-notes") { handleGenStructureNotes(); return; }
+  if (action === "ai-gen-node-note") { handleGenNodeNote(id); return; }
   if (action === "filter-library") {
     libraryFilterTag = target.dataset.tag ?? "all";
     dom.structureLibraryContent.innerHTML = renderStructureLibraryDialog(libraryFilterTag);
@@ -2021,9 +2148,29 @@ function handleClick(event) {
     return insertSceneFromPlotCard(id);
   }
   if (action === "delete-plot-card") {
-    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).filter((item) => item.id !== id);
+    // 软删除：移到废纸篓
+    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).map((item) =>
+      item.id === id ? { ...item, deleted_at: new Date().toISOString() } : item
+    );
     appState.plotEditorOpen = false;
     normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "restore-plot-card") {
+    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).map((item) =>
+      item.id === id ? { ...item, deleted_at: null } : item
+    );
+    normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "purge-plot-card") {
+    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).filter((item) => item.id !== id);
+    normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "toggle-plot-trash-view") {
+    appState.plotTrashOpen = !appState.plotTrashOpen;
+    render();
     return;
   }
   if (action === "add-character") {
@@ -2100,11 +2247,24 @@ function handleClick(event) {
     return;
   }
   if (action === "add-relationship") {
+    // 决议 4：关系 1 条对称 — 新增前去重，存在 (a,b) 或 (b,a) 都视为同一对
     const characters = list(appState.project.character_hub?.characters);
+    const src = characters[0]?.id ?? "";
+    const tgt = characters[1]?.id ?? characters[0]?.id ?? "";
+    const existing = list(appState.project.character_hub?.relationship_map).find((r) =>
+      (r.source_character_id === src && r.target_character_id === tgt) ||
+      (r.source_character_id === tgt && r.target_character_id === src)
+    );
+    if (existing) {
+      // 已存在则选中该条，不重复创建
+      appState.selection.relationshipId = existing.id;
+      render();
+      return;
+    }
     const relationship = {
       id: createId("rel"),
-      source_character_id: characters[0]?.id ?? "",
-      target_character_id: characters[1]?.id ?? characters[0]?.id ?? "",
+      source_character_id: src,
+      target_character_id: tgt,
       relationship_type: "",
       tension: "",
       power_balance: "",
@@ -2255,6 +2415,20 @@ function handleClick(event) {
     aiWriteScreenplayBulk();
     return;
   }
+  if (action === "ai-rewrite-all-screenplay") {
+    const scenes = list(appState.project.scene_workbench?.scenes);
+    const written = scenes.filter((s) => s.script_full && s.script_full.trim().length > 0);
+    if (written.length === 0) {
+      alert("没有已写的剧本可以重写。");
+      return;
+    }
+    if (!confirm(`将清空全部 ${written.length} 个场景的剧本并重新生成（应用最新反同质化 prompt）。\n\n这会消耗较多 token 且不可撤销。继续？`)) return;
+    written.forEach((s) => { s.script_full = ""; });
+    markDirty();
+    render();
+    aiWriteScreenplayBulk();
+    return;
+  }
   if (action === "export-screenplay-fountain") {
     const text = buildFountainText(appState);
     const title = (appState.project.project?.title || "screenplay").replace(/[\\/:*?"<>|]/g, "_");
@@ -2271,12 +2445,9 @@ function handleClick(event) {
   }
   if (action === "preview-screenplay-full") {
     const text = buildFountainText(appState);
-    const w = window.open("", "_blank", "width=900,height=900");
-    if (!w) { alert("浏览器拦截了弹窗，请允许后重试。"); return; }
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>剧本预览</title>
-      <style>body{font-family:Courier New,monospace;padding:48px 64px;line-height:1.6;white-space:pre-wrap;max-width:780px;margin:0 auto;color:#1f1d18;background:#fbf8f1}</style>
-      </head><body>${text.replace(/[<>&]/g, (c) => ({ "<":"&lt;", ">":"&gt;", "&":"&amp;" })[c])}</body></html>`);
-    w.document.close();
+    const title = appState.project.project?.title || "剧本预览";
+    const w = openFountainPreview(text, title);
+    if (!w) alert("浏览器拦截了弹窗，请允许后重试。");
     return;
   }
   if (action === "set-plot-view") { setPlotBoardView(target.dataset.id ?? "structure"); return; }
@@ -2341,6 +2512,18 @@ function handleInput(event) {
   if (action === "node-field") {
     const node = list(appState.project.structure_profile?.nodes).find((item) => item.id === event.target.dataset.id);
     if (node) node[fieldName] = event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "convention-field") {
+    const item = list(appState.project.genre_profile?.conventions).find((c) => c.id === event.target.dataset.id);
+    if (item) item[fieldName] = event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "taboo-field") {
+    const item = list(appState.project.genre_profile?.taboos).find((t) => t.id === event.target.dataset.id);
+    if (item) item[fieldName] = event.target.value;
     markDirty();
     return;
   }
@@ -2477,6 +2660,11 @@ dom.pageProjectButton.addEventListener("click", () => {
 if (dom.pageLibraryButton) {
   dom.pageLibraryButton.addEventListener("click", () => {
     if (appState.currentPage === "creation") appState.creation = null;
+    if (appState.currentPage === "library") {
+      setCurrentPage(appState.libraryReturnPage ?? "project");
+      return;
+    }
+    appState.libraryReturnPage = appState.currentPage === "workflow" ? "workflow" : "project";
     setCurrentPage("library");
   });
 }
@@ -2817,6 +3005,170 @@ async function kbImport(target) {
 
 // ── Screenplay AI ─────────────────────────────────────────────────────────────
 
+async function aiRateScene(sceneId) {
+  const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+  if (!scene) return;
+  if (!scene.script_full || scene.script_full.trim().length < 80) {
+    alert("本场还没写剧本，无法评分");
+    return;
+  }
+  if (!appState.raterLoading) appState.raterLoading = {};
+  appState.raterLoading[sceneId] = true;
+  render();
+  try {
+    const result = await callGenerateAPI("act_rater", appState.project, {
+      sceneId,
+      scriptText: scene.script_full,
+      genres: list(appState.project.project?.genre),
+      tones: appState.project.project?.tone ? [appState.project.project.tone] : [],
+      focuses: [],
+      audience: ""
+    });
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    appState.raterResult = { sceneId, data };
+  } catch (err) {
+    alert("幕评师评分失败：" + err.message);
+  } finally {
+    delete appState.raterLoading[sceneId];
+    render();
+  }
+}
+
+async function aiRateScreenplayFull() {
+  const scenes = list(appState.project.scene_workbench?.scenes);
+  const writtenScenes = scenes.filter((s) => s.script_full && s.script_full.trim().length > 50);
+  if (writtenScenes.length === 0) {
+    alert("还没有任何已写场，无法进行全片评分");
+    return;
+  }
+  appState.raterFullLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("act_rater", appState.project, {
+      mode: "full",
+      genres: list(appState.project.project?.genre),
+      tones: appState.project.project?.tone ? [appState.project.project.tone] : [],
+      focuses: [],
+      audience: ""
+    });
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    appState.raterResult = { mode: "full", data };
+  } catch (err) {
+    alert("全片幕评师评分失败：" + err.message);
+  } finally {
+    appState.raterFullLoading = false;
+    render();
+  }
+}
+
+async function aiReviseFullScreenplayWithRater() {
+  const rater = appState.raterResult;
+  if (!rater || rater.mode !== "full") {
+    alert("请先用全片幕评师评分");
+    return;
+  }
+  const directives = rater.data.revision_directives || [];
+  if (directives.length === 0) {
+    alert("评分中未给出修稿指令");
+    return;
+  }
+  // 按 sceneId 分组，每场注入对应 directives 进 notes
+  const bySceneId = new Map();
+  for (const d of directives) {
+    const sid = d.scene_id;
+    if (!sid) continue;
+    if (!bySceneId.has(sid)) bySceneId.set(sid, []);
+    bySceneId.get(sid).push(d);
+  }
+  if (bySceneId.size === 0) {
+    alert("修稿指令未标注 scene_id，无法定向应用");
+    return;
+  }
+  if (!confirm(`将按全片评审指令重写 ${bySceneId.size} 场剧本，可能耗时较长。继续？`)) return;
+
+  const tag = "【上轮幕评师修稿指令】";
+  for (const [sceneId, dirs] of bySceneId) {
+    const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+    if (!scene) continue;
+    const block = dirs.map((d, i) =>
+      `${i + 1}. [${d.severity}] ${d.issue}\n   定位：${d.location_hint || "（未给定位）"}\n   要求：${d.directive}`
+    ).join("\n");
+    const oldNotes = (scene.notes || "").replace(new RegExp(tag + "[\\s\\S]*?(?=\\n\\n|$)", "g"), "").trim();
+    scene.notes = `${oldNotes}\n\n${tag}\n${block}`.trim();
+  }
+  markDirty();
+  appState.raterResult = null;
+  render();
+
+  // 按 order_index 顺序依次重写每场
+  const sceneIds = Array.from(bySceneId.keys());
+  const sortedScenes = list(appState.project.scene_workbench?.scenes)
+    .filter((s) => sceneIds.includes(s.id))
+    .sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+  appState.screenplayAi.bulkRunning = true;
+  appState.screenplayAi.bulkProgress = { done: 0, total: sortedScenes.length };
+  render();
+  for (const s of sortedScenes) {
+    await aiWriteSceneScript(s.id, { silent: true });
+    appState.screenplayAi.bulkProgress.done += 1;
+    render();
+  }
+  appState.screenplayAi.bulkRunning = false;
+  render();
+}
+
+async function aiReviseSceneWithRater(sceneId) {
+  const rater = appState.raterResult;
+  if (!rater || rater.sceneId !== sceneId) {
+    alert("请先用幕评师评分");
+    return;
+  }
+  const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+  if (!scene) return;
+  const directives = (rater.data.revision_directives || []).map((d, i) =>
+    `${i + 1}. [${d.severity}] ${d.issue}\n   定位：${d.location_hint}\n   要求：${d.directive}`
+  ).join("\n");
+  // 把修稿指令注入到 notes 字段（buildSceneScriptPrompt 会读 notes 作为"创作笔记"），
+  // 这样下次 ai-write-scene-script 时 prompt 会包含这些指令
+  const tag = "【上轮幕评师修稿指令】";
+  const oldNotes = (scene.notes || "").replace(new RegExp(tag + "[\\s\\S]*?(?=\\n\\n|$)", "g"), "").trim();
+  scene.notes = `${oldNotes}\n\n${tag}\n${directives}`.trim();
+  markDirty();
+  appState.raterResult = null;
+  render();
+  await aiWriteSceneScript(sceneId, { silent: true });
+}
+
+async function aiBreakdownScene(sceneId) {
+  if (!appState.sceneBreakdownLoading) appState.sceneBreakdownLoading = {};
+  if (appState.sceneBreakdownLoading[sceneId]) return;
+  appState.sceneBreakdownLoading[sceneId] = true;
+  render();
+  try {
+    const result = await callGenerateAPI("scene_breakdown", appState.project, { sceneId });
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
+    if (!scene) throw new Error("场景已被移除");
+    if (data.entry_state) scene.entry_state = String(data.entry_state).trim();
+    if (data.exit_state)  scene.exit_state  = String(data.exit_state).trim();
+    if (data.obstacle)    scene.obstacle    = String(data.obstacle).trim();
+    if (data.beat_summary) scene.beat_summary = String(data.beat_summary).trim();
+    // 落地拍摄定位：无效占位（待定/未定/空）才用 AI 结果覆盖，避免抹掉用户已填的地点
+    const badLoc = (v) => !v || /待定|未定/.test(v);
+    if (data.location && badLoc(scene.location)) scene.location = String(data.location).trim();
+    if (data.time_of_day && badLoc(scene.time_of_day)) scene.time_of_day = String(data.time_of_day).trim();
+    markDirty();
+  } catch (err) {
+    alert("AI 拆这场失败：" + err.message);
+  } finally {
+    delete appState.sceneBreakdownLoading[sceneId];
+    render();
+  }
+}
+
 async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
   // 先确认场景存在 + 取标题（不要持有引用 — render() 调用 normalizeProject 会替换 project 对象）
   const peekScene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
@@ -2930,7 +3282,20 @@ async function callGenerateAPIStream(step, projectContext, options, onChunk) {
   _cfAbortController?.abort();
   const controller = new AbortController();
   _cfAbortController = controller;
+  // 静默超时：区分「首字节」与「字节间」两段。重推理步骤（如 characters 的多字段心理档案）
+  // 首 token 前模型会长时间思考，故首字节给更长宽限；流开始后用较短的 idle 超时兜底卡死。
+  const FIRST_BYTE_TIMEOUT_MS = 120000;
+  const IDLE_TIMEOUT_MS = 60000;
+  let idleTimer = null;
+  let timedOut = false;
+  let started = false;
+  const resetIdleTimer = () => {
+    if (idleTimer) clearTimeout(idleTimer);
+    const ms = started ? IDLE_TIMEOUT_MS : FIRST_BYTE_TIMEOUT_MS;
+    idleTimer = setTimeout(() => { timedOut = true; controller.abort(); }, ms);
+  };
   try {
+    resetIdleTimer();
     const response = await fetch("/api/generate/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2944,6 +3309,8 @@ async function callGenerateAPIStream(step, projectContext, options, onChunk) {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      started = true;
+      resetIdleTimer();
       buf += decoder.decode(value, { stream: true });
       const lines = buf.split("\n");
       buf = lines.pop();
@@ -2952,15 +3319,44 @@ async function callGenerateAPIStream(step, projectContext, options, onChunk) {
         let evt;
         try { evt = JSON.parse(line.slice(6)); } catch { continue; }
         if (evt.type === "chunk") onChunk?.(evt.text);
-        if (evt.type === "done") return evt;
-        if (evt.type === "error") return { choices: [], reasoning: "", warnings: [], error: evt.message };
+        if (evt.type === "done") { if (idleTimer) clearTimeout(idleTimer); return evt; }
+        if (evt.type === "error") { if (idleTimer) clearTimeout(idleTimer); return { choices: [], reasoning: "", warnings: [], error: evt.message }; }
       }
     }
-    return { choices: [], reasoning: "", warnings: [], error: "流式响应未正常结束" };
+    return { choices: [], reasoning: "", warnings: [], error: "流式响应未正常结束（模型可能未返回有效内容，检查设置里的模型连接）" };
   } catch (error) {
-    if (error.name === "AbortError") return { choices: [], reasoning: "", warnings: [], cancelled: true };
+    if (error.name === "AbortError") {
+      if (timedOut) return { choices: [], reasoning: "", warnings: [], error: "AI 响应超时（长时间无数据）。请检查设置 → 模型连接，确认所选模型可用。" };
+      return { choices: [], reasoning: "", warnings: [], cancelled: true };
+    }
     return { choices: [], reasoning: "", warnings: [], error: error.message };
+  } finally {
+    if (idleTimer) clearTimeout(idleTimer);
   }
+}
+
+// 决议 3：直接创建空项目并跳到「结构骨架」（跳过 AI 入口）
+async function handleCreateBlankProjectThenStructure() {
+  const payload = {
+    title: "未命名故事",
+    format: "feature_or_pilot",
+    language: "zh-CN",
+    genre: [],
+    logline: "",
+    theme_question: "",
+    tone: ""
+  };
+  try {
+    const response = await fetchJson("/api/projects", { method: "POST", body: JSON.stringify(payload) });
+    appState.project = ensurePlotDrivenProject(response.project);
+    appState.projectList = response.projects ?? appState.projectList;
+    appState.runtime.serverAvailable = true;
+  } catch {
+    appState.project = applyProjectDraftToProject(createEmptyProject(payload));
+    appState.projectList = [summarizeProjectListItem(appState.project), ...appState.projectList];
+  }
+  setCurrentPage("workflow");
+  setCurrentStep("structure");
 }
 
 // ── Creation action handlers ──────────────────────────────────────────────────
@@ -3019,6 +3415,16 @@ function handleCreationClick(action, target) {
     saveLocalSnapshot();
     render();
     renderCreationPage();
+    return true;
+  }
+  if (action === "open-from-structure") {
+    // 决议 3：用户已有完整故事 → 直接进结构骨架页，跳过 AI 入口
+    appState.createModePickerOpen = false;
+    appState.proCreation.active = false;
+    appState.creation = null;
+    handleCreateBlankProjectThenStructure().catch((err) => {
+      console.error("[open-from-structure] failed:", err);
+    });
     return true;
   }
   if (action === "back-to-projects") {
@@ -3241,6 +3647,38 @@ function handleCreationClick(action, target) {
   if (action === "confirm-character") {
     const idx = Number(target.dataset.idx ?? -1);
     if (idx >= 0 && (c.characterProposals ?? [])[idx]) c.characterProposals[idx]._status = "confirmed";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-add-blank-character") {
+    // 决议 2：始终允许手动新增（不依赖 AI）
+    c.characterProposals = c.characterProposals ?? [];
+    c.characterProposals.push({
+      name: "", story_role: "protagonist", archetype: "",
+      desire: "", wound: "", arc_start: "", arc_end: "",
+      _status: "pending", _manual: true
+    });
+    c.editingCharIdx = c.characterProposals.length - 1;
+    c.aiError = "";
+    renderCreationPage();
+    return true;
+  }
+  if (action === "cf-use-fallback-characters") {
+    // 决议 2：AI 失败时基于 logline 给默认 3 主角骨架，不阻塞
+    const logline = (c.draft?.logline ?? c.selectedSynopsis?.summary ?? "").trim();
+    const protagonist = (c.draft?.protagonist ?? "").trim();
+    c.characterProposals = [
+      {
+        name: protagonist || "主角",
+        story_role: "protagonist", archetype: "",
+        desire: logline ? `推动核心动作：${logline.slice(0, 40)}…` : "",
+        wound: "", arc_start: "", arc_end: "",
+        _status: "pending", _fallback: true
+      },
+      { name: "盟友", story_role: "ally", archetype: "", desire: "", wound: "", arc_start: "", arc_end: "", _status: "pending", _fallback: true },
+      { name: "对手", story_role: "antagonist", archetype: "", desire: "", wound: "", arc_start: "", arc_end: "", _status: "pending", _fallback: true }
+    ];
+    c.aiError = "";
     renderCreationPage();
     return true;
   }
@@ -3512,7 +3950,18 @@ async function handleRefineCharacter(characterId) {
     if (value) character[key] = value;
   }
   if (!locked.has("traits") && Array.isArray(refined.traits) && refined.traits.length) {
-    character.traits = refined.traits.map((t) => String(t));
+    // 用户已选的特质作为方向锚点：合并 AI 输出 + 用户原选，去重保留全部
+    const existing = list(character.traits).filter((t) => t && String(t).trim());
+    const refinedStr = refined.traits.map((t) => String(t)).filter(Boolean);
+    if (existing.length > 0) {
+      const merged = [...existing];
+      for (const t of refinedStr) {
+        if (!merged.includes(t)) merged.push(t);
+      }
+      character.traits = merged;
+    } else {
+      character.traits = refinedStr;
+    }
   }
 
   appState.characterDesign = { loading: false, error: "" };
@@ -3550,7 +3999,10 @@ async function handleGenerateAct(actKey) {
         projectCtx: {
           project: { project: c.draft, logline: c.draft?.logline },
           story_core: { premise: c.draft?.logline, core_conflict: c.draft?.core_conflict },
-          intent_anchor: { protagonist: c.draft?.protagonist }
+          intent_anchor: { protagonist: c.draft?.protagonist },
+          // 把已确认的人物提案传给故事点生成，否则 AI 会为同一个故事另造一套人名，
+          // 导致结构骨架与剧情卡/剧本的人物名整套分裂
+          character_hub: { characters: (c.characterProposals ?? []).filter((p) => p._status !== "skipped") }
         },
         actTitle: act.title,
         actPurpose: act.purpose,
@@ -3572,6 +4024,116 @@ async function handleGenerateAct(actKey) {
   renderCreationPage();
 }
 
+// 工作台「结构骨架」步骤：为所有叙事节点 AI 填写情节（story_title→title，summary→note）。
+// 复用向导同一个 /api/ai/generate-act-nodes 端点，逐幕生成。
+function buildStructureGenCtx() {
+  const proj = appState.project;
+  return {
+    project: { project: proj.project, logline: proj.project?.logline },
+    story_core: proj.story_core,
+    intent_anchor: proj.intent_anchor,
+    character_hub: proj.character_hub,
+    story_bible: proj.story_bible
+  };
+}
+
+async function genNodesForAct(act, actNodes) {
+  // actNodes: 项目节点对象数组；端点要求 [nodeType, actKey, title, required] 元组
+  const tuples = actNodes.map((n) => [n.node_type, act.key, n.title, n.required ?? false]);
+  const res = await fetch("/api/ai/generate-act-nodes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      projectCtx: buildStructureGenCtx(),
+      actTitle: act.title,
+      actPurpose: act.purpose,
+      nodes: tuples
+    })
+  });
+  const json = await res.json();
+  if (!json.ok || !json.data?.nodes) throw new Error(json.error ?? "生成失败");
+  return json.data.nodes;
+}
+
+function applyNodeData(node, nodeData) {
+  if (!nodeData) return;
+  if (nodeData.story_title) node.title = String(nodeData.story_title).trim();
+  const parts = [];
+  if (nodeData.summary) parts.push(String(nodeData.summary).trim());
+  if (nodeData.value_shift) parts.push(`价值转变：${String(nodeData.value_shift).trim()}`);
+  if (parts.length) node.note = parts.join("\n\n");
+}
+
+async function handleGenStructureNotes() {
+  const structure = appState.project.structure_profile;
+  const acts = list(structure?.acts);
+  const allNodes = list(structure?.nodes);
+  if (acts.length === 0 || allNodes.length === 0) return;
+  if (appState.structureNodeGen?.loading) return;
+
+  appState.structureNodeGen = { loading: true, progress: "" };
+  render();
+  // 先收集所有幕的生成结果。render() 会经 ensurePlotDrivenProject 重建 nodes 数组，
+  // 循环内持有的旧引用会变成孤儿对象，写入丢失。故聚合后统一写回当前 live 节点。
+  const generated = {};
+  try {
+    for (let i = 0; i < acts.length; i++) {
+      const act = acts[i];
+      const actNodes = allNodes.filter((n) => n.act_id === act.id);
+      if (actNodes.length === 0) continue;
+      appState.structureNodeGen.progress = `${i + 1}/${acts.length} 幕`;
+      render();
+      const nodes = await genNodesForAct(act, actNodes);
+      Object.assign(generated, nodes);
+    }
+  } catch (err) {
+    appState.structureNodeGen = { loading: false, progress: "", error: err.message };
+    render();
+    return;
+  }
+  list(appState.project.structure_profile?.nodes).forEach((node) => applyNodeData(node, generated[node.node_type]));
+  appState.structureNodeGen = { loading: false, progress: "" };
+  normalizeProject();
+  markDirty();
+  render();
+}
+
+async function handleGenNodeNote(nodeId) {
+  const structure = appState.project.structure_profile;
+  const node = list(structure?.nodes).find((n) => n.id === nodeId);
+  if (!node) return;
+  const act = list(structure?.acts).find((a) => a.id === node.act_id);
+  if (!act) return;
+  if (appState.structureNodeGen?.loading) return;
+
+  appState.structureNodeGen = { loading: true, progress: "本节点" };
+  render();
+  try {
+    const nodes = await genNodesForAct(act, [node]);
+    // render() 后 nodes 数组已被 ensurePlotDrivenProject 重建，需按 id 取回 live 节点再写入。
+    const liveNode = list(appState.project.structure_profile?.nodes).find((n) => n.id === nodeId);
+    applyNodeData(liveNode ?? node, nodes[node.node_type]);
+  } catch (err) {
+    appState.structureNodeGen = { loading: false, progress: "", error: err.message };
+    render();
+    return;
+  }
+  appState.structureNodeGen = { loading: false, progress: "" };
+  markDirty();
+  render();
+}
+
+// 标题派生：优先用所选 AI 概念的标题，否则从 logline 截取首个分句作为可编辑工作标题
+function deriveWorkingTitle(selectedConcept, logline) {
+  const conceptTitle = (selectedConcept?.data?.title ?? selectedConcept?.title ?? "").trim();
+  if (conceptTitle) return conceptTitle;
+  const line = String(logline ?? "").trim();
+  if (!line) return "未命名项目";
+  const firstClause = line.split(/[，。；,.;\n]/)[0].trim();
+  const base = firstClause || line;
+  return base.length > 16 ? base.slice(0, 16) : base;
+}
+
 async function handleFinalizeNewCreation() {
   const c = appState.creation;
   const draft = c.draft ?? {};
@@ -3579,7 +4141,7 @@ async function handleFinalizeNewCreation() {
   const preset = structurePresets[template] ?? buildCustomStructurePreset(2);
 
   const proj = createEmptyProject();
-  proj.project.title = draft.title || "未命名项目";
+  proj.project.title = draft.title?.trim() || deriveWorkingTitle(c.selectedConcept, draft.logline);
   proj.project.format = draft.format ?? "feature";
   proj.project.logline = draft.logline ?? "";
   proj.story_core.premise = draft.logline ?? "";
@@ -3607,17 +4169,49 @@ async function handleFinalizeNewCreation() {
     const nodeData = result?.nodes?.[node.node_type];
     if (nodeData) {
       const cardId = createId("card");
-      cards.push({ id: cardId, node_id: node.id, title: nodeData.story_title ?? nodeData.key_event ?? "", summary: nodeData.summary ?? "", value_shift: nodeData.value_shift ?? "", status: "draft" });
+      // 创作流程生成的故事点是正式主线：直接归位到主线轨并挂上幕，
+      // 否则会全部落进「未定义」轨，剧情开发板呈现为空板
+      cards.push({
+        id: cardId,
+        node_id: node.id,
+        act_id: node.act_id ?? "",
+        type: "mainline",
+        lane_id: "lane_main",
+        title: nodeData.story_title ?? nodeData.key_event ?? "",
+        summary: nodeData.summary ?? "",
+        value_shift: nodeData.value_shift ?? "",
+        status: "draft"
+      });
       node.card_ids = [cardId];
     }
   }
   proj.plot_board = { cards };
 
+  // AI 角色用 story_bible 方言（external_want/internal_need/...），写进 story_bible.characters，
+  // 并清空 character_hub，让 ensurePlotDrivenProject 的 deriveCharacterHub 重新派生出完整 hub 字段。
+  // 旧实现误用 desire/wound 写 character_hub，导致深层字段全丢、归一化又冲回空骨架。
   const chars = (c.characterProposals ?? []).filter(p => p._status !== "skipped").map(ch => ({
-    id: createId("char"), name: ch.name ?? "", story_role: ch.story_role ?? "supporting",
-    desire: ch.desire ?? "", wound: ch.wound ?? "", arc_start: ch.arc_start ?? "", arc_end: ch.arc_end ?? ""
+    id: createId("char"),
+    name: ch.name ?? "",
+    story_role: ch.story_role ?? "supporting",
+    archetype: ch.archetype ?? "",
+    external_want: ch.external_want ?? "",
+    internal_need: ch.internal_need ?? "",
+    psychological_flaw: ch.psychological_flaw ?? "",
+    moral_flaw: ch.moral_flaw ?? "",
+    public_mask: ch.public_mask ?? "",
+    core_fear: ch.core_fear ?? "",
+    wound: ch.wound ?? "",
+    belief: ch.belief ?? "",
+    arc_start: ch.arc_start ?? "",
+    arc_end: ch.arc_end ?? "",
+    voice_rules: Array.isArray(ch.voice_rules) ? ch.voice_rules : [],
+    secret: ch.secret ?? ""
   }));
-  proj.character_hub = { characters: chars };
+  if (chars.length > 0) {
+    proj.story_bible.characters = chars;
+    proj.character_hub = { characters: [], relationship_map: [] };
+  }
 
   // Set as current project and save to server
   appState.project = ensurePlotDrivenProject(proj);
@@ -4034,13 +4628,20 @@ function handleCreationInput(action, target) {
     const field = target.dataset.field ?? "";
     const value = target.value ?? "";
     if (!c.draft) c.draft = {};
+    const prev = c.draft[field] ?? "";
     c.draft[field] = value;
     if (field === "format") {
       const recs = { feature: "three_act", pilot: "three_act", series: "three_act", short: "three_act", micro_drama: "three_act" };
       c.draft.structure_template = recs[value] ?? "feature_film";
+      renderCreationPage();
+      return true;
     }
-    // Re-render only to update button state (canProceed changes with logline length)
-    renderCreationPage();
+    // logline：仅在「能否进入下一步」临界点切换时重渲，避免每键重建 DOM 丢焦点/丢字符
+    if (field === "logline") {
+      const wasValid = prev.trim().length >= 10;
+      const nowValid = value.trim().length >= 10;
+      if (wasValid !== nowValid) renderCreationPage();
+    }
     return true;
   }
   if (action === "pro-anchor-input") {
@@ -4102,3 +4703,17 @@ if (pageCreationButton) {
 
 // Initial render of creation page if it's visible
 renderCreationPage();
+
+// 自治测试用：把核心引用挂到 window，方便 e2e 脚本批量操作（仅 dev）
+if (typeof window !== "undefined") {
+  window.__yuandian = {
+    appState,
+    render,
+    renderCreationPage,
+    markDirty,
+    normalizeProject,
+    saveLocalSnapshot,
+    saveProjectToServer,
+    createId,
+  };
+}

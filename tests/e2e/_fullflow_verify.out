@@ -1,0 +1,184 @@
+  ✓ click 新建项目
+  ✓ click 一句话概念模式
+
+=== Step1 故事核心 ===
+  ✓ click 下一步：选结构
+
+=== Step2 结构 ===
+  generate(characters(auto)) -> 200
+  ✓ click 下一步：生成人物
+
+=== Step3 人物 ===
+  ✓ click confirm char #1
+  ✓ click confirm char #2
+  ✓ click confirm char #3
+  ✓ click confirm char #4
+  已确认角色，剩余 confirm 按钮: 0
+  ✓ click 下一步：情节大纲
+
+=== Step4 情节大纲 ===
+  ✓ 生成本幕 (round 0)
+  generate(act0) -> 200
+  ✓ click 下一幕
+  ✓ 生成本幕 (round 1)
+  generate(act1) -> 200
+  ✓ click 下一幕
+  ✓ 生成本幕 (round 2)
+  generate(act2) -> 200
+  ✓ click 完成节点
+
+=== Step5 确认创建 ===
+  ✓ click 完成创建，进入工作台
+
+=== 工作台 · 结构骨架 ===
+  ✓ click 结构骨架
+  结构节点数: 0
+  ✓ click 一键生成结构故事点
+  generate(structure-act) -> 200
+  ✓ click 保存结构
+
+=== 工作台 · 人物核心 ===
+  ✓ click 人物核心
+  人物数: 4
+  ✓ click 选角 char_mptv97q4_fexcjv
+  ✓ click 精修 char_mptv97q4_fexcjv
+  generate(refine-char_mptv97q4_fexcjv) -> 200
+  ✓ click 选角 char_mptv97q4_b6dfpv
+  ✓ click 精修 char_mptv97q4_b6dfpv
+  generate(refine-char_mptv97q4_b6dfpv) -> 200
+  ✗ 未找到/不可点 选角 char_mptv97q4_i6bprv ([data-action="select-character"][data-id="char_mptv97q4_i6bprv"])
+  ✓ click 选角 char_mptv97q4_i6bprv
+  ✓ click 精修 char_mptv97q4_i6bprv
+  generate(refine-char_mptv97q4_i6bprv) -> 200
+  ✓ click 选角 char_mptv97q4_epwxis
+  ✓ click 精修 char_mptv97q4_epwxis
+  generate(refine-char_mptv97q4_epwxis) -> 200
+  ✓ click 保存人物
+
+=== 工作台 · 关系张力 ===
+  ✓ click 关系张力
+  ✓ click 新增关系
+  ✓ 选关系类型
+  ✓ click 保存关系
+
+=== 工作台 · 剧情开发 ===
+  ✓ click 剧情开发
+  剧情卡数（去重 id）: 11
+  ✓ click 选卡 card_mptv97q4_vfxfgd
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_vfxfgd
+  ✓ click 选卡 card_mptv97q4_nvz4td
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_nvz4td
+  ✓ click 选卡 card_mptv97q4_x6sr6w
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_x6sr6w
+  ✓ click 选卡 card_mptv97q4_3syvhg
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_3syvhg
+  ✓ click 选卡 card_mptv97q4_lzaxjz
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_lzaxjz
+  ✓ click 选卡 card_mptv97q4_wib057
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_wib057
+  ✓ click 选卡 card_mptv97q4_j22286
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_j22286
+  ✓ click 选卡 card_mptv97q4_3hjstb
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_3hjstb
+  ✓ click 选卡 card_mptv97q4_i63ijb
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_i63ijb
+  ✓ click 选卡 card_mptv97q4_it46dq
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_it46dq
+  ✓ click 选卡 card_mptv97q4_wpy810
+  [dialog] confirm "该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。"
+  ✓ click 建场景<-card_mptv97q4_wpy810
+
+=== 工作台 · 场景拆解 ===
+  ✓ click 场景拆解
+  场景数: 12
+  待拆解场景 id 数: 12
+  ✓ click 选场 scene_mptv97q3_947cgh
+  ✓ click 拆解 scene_mptv97q3_947cgh
+  generate(breakdown-scene_mptv97q3_947cgh) -> 200
+  ✓ click 选场 scene_mptveg9a_nst1o0
+  ✓ click 拆解 scene_mptveg9a_nst1o0
+  generate(breakdown-scene_mptveg9a_nst1o0) -> 200
+  ✓ click 选场 scene_mptvegw3_9w6vo1
+  ✓ click 拆解 scene_mptvegw3_9w6vo1
+  generate(breakdown-scene_mptvegw3_9w6vo1) -> 200
+  ✓ click 选场 scene_mptvehj7_93up4q
+  ✓ click 拆解 scene_mptvehj7_93up4q
+  generate(breakdown-scene_mptvehj7_93up4q) -> 200
+  ✓ click 选场 scene_mptvei60_mosy3q
+  ✓ click 拆解 scene_mptvei60_mosy3q
+  generate(breakdown-scene_mptvei60_mosy3q) -> 200
+  ✓ click 选场 scene_mptveit2_qayko3
+  ✓ click 拆解 scene_mptveit2_qayko3
+  generate(breakdown-scene_mptveit2_qayko3) -> 200
+  ✓ click 选场 scene_mptvejnz_eiuiyj
+  ✓ click 拆解 scene_mptvejnz_eiuiyj
+  generate(breakdown-scene_mptvejnz_eiuiyj) -> 200
+  ✓ click 选场 scene_mptvekaq_arb01r
+  ✓ click 拆解 scene_mptvekaq_arb01r
+  generate(breakdown-scene_mptvekaq_arb01r) -> 200
+  ✓ click 选场 scene_mptveky1_8wxjj4
+  ✓ click 拆解 scene_mptveky1_8wxjj4
+  generate(breakdown-scene_mptveky1_8wxjj4) -> 200
+  ✓ click 选场 scene_mptvelte_me6ask
+  ✓ click 拆解 scene_mptvelte_me6ask
+  generate(breakdown-scene_mptvelte_me6ask) -> 200
+  ✓ click 选场 scene_mptvemia_ozn6g5
+  ✓ click 拆解 scene_mptvemia_ozn6g5
+  generate(breakdown-scene_mptvemia_ozn6g5) -> 200
+  ✓ click 选场 scene_mptven7e_rysb12
+  ✓ click 拆解 scene_mptven7e_rysb12
+  generate(breakdown-scene_mptven7e_rysb12) -> 200
+  ✓ click 保存
+
+=== 工作台 · 剧本撰写 ===
+  ✓ click 剧本撰写
+  可写场景 id 数: 12
+  ✓ click 选写 scene_mptv97q3_947cgh
+  generate(scene-scene_mptv97q3_947cgh) -> 200
+  ✓ click 选写 scene_mptveg9a_nst1o0
+  generate(scene-scene_mptveg9a_nst1o0) -> 200
+  ✓ click 选写 scene_mptvegw3_9w6vo1
+  generate(scene-scene_mptvegw3_9w6vo1) -> 200
+  ✓ click 选写 scene_mptvehj7_93up4q
+  generate(scene-scene_mptvehj7_93up4q) -> 200
+  ✓ click 选写 scene_mptvei60_mosy3q
+  generate(scene-scene_mptvei60_mosy3q) -> 200
+  ✗ 未找到/不可点 选写 scene_mptveit2_qayko3 ([data-action="select-screenplay-scene"][data-id="scene_mptveit2_qayko3"])
+  ✓ click 选写 scene_mptveit2_qayko3
+  generate(scene-scene_mptveit2_qayko3) -> 200
+  ✓ click 选写 scene_mptvejnz_eiuiyj
+  generate(scene-scene_mptvejnz_eiuiyj) -> 200
+  ✓ click 选写 scene_mptvekaq_arb01r
+  generate(scene-scene_mptvekaq_arb01r) -> 200
+  ✗ 未找到/不可点 选写 scene_mptveky1_8wxjj4 ([data-action="select-screenplay-scene"][data-id="scene_mptveky1_8wxjj4"])
+  ✓ click 选写 scene_mptveky1_8wxjj4
+  generate(scene-scene_mptveky1_8wxjj4) -> 200
+  ✓ click 选写 scene_mptvelte_me6ask
+  generate(scene-scene_mptvelte_me6ask) -> 200
+  ✓ click 选写 scene_mptvemia_ozn6g5
+  generate(scene-scene_mptvemia_ozn6g5) -> 200
+  ✓ click 选写 scene_mptven7e_rysb12
+  generate(scene-scene_mptven7e_rysb12) -> 200
+  已写场次: 12
+  ✓ click 保存剧本
+  ✓ click 全本预览
+  ✓ click 导出 .fountain
+  ✓ 产出物已保存: tests/e2e/realuse-shots/deliverable.fountain
+
+===== 专家观察汇总 =====
+  （脚本层未捕获显式问题，详见截图与 pageerror）
+
+===== pageerror 汇总 =====
+  无 pageerror
+
+FULLFLOW DONE

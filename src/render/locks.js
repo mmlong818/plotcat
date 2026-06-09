@@ -18,9 +18,9 @@ function renderGenreItems(items = [], actionPrefix = "convention", emptyMessage 
           <strong>${escapeHtml(item.name || "未命名条目")}</strong>
           <span>${escapeHtml(item.status || item.description || "")}</span>
           <div class="form-grid form-grid--compact">
-            ${inputField("名称", `${actionPrefix}-field`, "name", item.name)}
-            ${actionPrefix === "convention" ? selectField("状态", `${actionPrefix}-field`, "status", item.status, [["required", "必备"], ["optional", "可选"]]) : ""}
-            ${textareaField("说明", `${actionPrefix}-field`, "description", item.description, { rows: 3 })}
+            ${inputField("名称", `${actionPrefix}-field`, "name", item.name, { dataId: item.id })}
+            ${actionPrefix === "convention" ? selectField("状态", `${actionPrefix}-field`, "status", item.status, [["required", "必备"], ["optional", "可选"]], { dataId: item.id }) : ""}
+            ${textareaField("说明", `${actionPrefix}-field`, "description", item.description, { rows: 3, dataId: item.id })}
           </div>
           <div class="inline-actions">
             <button class="button button--ghost button--tiny" type="button" data-action="delete-${escapeHtml(actionPrefix)}" data-id="${escapeHtml(item.id)}">删除</button>
@@ -268,8 +268,14 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
     </p>
   ` : "";
 
+  const backToWorkflow = appState.libraryReturnPage === "workflow";
   dom.locksContent.innerHTML = `
     <section class="lock-workbench">
+      <div style="margin-bottom: 10px">
+        <button class="button button--ghost button--small" type="button" data-action="library-back">
+          ← ${backToWorkflow ? "返回创作" : "返回项目中心"}
+        </button>
+      </div>
       <div class="bible-overview-grid">
         <article class="metric-card"><span class="metric-card__label">已锁定剧情</span><strong class="metric-card__value ${lockedCards.length === 0 ? "metric-card__value--zero" : ""}">${lockedCards.length}</strong></article>
         <article class="metric-card"><span class="metric-card__label">时间节点</span><strong class="metric-card__value ${timeline.length === 0 ? "metric-card__value--zero" : ""}">${timeline.length}</strong></article>
