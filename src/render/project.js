@@ -104,8 +104,12 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
               <button class="button button--ghost button--tiny" type="button" data-action="cancel-delete-project">
                 取消
               </button>
+            ` : appState.projectMenuId === item.id ? `
+              <button class="button button--ghost button--tiny" type="button" data-action="rename-project" data-id="${escapeHtml(item.id)}">重命名</button>
+              <button class="button button--ghost button--tiny" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}">删除</button>
+              <button class="button button--ghost button--tiny" type="button" data-action="close-project-menu" aria-label="收起菜单">×</button>
             ` : `
-              <button class="project-card__more" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}" title="删除项目" aria-label="删除项目">
+              <button class="project-card__more" type="button" data-action="open-project-menu" data-id="${escapeHtml(item.id)}" title="更多操作" aria-label="更多操作">
                 ⋯
               </button>
             `}

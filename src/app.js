@@ -533,6 +533,11 @@ function normalizeProject() {
       .map((id) => cardById.get(id))
       .find((card) => card && scene.title === `${card.title} 场景`);
     if (suffixSource) scene.title = suffixSource.title;
+    // 状态口径自愈：已有可观成稿但工作流状态还停在草稿/大纲的，升级为已写成稿
+    // （AI 成稿现在会实时回写 status，这里只兜旧数据）
+    if ((scene.status === "draft" || scene.status === "outline") && (scene.script_full || "").trim().length >= 200) {
+      scene.status = "scripted";
+    }
     // 迁移旧版注入到 notes 的幕评师修稿指令 → 专用 rater_directives 字段
     const legacyTag = "【上轮幕评师修稿指令】";
     if (scene.notes && scene.notes.includes(legacyTag)) {
@@ -1985,8 +1990,43 @@ function handleClick(event) {
       });
     return;
   }
+  if (action === "open-project-menu") {
+    appState.projectMenuId = id;
+    appState.projectDeleteConfirmId = null;
+    render();
+    return;
+  }
+  if (action === "close-project-menu") {
+    appState.projectMenuId = null;
+    render();
+    return;
+  }
+  if (action === "rename-project") {
+    const current = list(appState.projectList).find((p) => p.id === id);
+    const nextTitle = window.prompt("项目新名称：", current?.title ?? "")?.trim();
+    appState.projectMenuId = null;
+    if (!nextTitle || nextTitle === current?.title) { render(); return; }
+    fetchJson(`/api/projects/${encodeURIComponent(id)}`)
+      .then((payload) => {
+        const doc = payload.project;
+        doc.project.title = nextTitle;
+        return fetchJson(`/api/projects/${encodeURIComponent(id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ project: doc })
+        });
+      })
+      .then((payload) => {
+        appState.projectList = payload.projects ?? appState.projectList;
+        if (appState.project?.project?.id === id) appState.project.project.title = nextTitle;
+        render();
+      })
+      .catch((error) => { window.alert(`重命名失败：${error.message}`); render(); });
+    return;
+  }
   if (action === "request-delete-project") {
     appState.projectDeleteConfirmId = id;
+    appState.projectMenuId = null;
     render();
     return;
   }
@@ -2246,6 +2286,11 @@ function handleClick(event) {
     return;
   }
   if (action === "delete-character") {
+    const charToDelete = getCharacter(id);
+    const cascadeRels = list(appState.project.character_hub?.relationship_map)
+      .filter((r) => r.source_character_id === id || r.target_character_id === id);
+    const cascadeNote = cascadeRels.length ? `\n该人物关联的 ${cascadeRels.length} 条关系会一并删除。` : "";
+    if (!confirm(`删除人物「${charToDelete?.name || "未命名"}」？此操作不可恢复。${cascadeNote}`)) return;
     appState.project.character_hub.characters = list(appState.project.character_hub?.characters).filter((item) => item.id !== id);
     appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
     // 同步从 story_bible.characters 删除，否则 normalize 时 deriveCharacterHub 会从 story_bible 把人物加回来
@@ -2260,18 +2305,29 @@ function handleClick(event) {
     return;
   }
   if (action === "add-relationship") {
-    // 决议 4：关系 1 条对称 — 新增前去重，存在 (a,b) 或 (b,a) 都视为同一对
+    // 决议 4：关系 1 条对称 — (a,b) 与 (b,a) 视为同一对。
+    // 新增时自动选第一对「还没有关系」的角色组合，否则固定取前两人会静默无效
     const characters = list(appState.project.character_hub?.characters);
-    const src = characters[0]?.id ?? "";
-    const tgt = characters[1]?.id ?? characters[0]?.id ?? "";
-    const existing = list(appState.project.character_hub?.relationship_map).find((r) =>
-      (r.source_character_id === src && r.target_character_id === tgt) ||
-      (r.source_character_id === tgt && r.target_character_id === src)
+    if (characters.length < 2) {
+      alert("至少需要两个人物才能建立关系");
+      return;
+    }
+    const rels = list(appState.project.character_hub?.relationship_map);
+    const hasPair = (a, b) => rels.some((r) =>
+      (r.source_character_id === a && r.target_character_id === b) ||
+      (r.source_character_id === b && r.target_character_id === a)
     );
-    if (existing) {
-      // 已存在则选中该条，不重复创建
-      appState.selection.relationshipId = existing.id;
-      render();
+    let src = "", tgt = "";
+    outer: for (let i = 0; i < characters.length; i++) {
+      for (let j = i + 1; j < characters.length; j++) {
+        if (!hasPair(characters[i].id, characters[j].id)) {
+          src = characters[i].id; tgt = characters[j].id;
+          break outer;
+        }
+      }
+    }
+    if (!src) {
+      alert("所有角色两两之间都已有关系。可在已有关系上修改角色组合。");
       return;
     }
     const relationship = {
@@ -2293,6 +2349,12 @@ function handleClick(event) {
   }
   if (action === "select-relationship") { appState.selection.relationshipId = id; render(); return; }
   if (action === "delete-relationship") {
+    const relToDelete = getRelationship(id);
+    if (relToDelete) {
+      const relName = relToDelete.relationship_type || relToDelete.relationship_kind || "未命名关系";
+      const pair = `${getCharacterNameById(relToDelete.source_character_id)} ↔ ${getCharacterNameById(relToDelete.target_character_id)}`;
+      if (!confirm(`删除关系「${pair}（${relName}）」？此操作不可恢复。`)) return;
+    }
     appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.id !== id);
     if (appState.project.story_bible) {
       appState.project.story_bible.relationships = list(appState.project.story_bible.relationships).filter((item) => item.id !== id);
@@ -2338,6 +2400,39 @@ function handleClick(event) {
   if (action === "kb-open-entry") { kbOpenEntry(id); return; }
   if (action === "kb-import") { kbImport(target.dataset.target); return; }
   if (action === "select-timeline") { appState.selection.timelineId = id; render(); return; }
+  if (action === "delete-timeline") {
+    const item = getTimelineEvent(id);
+    if (item?.summary && !confirm(`删除时间节点「${item.summary}」？此操作不可恢复。`)) return;
+    appState.project.lock_layer.projections.timeline_events =
+      list(appState.project.lock_layer?.projections?.timeline_events).filter((e) => e.id !== id);
+    appState.project.story_bible.timeline_events =
+      list(appState.project.story_bible?.timeline_events).filter((e) => e.id !== id);
+    appState.selection.timelineId = null;
+    normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "delete-world-rule") {
+    const item = getWorldRule(id);
+    if (item?.rule_statement && !confirm(`删除世界规则「${item.rule_statement.slice(0, 20)}」？此操作不可恢复。`)) return;
+    appState.project.lock_layer.projections.world_rules =
+      list(appState.project.lock_layer?.projections?.world_rules).filter((e) => e.id !== id);
+    appState.project.story_bible.world_rules =
+      list(appState.project.story_bible?.world_rules).filter((e) => e.id !== id);
+    appState.selection.worldRuleId = null;
+    normalizeProject(); markDirty(); render();
+    return;
+  }
+  if (action === "delete-setup") {
+    const item = getSetup(id);
+    if (item?.setup_summary && !confirm(`删除伏笔「${item.setup_summary.slice(0, 20)}」？此操作不可恢复。`)) return;
+    appState.project.lock_layer.projections.setup_payoffs =
+      list(appState.project.lock_layer?.projections?.setup_payoffs).filter((e) => e.id !== id);
+    appState.project.story_bible.setup_payoffs =
+      list(appState.project.story_bible?.setup_payoffs).filter((e) => e.id !== id);
+    appState.selection.setupId = null;
+    normalizeProject(); markDirty(); render();
+    return;
+  }
   if (action === "add-world-rule") {
     const item = { id: createId("rule"), rule_statement: "", rule_level: "hard", scope: "", exceptions: [], evidence: [] };
     appState.project.lock_layer.projections.world_rules.push(item);
@@ -2386,6 +2481,12 @@ function handleClick(event) {
   }
   if (action === "select-scene") { appState.selection.sceneId = id; render(); return; }
   if (action === "delete-scene") {
+    const sceneToDelete = getScene(id);
+    if (sceneToDelete) {
+      const scriptLen = (sceneToDelete.script_full || "").trim().length;
+      const scriptNote = scriptLen > 0 ? `\n本场已有 ${scriptLen} 字剧本成稿，会一并删除。` : "";
+      if (!confirm(`删除场景「${sceneToDelete.title || "未命名场景"}」？此操作不可恢复。${scriptNote}`)) return;
+    }
     appState.project.scene_workbench.scenes = list(appState.project.scene_workbench?.scenes).filter((item) => item.id !== id);
     if (appState.project.story_bible) {
       appState.project.story_bible.scene_cards = list(appState.project.story_bible.scene_cards).filter((item) => item.id !== id);
@@ -3198,6 +3299,8 @@ async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
     const liveScene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
     if (!liveScene) throw new Error("场景在生成期间被移除");
     liveScene.script_full = script;
+    // AI 成稿后回写场景工作流状态，避免场景页一直停留在手填「草稿」与剧本页口径打架
+    liveScene.status = "scripted";
     // 幕评师修稿指令是一次性的：本轮重写已消费，清空避免影响后续无关生成
     if (liveScene.rater_directives) liveScene.rater_directives = "";
     if (data.end_hook || data.emotion_arc) {

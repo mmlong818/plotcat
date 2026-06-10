@@ -201,6 +201,9 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
             ${inputField("触发", "timeline-field", "trigger", getTimelineEvent().trigger)}
             ${textareaField("结果", "timeline-field", "consequence", getTimelineEvent().consequence, { rows: 3 })}
           </div>
+          <div style="margin-top: 8px">
+            <button class="button button--ghost button--tiny" type="button" data-action="delete-timeline" data-id="${escapeHtml(getTimelineEvent().id)}">删除此节点</button>
+          </div>
         ` : ""}
       </div>
     `;
@@ -226,6 +229,9 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
             ${selectField("强度", "world-rule-field", "rule_level", getWorldRule().rule_level, [["hard", "硬规则"], ["soft", "软规则"]])}
             ${textareaField("例外", "world-rule-field", "exceptions_text", list(getWorldRule().exceptions).join("、"), { rows: 2 })}
           </div>
+          <div style="margin-top: 8px">
+            <button class="button button--ghost button--tiny" type="button" data-action="delete-world-rule" data-id="${escapeHtml(getWorldRule().id)}">删除此规则</button>
+          </div>
         ` : ""}
       </div>
     `;
@@ -250,6 +256,9 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
             ${inputField("预期回收窗口", "setup-field", "expected_payoff_window", getSetup().expected_payoff_window)}
             ${selectField("状态", "setup-field", "status", getSetup().status, Object.entries(setupStatusLabels))}
             ${textareaField("回收说明", "setup-field", "payoff_summary", getSetup().payoff_summary, { rows: 3 })}
+          </div>
+          <div style="margin-top: 8px">
+            <button class="button button--ghost button--tiny" type="button" data-action="delete-setup" data-id="${escapeHtml(getSetup().id)}">删除此伏笔</button>
           </div>
         ` : ""}
       </div>

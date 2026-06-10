@@ -3,13 +3,13 @@ import { escapeHtml, inputField, textareaField, field, list, renderEmptyState } 
 // 关系类型分组（图标 + 4 大类语义）
 const RELATIONSHIP_GROUPS = [
   { key: "love",    icon: "♥",  label: "情感",   tone: "love",
-    types: ["三角恋情", "假面情侣", "强制婚约", "博得芳心", "单向爱意"] },
+    types: ["三角恋情", "假面情侣", "强制婚约", "博得芳心", "单向爱意", "破镜夫妻"] },
   { key: "ally",    icon: "⚔",  label: "同盟",   tone: "ally",
-    types: ["手足战友", "师徒传承", "左膀右臂"] },
+    types: ["手足战友", "师徒传承", "左膀右臂", "搭档拍档", "知情同谋"] },
   { key: "rival",   icon: "✕",  label: "对抗",   tone: "rival",
-    types: ["强力对手", "归来宿敌", "反目旧友", "暴躁上司"] },
+    types: ["强力对手", "归来宿敌", "反目旧友", "暴躁上司", "加害与受害", "猎手与猎物", "上下级博弈"] },
   { key: "family",  icon: "⌂",  label: "家庭",   tone: "family",
-    types: ["大家长式"] },
+    types: ["大家长式", "亲子羁绊", "疏离血亲", "手足阋墙", "隔代守护"] },
 ];
 
 function relStatusDot(status) {

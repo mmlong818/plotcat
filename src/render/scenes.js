@@ -63,7 +63,7 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                     <span class="scene-row__num">${String(scene.order_index || 0).padStart(2, "0")}</span>
                     <span class="scene-row__body">
                       <span class="scene-row__title">${escapeHtml(scene.title || "未命名场景")}</span>
-                      <span class="scene-row__meta">${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}</span>
+                      <span class="scene-row__meta">${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}${list(scene.linked_plot_card_ids).length === 0 && !(scene.purpose || "").trim() ? ` · <span class="scene-row__orphan" title="本场未关联任何剧情卡且没有场景目的，可能游离于故事主线之外">⚠ 游离场</span>` : ""}</span>
                     </span>
                   </button>
                 `

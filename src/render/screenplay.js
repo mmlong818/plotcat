@@ -214,7 +214,7 @@ function renderEditor(appState, scene) {
         <button class="button button--ghost button--tiny" type="button" data-action="ai-write-scene-script" data-id="${escapeHtml(scene.id)}" ${isSceneAiBusy ? "disabled" : ""}>${isSceneAiBusy ? "AI 写作中..." : "AI 写本场"}</button>
         ${(scene.script_full || "").length > 80 ? `<button class="button button--ghost button--tiny" type="button" data-action="ai-rate-scene" data-id="${escapeHtml(scene.id)}" ${appState.raterLoading?.[scene.id] ? "disabled" : ""}>${appState.raterLoading?.[scene.id] ? "评分中…" : "✦ 幕评师评分"}</button>` : ""}
         <button class="button button--ghost button--tiny" type="button" data-action="insert-scene-script-template" data-id="${escapeHtml(scene.id)}">插入剧本模板</button>
-        <span class="screenplay-editor__hint">${(scene.script_full || "").length} 字 · 约 ${Math.ceil((scene.script_full || "").length / 250)} 页</span>
+        <span class="screenplay-editor__hint">${(scene.script_full || "").replace(/\s+/g, "").length} 字 · 约 ${Math.max(1, Math.ceil((scene.script_full || "").replace(/\s+/g, "").length / 250))} 页</span>
       </div>
       ${appState.raterResult && appState.raterResult.sceneId === scene.id ? renderRaterPanel(appState.raterResult) : ""}
       <textarea
@@ -290,7 +290,8 @@ export function renderScreenplayPage(dom, appState) {
     return;
   }
 
-  const totalChars = scenes.reduce((sum, s) => sum + (s.script_full?.length ?? 0), 0);
+  // 统一口径（与全本预览一致）：去空白字符数；页数 = 字数 / 250
+  const totalChars = scenes.reduce((sum, s) => sum + (s.script_full || "").replace(/\s+/g, "").length, 0);
   // 与侧栏标签同口径：通过质量检查的才算成稿，避免「已成稿 8」而侧栏全是「需修订」的自相矛盾
   const donCount = scenes.filter((s) => sceneStatusLabel(s).tag === "已成稿").length;
   const ai = appState.screenplayAi ?? { bulkRunning: false, bulkProgress: { done: 0, total: 0 }, lastError: "" };
