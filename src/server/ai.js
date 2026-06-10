@@ -1,48 +1,10 @@
 import { buildExpertOutput } from "../logic/experts.js";
-import { spawnClaude } from "./spawnClaude.js";
+import { completeText, getLlmConfig, setLlmConfig, getLlmStatus } from "./llm.js";
+import { parseJsonFromText } from "../ai/generator.js";
 
-const CLAUDE_TIMEOUT_MS = 300_000;
-
-function callClaudeSubprocessOnce(prompt) {
-  return new Promise((resolve, reject) => {
-    const proc = spawnClaude(["-p", "--output-format", "text"]);
-    proc.stdout.setEncoding("utf8");
-    proc.stderr.setEncoding("utf8");
-    proc.stdin.setDefaultEncoding("utf8");
-
-    let stdout = "";
-    let stderr = "";
-    const timer = setTimeout(() => { proc.kill(); reject(new Error("claude CLI 超时")); }, CLAUDE_TIMEOUT_MS);
-
-    proc.stdout.on("data", (d) => { stdout += d; });
-    proc.stderr.on("data", (d) => { stderr += d; });
-    proc.stdin.write(prompt, "utf8");
-    proc.stdin.end();
-
-    proc.on("close", (code) => {
-      clearTimeout(timer);
-      if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 300)}`));
-      else resolve(stdout);
-    });
-    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
-  });
-}
-
-// 带重试的封装：遇到非零退出 / 超时时短暂等待后重试，避免限流瞬时失败导致整轮 bulk 报废
-async function callClaudeSubprocess(prompt, { retries = 2, retryDelayMs = 4000 } = {}) {
-  let lastError;
-  for (let attempt = 0; attempt <= retries; attempt++) {
-    try {
-      return await callClaudeSubprocessOnce(prompt);
-    } catch (err) {
-      lastError = err;
-      if (attempt < retries) {
-        console.warn(`[claude] attempt ${attempt + 1}/${retries + 1} failed: ${err.message.slice(0, 120)}, retrying in ${retryDelayMs}ms...`);
-        await new Promise((r) => setTimeout(r, retryDelayMs));
-      }
-    }
-  }
-  throw lastError;
+// 生成调用统一走 llm 层（多 provider）；保留旧函数名避免大量调用点改动
+function callClaudeSubprocess(prompt, opts = {}) {
+  return completeText(prompt, opts);
 }
 
 function extractJsonCandidate(text) {
@@ -139,23 +101,14 @@ function parseJsonFromClaude(text) {
   }
 }
 
-const defaultProvider = process.env.OPENAI_API_KEY
-  ? "openai"
-  : process.env.GEMINI_API_KEY
-    ? "gemini"
-    : "openai";
-
-const defaultModels = {
-  openai: process.env.OPENAI_MODEL || "gpt-5",
-  gemini: process.env.GEMINI_MODEL || "gemini-2.0-flash"
-};
-
+// provider/key/model 的真源在 llm.js；这里保留只读 shim 供结构化输出与模型列表使用
 const runtimeConfig = {
-  provider: defaultProvider,
-  apiKey: process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || "",
-  model: defaultModels[defaultProvider],
-  source: process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY ? "env" : "none"
+  get provider() { return getLlmConfig().provider; },
+  get apiKey() { return getLlmConfig().apiKey; },
+  get model() { return getLlmConfig().model; },
+  get source() { return getLlmConfig().source; }
 };
+const defaultModels = { openai: "gpt-5.4-mini", gemini: "gemini-2.5-flash" };
 
 const wizardFormatLabels = {
   feature: "电影",
@@ -686,33 +639,11 @@ ${JSON.stringify(draft, null, 2)}
 }
 
 function getAiStatus() {
-  return {
-    configured: true,
-    provider: "claude",
-    model: "claude (订阅)",
-    source: "subscription"
-  };
+  return getLlmStatus();
 }
 
-function updateAiConfig({ provider, apiKey, model }) {
-  if (provider != null) {
-    runtimeConfig.provider = normalizeProvider(trimText(provider));
-    if (!model && !runtimeConfig.apiKey) {
-      runtimeConfig.model = defaultModels[runtimeConfig.provider];
-    }
-  }
-
-  if (typeof apiKey === "string") {
-    runtimeConfig.apiKey = apiKey.trim();
-    runtimeConfig.source = runtimeConfig.apiKey ? "session" : "none";
-  }
-
-  if (typeof model === "string" && model.trim()) {
-    runtimeConfig.model = model.trim();
-  } else if (!runtimeConfig.model) {
-    runtimeConfig.model = defaultModels[runtimeConfig.provider];
-  }
-
+function updateAiConfig({ provider, apiKey, model, baseUrl }) {
+  setLlmConfig({ provider, apiKey, model, baseUrl });
   return getAiStatus();
 }
 
@@ -959,10 +890,18 @@ async function callGeminiStructured({ prompt, schema }) {
 }
 
 async function requestStructuredOutput({ prompt, schema, name }) {
-  if (runtimeConfig.provider === "gemini") {
+  const cfg = getLlmConfig();
+  if (cfg.provider === "gemini" && cfg.apiKey) {
     return callGeminiStructured({ prompt, schema });
   }
-  return callOpenAiStructured({ prompt, schema, name });
+  if (cfg.provider === "openai" && cfg.apiKey) {
+    return callOpenAiStructured({ prompt, schema, name });
+  }
+  // claude_cli / anthropic / custom：纯文本完成 + JSON 提取
+  const text = await completeText(`${prompt}
+
+严格只输出 JSON，不要其他内容。`);
+  return parseJsonFromText(text);
 }
 
 function providerLabel(provider) {

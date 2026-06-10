@@ -1,4 +1,4 @@
-import { spawnClaude } from '../server/spawnClaude.js';
+import { completeText } from '../server/llm.js';
 import {
   buildLoglinePrompt,
   buildTreatmentPrompt,
@@ -41,8 +41,6 @@ try {
   // 知识库文件尚未创建，使用空对象
 }
 
-const TIMEOUT_MS = 300_000;
-
 function makeId() {
   return `choice_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
@@ -53,42 +51,14 @@ function getBeatData(template) {
   return BEAT_SHEET_LIBRARY[template] ?? null;
 }
 
-function callClaude(system, user) {
-  return new Promise((resolve, reject) => {
-    const fullPrompt = `${system}\n\n---\n\n${user}`;
+async function callClaude(system, user) {
+  const fullPrompt = `${system}
 
-    const proc = spawnClaude(['-p', '--output-format', 'text']);
-    proc.stdout.setEncoding('utf8');
-    proc.stderr.setEncoding('utf8');
-    proc.stdin.setDefaultEncoding('utf8');
+---
 
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => {
-      proc.kill();
-      reject(new Error('claude CLI 超时'));
-    }, TIMEOUT_MS);
-
-    proc.stdout.on('data', (d) => { stdout += d; });
-    proc.stderr.on('data', (d) => { stderr += d; });
-
-    proc.stdin.write(fullPrompt, 'utf8');
-    proc.stdin.end();
-
-    proc.on('close', (code) => {
-      clearTimeout(timer);
-      if (code !== 0) {
-        reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 300)}`));
-      } else {
-        resolve(parseJsonFromText(stdout));
-      }
-    });
-
-    proc.on('error', (err) => {
-      clearTimeout(timer);
-      reject(err);
-    });
-  });
+${user}`;
+  const text = await completeText(fullPrompt);
+  return parseJsonFromText(text);
 }
 
 export function parseJsonFromText(text) {

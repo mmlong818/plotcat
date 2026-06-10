@@ -32,7 +32,7 @@ import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
 import { listSources, getProvider } from "./src/knowledge/registry.js";
-import { spawnClaude } from "./src/server/spawnClaude.js";
+import { completeText, completeTextStream } from "./src/server/llm.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = 4173;
@@ -487,33 +487,20 @@ async function handleApi(request, response, pathname) {
     try { prompt = buildPromptForStep(step, projectContext, options); }
     catch (e) { stopHeartbeat(); response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`); response.end(); return true; }
 
-    const proc = spawnClaude(["-p", "--output-format", "text"]);
-    proc.stdout.setEncoding("utf8");
-    proc.stderr.setEncoding("utf8");
-    proc.stdin.setDefaultEncoding("utf8");
-    proc.stdin.write(prompt, "utf8");
-    proc.stdin.end();
-
-    let fullText = "";
+    // 统一走 llm 层：claude_cli / anthropic / openai / custom 真流式，gemini 整段一次
     let ended = false;
-    const streamTimeout = setTimeout(() => {
-      if (!ended) { proc.kill(); }
-    }, 300_000);
+    request.on("close", () => { ended = true; stopHeartbeat(); });
 
-    proc.stdout.on("data", (chunk) => {
+    completeTextStream(prompt, (chunk) => {
+      if (ended) return;
       firstChunkSeen = true;
       stopHeartbeat();
-      fullText += chunk;
       response.write(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`);
-    });
-
-    proc.on("close", (code) => {
-      ended = true;
-      stopHeartbeat();
-      clearTimeout(streamTimeout);
-      if (code !== 0) {
-        response.write(`data: ${JSON.stringify({ type: "error", message: "claude CLI 异常退出" })}\n\n`);
-      } else {
+    })
+      .then((fullText) => {
+        if (ended) return;
+        ended = true;
+        stopHeartbeat();
         try {
           const parsed = parseJsonFromText(fullText);
           const result = formatStepResult(step, parsed);
@@ -521,19 +508,15 @@ async function handleApi(request, response, pathname) {
         } catch (e) {
           response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`);
         }
-      }
-      response.end();
-    });
-
-    proc.on("error", (err) => {
-      ended = true;
-      stopHeartbeat();
-      clearTimeout(streamTimeout);
-      response.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
-      response.end();
-    });
-
-    request.on("close", () => { ended = true; stopHeartbeat(); clearTimeout(streamTimeout); proc.kill(); });
+        response.end();
+      })
+      .catch((err) => {
+        if (ended) return;
+        ended = true;
+        stopHeartbeat();
+        response.write(`data: ${JSON.stringify({ type: "error", message: err.message })}\n\n`);
+        response.end();
+      });
     return true;
   }
 
@@ -546,26 +529,7 @@ async function handleApi(request, response, pathname) {
 
     try {
       const prompt = buildEvaluatePromptForStep(step, content, context ?? {});
-      const result = await new Promise((resolve, reject) => {
-        const proc = spawnClaude(["-p", "--output-format", "text"]);
-        proc.stdout.setEncoding("utf8");
-        proc.stderr.setEncoding("utf8");
-        proc.stdin.setDefaultEncoding("utf8");
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("评估超时")); }, 150_000);
-        proc.stdout.on("data", (d) => { stdout += d; });
-        proc.stderr.on("data", (d) => { stderr += d; });
-        proc.stdin.write(prompt, "utf8");
-        proc.stdin.end();
-        proc.on("close", (code) => {
-          clearTimeout(timer);
-          if (stderr) console.error(`[evaluate] stderr:`, stderr.slice(0, 400));
-          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
-          else resolve({ stdout, stderr });
-        });
-        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
-      });
+      const result = { stdout: await completeText(prompt), stderr: "" };
       const parsed = parseJsonFromText(result.stdout);
       if (parsed.raw) {
         console.error(`[evaluate] ${step} 解析失败，原始输出：`, result.stdout.slice(0, 300));
@@ -795,25 +759,7 @@ async function handleApi(request, response, pathname) {
     try {
       const { system, user } = buildAnalyzeAnchorPrompt(anchor, genres);
       const fullPrompt = `${system}\n\n---\n\n${user}`;
-      const result = await new Promise((resolve, reject) => {
-        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
-        proc.stdout.setEncoding("utf8");
-        proc.stderr.setEncoding("utf8");
-        proc.stdin.setDefaultEncoding("utf8");
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("analyze 超时")); }, 180_000);
-        proc.stdout.on("data", (d) => { stdout += d; });
-        proc.stderr.on("data", (d) => { stderr += d; });
-        proc.stdin.write(fullPrompt, "utf8");
-        proc.stdin.end();
-        proc.on("close", (code) => {
-          clearTimeout(timer);
-          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
-          else resolve(stdout);
-        });
-        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
-      });
+      const result = await completeText(fullPrompt, { effort: "low" });
       const parsed = parseJsonFromText(result);
       json(response, 200, parsed);
     } catch (err) {
@@ -831,25 +777,7 @@ async function handleApi(request, response, pathname) {
     try {
       const { system, user } = buildWorkbenchQuestionsPrompt(wb, context, anchor, genres);
       const fullPrompt = `${system}\n\n---\n\n${user}`;
-      const result = await new Promise((resolve, reject) => {
-        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
-        proc.stdout.setEncoding("utf8");
-        proc.stderr.setEncoding("utf8");
-        proc.stdin.setDefaultEncoding("utf8");
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("questions 超时")); }, 180_000);
-        proc.stdout.on("data", (d) => { stdout += d; });
-        proc.stderr.on("data", (d) => { stderr += d; });
-        proc.stdin.write(fullPrompt, "utf8");
-        proc.stdin.end();
-        proc.on("close", (code) => {
-          clearTimeout(timer);
-          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
-          else resolve(stdout);
-        });
-        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
-      });
+      const result = await completeText(fullPrompt, { effort: "low" });
       const parsed = parseJsonFromText(result);
       json(response, 200, parsed);
     } catch (err) {
@@ -871,25 +799,7 @@ async function handleApi(request, response, pathname) {
         scene.questions ?? []
       );
       const fullPrompt = `${system}\n\n---\n\n${user}`;
-      const result = await new Promise((resolve, reject) => {
-        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
-        proc.stdout.setEncoding("utf8");
-        proc.stderr.setEncoding("utf8");
-        proc.stdin.setDefaultEncoding("utf8");
-        let stdout = "";
-        let stderr = "";
-        const timer = setTimeout(() => { proc.kill(); reject(new Error("assemble 超时")); }, 240_000);
-        proc.stdout.on("data", (d) => { stdout += d; });
-        proc.stderr.on("data", (d) => { stderr += d; });
-        proc.stdin.write(fullPrompt, "utf8");
-        proc.stdin.end();
-        proc.on("close", (code) => {
-          clearTimeout(timer);
-          if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 200)}`));
-          else resolve(stdout);
-        });
-        proc.on("error", (err) => { clearTimeout(timer); reject(err); });
-      });
+      const result = await completeText(fullPrompt, { effort: "low" });
 
       const assembled = parseJsonFromText(result);
       const logline = assembled.story_core?.premise ?? "";

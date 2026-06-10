@@ -556,13 +556,15 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
   const hasStoredConnection = appState.ai.configured && appState.ai.provider === provider;
   const configBusy = isAiConfigBusy();
   const modelBusy = appState.createAssistant.loading && appState.createAssistant.target === "ai-models";
-  const canFetchModels = Boolean(appState.aiConfigDraft.apiKey.trim() || hasStoredConnection);
-  const canConnect = Boolean((appState.aiConfigDraft.apiKey.trim() || hasStoredConnection) && appState.aiConfigDraft.model.trim());
+  const supportsModelList = provider === "openai" || provider === "gemini";
+  const canFetchModels = supportsModelList && Boolean(appState.aiConfigDraft.apiKey.trim() || hasStoredConnection);
+  const canConnect = provider === "claude_cli"
+    || Boolean((appState.aiConfigDraft.apiKey.trim() || hasStoredConnection) && appState.aiConfigDraft.model.trim());
 
   dom.settingsForm.innerHTML = `
     <div class="create-ai-config create-ai-config--settings">
       <div class="create-wizard__choices create-wizard__choices--providers">
-        ${["gemini", "openai"]
+        ${["claude_cli", "anthropic", "openai", "gemini", "custom"]
           .map(
             (value) => `
               <button
@@ -584,6 +586,12 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
             : "当前未连接模型服务。先填入 Key，再获取模型列表。"
         }
       </div>
+      ${provider === "claude_cli" ? `
+        <p class="scene-summary-hint" style="margin: 4px 0 8px">
+          使用本机已登录的 claude CLI（订阅计费），无需 API Key。生成质量最高但消耗订阅额度；
+          日常批量生成建议切到 API provider（如「兼容端点」+ DeepSeek，成本最低）。
+        </p>
+      ` : `
       <div class="form-grid form-grid--ai-connect">
         <div class="field field--full">
           <label>${escapeHtml(providerChoiceLabel(provider))} Key</label>
@@ -595,10 +603,23 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
             placeholder="${hasStoredConnection ? "已连接时可留空；更换 key 后重新获取模型" : "粘贴你的 API Key"}"
           />
         </div>
+        ${provider === "custom" ? `
+        <div class="field field--full">
+          <label>Base URL（OpenAI 兼容，如 DeepSeek/Kimi/Qwen/Ollama）</label>
+          <input
+            type="text"
+            data-action="ai-config-field"
+            data-field="baseUrl"
+            value="${escapeHtml(appState.aiConfigDraft.baseUrl || "https://api.deepseek.com/v1")}"
+            placeholder="https://api.deepseek.com/v1"
+          />
+        </div>
+        ` : ""}
       </div>
       <div class="form-grid form-grid--ai">
         <div class="field field--full">
           <label>模型</label>
+          ${(provider === "openai" || provider === "gemini") ? `
           <select data-action="ai-config-field" data-field="model" ${modelOptions.length ? "" : "disabled"}>
             <option value="">${modelOptions.length ? "选择一个模型" : "先获取模型列表"}</option>
             ${modelOptions
@@ -611,9 +632,20 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
               )
               .join("")}
           </select>
+          ` : `
+          <input
+            type="text"
+            data-action="ai-config-field"
+            data-field="model"
+            value="${escapeHtml(appState.aiConfigDraft.model)}"
+            placeholder="${provider === "anthropic" ? "claude-sonnet-4-6" : "deepseek-v4-flash"}"
+          />
+          `}
         </div>
       </div>
+      `}
       <div class="create-ai-config__actions">
+        ${supportsModelList ? `
         <button
           class="button button--ghost button--tiny ${modelBusy ? "is-busy" : ""}"
           type="button"
@@ -622,6 +654,7 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
         >
           ${modelBusy ? "读取中..." : modelOptions.length ? "重新获取模型" : "获取模型列表"}
         </button>
+        ` : ""}
         <button
           class="button button--primary button--tiny ${configBusy ? "is-busy" : ""}"
           type="button"
