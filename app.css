@@ -3023,29 +3023,20 @@ a { color: var(--accent); text-decoration: none; }
 .pgrid-cell--act-end { border-right: 2px solid var(--border-strong); }
 .pgrid-cell.drag-over { background: var(--accent-soft) !important; border-color: var(--border-accent) !important; }
 
-/* Row tints */
-.pgrid-row--orange .pgrid-cell,
-.pgrid-row--main .pgrid-cell      { background: rgba(186,86,22,0.05); }
-.pgrid-row--blue .pgrid-cell,
-.pgrid-row--subplot .pgrid-cell   { background: rgba(30,95,168,0.05); }
+/* Row tints（语义色名已在 ensurePlotBoardModel 迁移为颜色名，这里只保留一套） */
+.pgrid-row--orange .pgrid-cell    { background: rgba(186,86,22,0.05); }
+.pgrid-row--blue .pgrid-cell      { background: rgba(30,95,168,0.05); }
 .pgrid-row--green .pgrid-cell     { background: rgba(46,125,82,0.05); }
-.pgrid-row--purple .pgrid-cell,
-.pgrid-row--scenario-a .pgrid-cell,
-.pgrid-row--scenario-b .pgrid-cell { background: rgba(109,76,158,0.05); }
-.pgrid-row--gray .pgrid-cell,
-.pgrid-row--undefined .pgrid-cell  { background: transparent; }
+.pgrid-row--purple .pgrid-cell    { background: rgba(109,76,158,0.05); }
+.pgrid-row--gray .pgrid-cell      { background: transparent; }
 .pgrid-row--red .pgrid-cell       { background: rgba(192,57,43,0.05); }
 .pgrid-row--yellow .pgrid-cell    { background: rgba(180,83,9,0.05); }
 
 /* 轨道左侧色标条 */
-.pgrid-row--orange .pgrid-track-label,
-.pgrid-row--main .pgrid-track-label      { border-left: 3px solid #ba5616; }
-.pgrid-row--blue .pgrid-track-label,
-.pgrid-row--subplot .pgrid-track-label   { border-left: 3px solid #1e5fa8; }
-.pgrid-row--green .pgrid-track-label     { border-left: 3px solid #2e7d52; }
-.pgrid-row--purple .pgrid-track-label,
-.pgrid-row--scenario-a .pgrid-track-label,
-.pgrid-row--scenario-b .pgrid-track-label { border-left: 3px solid #6d4c9e; }
+.pgrid-row--orange .pgrid-track-label { border-left: 3px solid #ba5616; }
+.pgrid-row--blue .pgrid-track-label   { border-left: 3px solid #1e5fa8; }
+.pgrid-row--green .pgrid-track-label  { border-left: 3px solid #2e7d52; }
+.pgrid-row--purple .pgrid-track-label { border-left: 3px solid #6d4c9e; }
 
 /* Add stub button inside empty cell */
 .pgrid-add-stub {
@@ -3222,18 +3213,13 @@ a { color: var(--accent); text-decoration: none; }
 .pgrid-card--gray   { --lane-color: #8a7560; }
 
 /* Track dot color slots */
-.pgrid-track-dot--orange,
-.pgrid-track-dot--main      { --lane-color: #ba5616; }
-.pgrid-track-dot--blue,
-.pgrid-track-dot--subplot   { --lane-color: #1e5fa8; }
+.pgrid-track-dot--orange    { --lane-color: #ba5616; }
+.pgrid-track-dot--blue      { --lane-color: #1e5fa8; }
 .pgrid-track-dot--green     { --lane-color: #2e7d52; }
-.pgrid-track-dot--purple,
-.pgrid-track-dot--scenario-a,
-.pgrid-track-dot--scenario-b { --lane-color: #6d4c9e; }
+.pgrid-track-dot--purple    { --lane-color: #6d4c9e; }
 .pgrid-track-dot--red       { --lane-color: #c0392b; }
 .pgrid-track-dot--yellow    { --lane-color: #b45309; }
-.pgrid-track-dot--gray,
-.pgrid-track-dot--undefined { --lane-color: #8a7560; }
+.pgrid-track-dot--gray      { --lane-color: #8a7560; }
 
 /* Empty state */
 .pgrid-empty {

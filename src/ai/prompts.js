@@ -811,6 +811,7 @@ ${DRAMA_PRINCIPLES}`;
 - 进场状态：${target.entry_state ?? target.input_state ?? ""}
 - 出场状态：${target.exit_state ?? target.output_state ?? ""}
 - 创作笔记：${target.notes ?? target.emotion_stage ?? ""}
+${target.rater_directives ? `\n【上轮幕评师修稿指令（最高优先级，必须逐条执行后再满足其他要求）】\n${target.rater_directives}\n` : ""}
 ${target.conflict_proposition ? `\n【戏剧主张（最重要，必须由这条统领整场对白与动作）】\n冲突主张：${target.conflict_proposition}\n` : ""}${target.subtext_goal ? `\n【潜台词锚点（每个有意义的对白都要服务这条）】\n${target.subtext_goal}\n` : ""}${target.arc_beat ? `\n【弧光位置（本场结束时主角必须比进场更靠近 B）】\n${target.arc_beat}\n` : ""}
 
 本场出场人物（必须使用这些名字，不得替换；每个角色的所有字段都是 AI 必须消费的方向锚点——填了什么就用什么，不要忽略）：
