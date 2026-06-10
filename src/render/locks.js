@@ -353,6 +353,31 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
   ` : "";
 
   const backToWorkflow = appState.libraryReturnPage === "workflow";
+  // 系列挂载：选择后该系列的世界规则/时间线/常驻人物只读注入本项目所有生成
+  const seriesList = appState.seriesLibrary?.list ?? [];
+  const mountedId = appState.project.project?.series_id ?? "";
+  const sb = appState.project.series_bible;
+  const seriesMountBlock = `
+    <div class="summary-card" style="margin-bottom: 10px">
+      <div class="list-card__head">
+        <div>
+          <p class="section-label">系列挂载</p>
+          <h3>${sb ? escapeHtml(sb.name) : "未挂载系列"}</h3>
+        </div>
+        <select data-action="series-mount" data-field="series_id" style="max-width: 220px">
+          <option value="">不挂载</option>
+          ${seriesList.map((it) => `<option value="${escapeHtml(it.id)}" ${it.id === mountedId ? "selected" : ""}>${escapeHtml(it.name)}</option>`).join("")}
+        </select>
+      </div>
+      ${sb ? `
+        <p class="scene-summary-hint">
+          继承自系列（只读，编辑请去项目中心 → 资料库）：
+          世界规则 ${list(sb.world_rules).length} 条 · 时间线 ${list(sb.timeline_events).length} 条 · 常驻人物 ${list(sb.regulars).length} 人
+          ${list(sb.regulars).length ? `<br/>常驻：${list(sb.regulars).map((c) => escapeHtml(c.name)).filter(Boolean).join("、")}` : ""}
+        </p>
+      ` : `<p class="scene-summary-hint">挂载一个系列后，它的世界观设定会自动注入本项目的结构生成、扩场、写本与幕评师。</p>`}
+    </div>
+  `;
   dom.locksContent.innerHTML = `
     <section class="lock-workbench">
       <div style="margin-bottom: 10px">
@@ -360,6 +385,7 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
           ← ${backToWorkflow ? "返回创作" : "返回项目中心"}
         </button>
       </div>
+      ${seriesMountBlock}
       <div class="bible-overview-grid">
         <article class="metric-card"><span class="metric-card__label">已锁定剧情</span><strong class="metric-card__value ${lockedCards.length === 0 ? "metric-card__value--zero" : ""}">${lockedCards.length}</strong></article>
         <article class="metric-card"><span class="metric-card__label">时间节点</span><strong class="metric-card__value ${timeline.length === 0 ? "metric-card__value--zero" : ""}">${timeline.length}</strong></article>

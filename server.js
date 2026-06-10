@@ -17,13 +17,17 @@ import {
   createProject,
   createProjectVersion,
   deleteProject,
+  deleteSeriesBible,
   ensureProjectSeeded,
+  getSeriesBible,
   listProjectVersions,
   listProjects,
+  listSeriesBibles,
   loadProject,
   resetProject,
   restoreProjectVersion,
   saveProject,
+  saveSeriesBible,
   touchProject
 } from "./src/server/repository.js";
 import { computeIssues, summarizeIssues } from "./src/logic/rules.js";
@@ -98,6 +102,43 @@ function readJsonBody(request) {
 
 function decodeSegment(value) {
   return decodeURIComponent(value);
+}
+
+async function handleSeriesApi(request, response, pathname) {
+  if (pathname === "/api/series" && request.method === "GET") {
+    json(response, 200, { series: listSeriesBibles() });
+    return true;
+  }
+  if (pathname === "/api/series" && request.method === "POST") {
+    try {
+      const body = await readJsonBody(request);
+      json(response, 200, { series: saveSeriesBible(body), list: listSeriesBibles() });
+    } catch (error) {
+      json(response, 400, { error: error.message });
+    }
+    return true;
+  }
+  const seriesMatch = pathname.match(/^\/api\/series\/([^/]+)$/);
+  if (seriesMatch && request.method === "GET") {
+    const item = getSeriesBible(decodeSegment(seriesMatch[1]));
+    if (!item) { json(response, 404, { error: "系列不存在" }); return true; }
+    json(response, 200, { series: item });
+    return true;
+  }
+  if (seriesMatch && request.method === "PUT") {
+    try {
+      const body = await readJsonBody(request);
+      json(response, 200, { series: saveSeriesBible({ ...body, id: decodeSegment(seriesMatch[1]) }) });
+    } catch (error) {
+      json(response, 400, { error: error.message });
+    }
+    return true;
+  }
+  if (seriesMatch && request.method === "DELETE") {
+    json(response, 200, { list: deleteSeriesBible(decodeSegment(seriesMatch[1])) });
+    return true;
+  }
+  return false;
 }
 
 async function handleProjectsApi(request, response, pathname) {
@@ -239,6 +280,9 @@ async function handleApi(request, response, pathname) {
     });
     return true;
   }
+
+  const handledSeries = await handleSeriesApi(request, response, pathname);
+  if (handledSeries) return true;
 
   const handledProjects = await handleProjectsApi(request, response, pathname);
   if (handledProjects) {
