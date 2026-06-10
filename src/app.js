@@ -1635,6 +1635,10 @@ function handleClick(event) {
     aiGenreAudit();
     return;
   }
+  if (action === "ai-genre-remedy") {
+    aiGenreRemedy();
+    return;
+  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
@@ -3054,6 +3058,106 @@ async function aiGenreAudit() {
     alert(`契约审计失败：${error.message}`);
   } finally {
     appState.genreAuditLoading = false;
+    render();
+  }
+}
+
+// ── 契约修复闭环：审计问题 → 修稿指令/新增场景 → 可选定向重生成 ──────────────
+async function aiGenreRemedy() {
+  const audit = appState.project.genre_profile?.fulfillment_audit;
+  const hasProblems = list(audit?.fulfillment).some((f) => f.status !== "fulfilled") || list(audit?.taboo_violations).length > 0;
+  if (!audit || !hasProblems) {
+    alert("没有待修复的契约问题。先点「检查契约兑现」做一次审计。");
+    return;
+  }
+  appState.genreRemedyLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("genre_remedy", appState.project, {});
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    const directives = list(data.scene_directives);
+    const newScenes = list(data.new_scenes);
+    if (directives.length === 0 && newScenes.length === 0) throw new Error("AI 未给出手术方案");
+
+    const scenes = list(appState.project.scene_workbench?.scenes);
+    const byOrder = new Map(scenes.map((s) => [Number(s.order_index), s]));
+    const charByName = new Map(list(appState.project.character_hub?.characters).map((c) => [c.name, c.id]));
+    const cardById = new Map(getLivePlotCards().map((c) => [c.id, c]));
+
+    // 1. 修稿指令写入既有场次（叠加，不覆盖已有指令）。
+    // 用 scene.id 追踪重生成目标——插入新场后 order_index 会整体重排，按场次号会错位漏场
+    const directiveOrders = [];
+    const targetSceneIds = new Set();
+    for (const d of directives) {
+      const scene = byOrder.get(Number(d.scene_order));
+      if (!scene || !d.directive) continue;
+      scene.rater_directives = [scene.rater_directives, d.directive].filter(Boolean).join("\n\n");
+      directiveOrders.push(Number(d.scene_order));
+      targetSceneIds.add(scene.id);
+    }
+    // 2. 新增场景插入指定位置
+    const insertedTitles = [];
+    for (const ns of newScenes) {
+      const card = cardById.get(ns.card_id) ?? null;
+      const scene = {
+        id: createId("scene"),
+        order_index: 0,
+        title: ns.title || "未命名场景",
+        act_id: card?.act_id ?? "",
+        linked_plot_card_ids: card ? [card.id] : [],
+        pov_character_id: charByName.get((ns.pov_name || "").trim()) ?? "",
+        location: ns.location ?? "",
+        time_of_day: ns.time_of_day ?? "",
+        purpose: ns.purpose ?? "",
+        obstacle: ns.obstacle ?? "",
+        beat_summary: ns.beat_summary ?? "",
+        entry_state: "",
+        exit_state: "",
+        status: "draft",
+        script_excerpt: "",
+        notes: ns.fulfills ? `兑现类型必备场景：${ns.fulfills}` : ""
+      };
+      const after = Number(ns.insert_after_order) || scenes.length;
+      const sorted = list(appState.project.scene_workbench.scenes).sort((a, b) => a.order_index - b.order_index);
+      const pos = sorted.findIndex((s) => Number(s.order_index) === after);
+      sorted.splice(pos >= 0 ? pos + 1 : sorted.length, 0, scene);
+      sorted.forEach((s, i) => { s.order_index = i + 1; });
+      appState.project.scene_workbench.scenes = sorted;
+      insertedTitles.push(`《${scene.title}》（第 ${scene.order_index} 场）`);
+      targetSceneIds.add(scene.id);
+    }
+    normalizeProject();
+    markDirty();
+    render();
+
+    const summary = [
+      directives.length ? `已为 ${directiveOrders.length} 个场次写入修稿指令（第 ${directiveOrders.join("、")} 场）` : "",
+      insertedTitles.length ? `已新增 ${insertedTitles.length} 场：${insertedTitles.join("、")}` : "",
+      data.reasoning ? `\n手术思路：${data.reasoning}` : ""
+    ].filter(Boolean).join("\n");
+
+    // 3. 可选：立即串行重生成受影响场次（带指令的重写 + 新增场写稿）
+    const regenTargets = list(appState.project.scene_workbench?.scenes)
+      .filter((s) => targetSceneIds.has(s.id))
+      .sort((a, b) => a.order_index - b.order_index);
+    if (regenTargets.length > 0 && confirm(`${summary}\n\n是否立即按指令重生成这 ${regenTargets.length} 场？（每场约 2 分钟，可稍后在剧本页逐场手动生成）`)) {
+      for (const target of regenTargets) {
+        const r = await aiWriteSceneScript(target.id, { silent: true });
+        if (!r.ok) {
+          alert(`第 ${target.order_index} 场生成失败：${r.reason}。剩余场次已停止，可稍后手动生成。`);
+          break;
+        }
+      }
+      alert("契约修复重生成完成。建议重新点「检查契约兑现」复核。");
+    } else if (regenTargets.length === 0) {
+      alert(summary);
+    }
+  } catch (error) {
+    alert(`契约修复失败：${error.message}`);
+  } finally {
+    appState.genreRemedyLoading = false;
+    normalizeProject();
     render();
   }
 }

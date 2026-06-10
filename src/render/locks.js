@@ -81,7 +81,14 @@ function renderGenreFulfillment(appState) {
             ${blend.secondaries.map((g) => `<span class="chip chip--muted">${escapeHtml(g.label)}（调味）</span>`).join(" ")}
           </h3>
         </div>
-        <button class="button button--ghost button--tiny" type="button" data-action="ai-genre-audit" ${appState.genreAuditLoading ? "disabled" : ""} title="AI 逐条核验主导类型的必备场景是否在场景表中有真实落点，并检查禁忌">${appState.genreAuditLoading ? "审计中…" : "✦ 检查契约兑现"}</button>
+        <div style="display:flex; gap:6px">
+          <button class="button button--ghost button--tiny" type="button" data-action="ai-genre-audit" ${appState.genreAuditLoading ? "disabled" : ""} title="AI 逐条核验主导类型的必备场景是否在场景表中有真实落点，并检查禁忌">${appState.genreAuditLoading ? "审计中…" : "✦ 检查契约兑现"}</button>
+          ${(() => {
+            const fa = appState.project.genre_profile?.fulfillment_audit;
+            const hasProblems = fa && (list(fa.fulfillment).some((f) => f.status !== "fulfilled") || list(fa.taboo_violations).length > 0);
+            return hasProblems ? `<button class="button button--primary button--tiny" type="button" data-action="ai-genre-remedy" ${appState.genreRemedyLoading ? "disabled" : ""} title="把缺失/部分兑现/踩禁忌的问题转化为手术方案：既有场次写入修稿指令、必要时新增场次，并可一键重生成">${appState.genreRemedyLoading ? "开方中…" : "✦ 按契约修复"}</button>` : "";
+          })()}
+        </div>
       </div>
       <p class="scene-summary-hint" style="margin:2px 0 10px">${escapeHtml(blend.primary.audience_promise)}</p>
       <div class="stack">${reqRows}</div>
