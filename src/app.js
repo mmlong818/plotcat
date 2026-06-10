@@ -1195,7 +1195,8 @@ function renderHero() {
   if (appState.currentPage === "project") {
     dom.hero.classList.remove("is-compact", "is-topbar");
     dom.heroSide.hidden = false;
-    dom.heroSide.querySelector(".hero__actions").hidden = true;
+    // 设置/主题按钮在项目中心也要可用（配置 AI 模型不应先进入某个项目）
+    dom.heroSide.querySelector(".hero__actions").hidden = false;
     dom.heroEyebrow.textContent = "原点编剧系统";
     dom.heroTitle.textContent = "项目中心";
     dom.saveButton.hidden = true;

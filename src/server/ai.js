@@ -255,7 +255,8 @@ function clampActCount(value) {
 }
 
 function normalizeProvider(value) {
-  return value === "gemini" ? "gemini" : "openai";
+  const v = String(value ?? "").trim();
+  return ["claude_cli", "anthropic", "openai", "gemini", "custom"].includes(v) ? v : "openai";
 }
 
 function normalizeWizardFormat(value) {
@@ -784,15 +785,40 @@ function resolvePreferredModel(provider, models = []) {
   return models[0]?.id ?? defaultModel;
 }
 
-async function listAvailableModels({ provider, apiKey }) {
+async function listAnthropicModels(apiKey) {
+  const response = await fetch("https://api.anthropic.com/v1/models?limit=100", {
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" }
+  });
+  if (!response.ok) throw new Error(`Anthropic 模型列表失败：${response.status} ${(await response.text()).slice(0, 200)}`);
+  const payload = await response.json();
+  return (payload.data ?? []).map((m) => ({ id: m.id, label: m.display_name || m.id }));
+}
+
+async function listCustomModels(apiKey, baseUrl) {
+  const base = (baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, "");
+  const response = await fetch(`${base}/models`, {
+    headers: { authorization: `Bearer ${apiKey}` }
+  });
+  if (!response.ok) throw new Error(`兼容端点模型列表失败：${response.status} ${(await response.text()).slice(0, 200)}`);
+  const payload = await response.json();
+  return (payload.data ?? []).map((m) => ({ id: m.id, label: m.id }));
+}
+
+async function listAvailableModels({ provider, apiKey, baseUrl }) {
   const safeProvider = normalizeProvider(trimText(provider));
+  if (safeProvider === "claude_cli") {
+    return { provider: safeProvider, models: [], defaultModel: "" };
+  }
   const safeApiKey = resolveApiKey(safeProvider, apiKey);
   if (!safeApiKey) {
     throw new Error("请先提供有效的 API Key。");
   }
 
   const models =
-    safeProvider === "gemini" ? await listGeminiModels(safeApiKey) : await listOpenAiModels(safeApiKey);
+    safeProvider === "gemini" ? await listGeminiModels(safeApiKey)
+    : safeProvider === "anthropic" ? await listAnthropicModels(safeApiKey)
+    : safeProvider === "custom" ? await listCustomModels(safeApiKey, baseUrl ?? getLlmConfig().baseUrl)
+    : await listOpenAiModels(safeApiKey);
 
   return {
     provider: safeProvider,

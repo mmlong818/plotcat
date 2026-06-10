@@ -7,6 +7,20 @@
 //   custom     — 任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/GLM/Ollama/Grok…，LLM_BASE_URL + LLM_API_KEY）
 // 模型默认值依据 E:\CC\ai-models.md（2026-05-30）。
 import { spawnClaude } from "./spawnClaude.js";
+import { getDb } from "./db.js";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
+
+// Node 的 fetch 默认忽略 HTTP(S)_PROXY 环境变量；国内直连 OpenAI/Anthropic/Gemini
+// 通常不可达。检测到代理环境变量时挂全局代理 dispatcher（遵守 NO_PROXY，
+// 本地 127.0.0.1 的自家 API 与 Ollama 等不受影响）。
+if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy) {
+  try {
+    setGlobalDispatcher(new EnvHttpProxyAgent());
+    console.log("[llm] 已启用环境代理（HTTPS_PROXY），外部模型 API 经代理访问");
+  } catch (err) {
+    console.warn("[llm] 代理 dispatcher 初始化失败：", err.message);
+  }
+}
 
 export const LLM_PROVIDERS = ["claude_cli", "anthropic", "openai", "gemini", "custom"];
 
@@ -42,6 +56,44 @@ const llmConfig = {
   source: initialProvider !== "claude_cli" && ENV_KEYS[initialProvider] ? "env" : initialProvider === "claude_cli" ? "subscription" : "none"
 };
 
+// ── 配置持久化（app_meta）：重启后不静默回退到 claude_cli ─────────────────────
+// 注意：apiKey 以明文存本地 SQLite——本应用是单机本地工具，数据库即用户自己的磁盘；
+// 不存时每次重启都要重粘 key，比泄露面更伤可用性。env 来源的 key 不落库。
+const LLM_CONFIG_META_KEY = "llm_config";
+
+function persistLlmConfig() {
+  try {
+    const db = getDb();
+    const toSave = { ...llmConfig };
+    if (toSave.source === "env") toSave.apiKey = "";
+    db.prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)")
+      .run(LLM_CONFIG_META_KEY, JSON.stringify(toSave));
+  } catch (err) {
+    console.warn("[llm] 配置持久化失败：", err.message);
+  }
+}
+
+function restoreLlmConfig() {
+  try {
+    const db = getDb();
+    const row = db.prepare("SELECT value FROM app_meta WHERE key = ?").get(LLM_CONFIG_META_KEY);
+    if (!row?.value) return;
+    const saved = JSON.parse(row.value);
+    if (!LLM_PROVIDERS.includes(saved.provider)) return;
+    llmConfig.provider = saved.provider;
+    llmConfig.model = saved.model || DEFAULT_MODELS[saved.provider] || "";
+    llmConfig.baseUrl = saved.baseUrl || DEFAULT_BASE_URLS[saved.provider] || "";
+    // key 优先级：落库的 session key > 当前 env key
+    llmConfig.apiKey = saved.apiKey || ENV_KEYS[saved.provider] || "";
+    llmConfig.source = saved.provider === "claude_cli" ? "subscription"
+      : saved.apiKey ? "session" : llmConfig.apiKey ? "env" : "none";
+  } catch (err) {
+    console.warn("[llm] 配置恢复失败：", err.message);
+  }
+}
+
+restoreLlmConfig();
+
 export function getLlmConfig() {
   return { ...llmConfig };
 }
@@ -63,6 +115,7 @@ export function setLlmConfig({ provider, apiKey, model, baseUrl } = {}) {
   }
   if (typeof model === "string" && model.trim()) llmConfig.model = model.trim();
   if (typeof baseUrl === "string" && baseUrl.trim()) llmConfig.baseUrl = baseUrl.trim().replace(/\/+$/, "");
+  persistLlmConfig();
   return getLlmConfig();
 }
 

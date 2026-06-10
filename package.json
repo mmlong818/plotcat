@@ -7,5 +7,8 @@
     "start": "powershell -ExecutionPolicy Bypass -File .\\start-server.ps1",
     "start:direct": "node server.js",
     "check": "node --input-type=module -e \"import('./src/server/db.js'); import('./src/server/repository.js'); import('./src/server/ai.js'); console.log('server modules ok')\""
+  },
+  "dependencies": {
+    "undici": "^8.4.1"
   }
 }
