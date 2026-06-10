@@ -456,6 +456,61 @@ function buildGenreContractBlock(ctx) {
   return parts.join("\n");
 }
 
+// ── 连续性提炼：从剧情卡与场景表中提炼伏笔追踪与时间线，回填资料库 ──────────
+export function buildContinuityExtractionPrompt(projectContext) {
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const cards = (ctx?.plot_board?.cards ?? []).filter((c) => !c.deleted_at);
+  const scenes = (ctx?.scene_workbench?.scenes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const characters = ctx?.character_hub?.characters ?? [];
+
+  const cardLines = cards.map((c, i) => `[卡 ${i + 1}] ${c.title}：${c.summary || ""}`).join("\n");
+  const sceneLines = scenes.map((s) =>
+    `第 ${s.order_index} 场《${s.title}》｜${s.location || "?"}·${s.time_of_day || "?"}｜${s.purpose || ""}${s.beat_summary ? `｜转折：${s.beat_summary}` : ""}`
+  ).join("\n");
+  const charLines = characters.slice(0, 8).map((c) => `- ${c.name}`).join("\n");
+
+  const system = `你是剧本连续性管理（script supervisor）专家。任务：通读全片剧情卡与场景表，提炼出
+1) 伏笔追踪表：在前文埋设、需要在后文回收的具体物件/信息/行为（如一枚纽扣、一段录音、一句承诺）
+2) 故事内时间线：按故事内时间（第 N 天）排列的关键事件
+只提炼文本中真实存在的内容，禁止虚构；人物名严格使用角色名单。`;
+
+  const user = `项目：${ctx?.project?.title ?? ""}（${ctx?.project?.logline ?? ""}）
+
+角色名单：
+${charLines}
+
+剧情卡：
+${cardLines}
+
+场景表（放映顺序）：
+${sceneLines}
+
+JSON 输出（伏笔 3-8 组、时间线 5-12 条）：
+{
+  "setup_payoffs": [
+    {
+      "setup_summary": "埋了什么（具体物件/信息，≤30 字）",
+      "setup_scene_order": 埋设场次序号(数字),
+      "expected_payoff_window": "预期回收位置（如：第三幕对峙）",
+      "payoff_scene_order": 回收场次序号(数字，未回收填 0),
+      "payoff_summary": "如何回收（≤30 字，未回收留空）"
+    }
+  ],
+  "timeline_events": [
+    {
+      "story_day": 故事内第几天(数字，从 1 起),
+      "summary": "事件（≤30 字）",
+      "location": "地点",
+      "participants_names": ["人物名"]
+    }
+  ],
+  "reasoning": "提炼思路（简短）"
+}
+严格按 JSON 输出。`;
+
+  return { system, user };
+}
+
 // ── 全片场景表规划：把剧情卡拆成 1:N 场景，使总场数达到作品形态标准 ──────────
 export function buildSceneExpansionPrompt(projectContext, options) {
   const { targetSceneCount = 30 } = options ?? {};
