@@ -394,10 +394,18 @@ export function buildFountainText(appState) {
           const rest = idx > -1 ? script.slice(idx) : "";
           lines.push(slug + rest);
         } else {
-          lines.push(script);
+          // AI 自带 slug 但场景定位仍是占位：保留 AI slug，若它本身也是占位则显式标 TODO
+          const firstLine = script.split("\n")[0];
+          const todo = /待定|未定/.test(firstLine)
+            ? "\n[[ TODO：本场拍摄定位未填——在场景拆解页补「地点/时段」后重新导出 ]]"
+            : "";
+          lines.push(script + todo);
         }
       } else {
-        lines.push(slug, "", script);
+        const todo = !hasRealLocation(scene)
+          ? "\n[[ TODO：本场拍摄定位未填——在场景拆解页补「地点/时段」后重新导出 ]]"
+          : "";
+        lines.push(slug + todo, "", script);
       }
     } else {
       const summary = scene.beat_summary || scene.purpose || "（本场尚未撰写）";

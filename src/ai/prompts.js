@@ -594,14 +594,22 @@ export function buildContinuityExtractionPrompt(projectContext) {
   const characters = ctx?.character_hub?.characters ?? [];
 
   const cardLines = cards.map((c, i) => `[卡 ${i + 1}] ${c.title}：${c.summary || ""}`).join("\n");
-  const sceneLines = scenes.map((s) =>
-    `第 ${s.order_index} 场《${s.title}》｜${s.location || "?"}·${s.time_of_day || "?"}｜${s.purpose || ""}${s.beat_summary ? `｜转折：${s.beat_summary}` : ""}`
-  ).join("\n");
+  const ID_HINT_RE = /[A-Za-z]{1,4}[-—]?\d{2,}|\d{3,}号|编号|工号|警号|案号|档案号/;
+  const sceneLines = scenes.map((s) => {
+    const meta = `第 ${s.order_index} 场《${s.title}》｜${s.location || "?"}·${s.time_of_day || "?"}｜${s.purpose || ""}${s.beat_summary ? `｜转折：${s.beat_summary}` : ""}`;
+    // 编号/专名几乎只活在正文里：抽出含编号特征的行供专名连戏表提炼
+    const idLines = String(s.script_full || "").split(/\r?\n/)
+      .filter((l) => ID_HINT_RE.test(l))
+      .slice(0, 4)
+      .map((l) => l.trim().slice(0, 60));
+    return idLines.length ? `${meta}\n  [编号线索] ${idLines.join("；")}` : meta;
+  }).join("\n");
   const charLines = characters.slice(0, 8).map((c) => `- ${c.name}`).join("\n");
 
   const system = `你是剧本连续性管理（script supervisor）专家。任务：通读全片剧情卡与场景表，提炼出
 1) 伏笔追踪表：在前文埋设、需要在后文回收的具体物件/信息/行为（如一枚纽扣、一段录音、一句承诺）
 2) 故事内时间线：按故事内时间（第 N 天）排列的关键事件
+3) 专名连戏表：全片必须一字不差保持一致的专有名词与编号——人物工号/警号、案件/档案编号、关键物件型号、机构与地名全称。同一事物若已出现多个版本，选最早出现的版本为正典，并在 note 里指出冲突场次
 只提炼文本中真实存在的内容，禁止虚构；人物名严格使用角色名单。`;
 
   const user = `项目：${ctx?.project?.title ?? ""}（${ctx?.project?.logline ?? ""}）
@@ -633,6 +641,9 @@ JSON 输出（伏笔 3-8 组、时间线 5-12 条）：
       "location": "地点",
       "participants_names": ["人物名"]
     }
+  ],
+  "proper_nouns": [
+    { "term": "正典写法（如：陆沉工号 LU-0417）", "kind": "工号/档案号/物件编号/地名/机构名", "note": "归属与冲突说明（如：第 8 场曾误写 7734，需统一）" }
   ],
   "reasoning": "提炼思路（简短）"
 }
@@ -1072,6 +1083,9 @@ ${DRAMA_PRINCIPLES}`;
 - 创作笔记：${target.notes ?? target.emotion_stage ?? ""}
 ${target.rater_directives ? `\n【上轮幕评师修稿指令（最高优先级，必须逐条执行后再满足其他要求）】\n${target.rater_directives}\n` : ""}
 ${target.conflict_proposition ? `\n【戏剧主张（最重要，必须由这条统领整场对白与动作）】\n冲突主张：${target.conflict_proposition}\n` : ""}${target.subtext_goal ? `\n【潜台词锚点（每个有意义的对白都要服务这条）】\n${target.subtext_goal}\n` : ""}${target.arc_beat ? `\n【弧光位置（本场结束时主角必须比进场更靠近 B）】\n${target.arc_beat}\n` : ""}
+
+【动作归属纪律】上方场景卡与关联剧情卡里写明由某人执行的关键动作（尤其是主角的 plot-resolving action），
+必须由那个人亲手执行，不得移交给配角代劳——主角的高潮动作被别人代做是结构性失格。
 
 本场出场人物（必须使用这些名字，不得替换；每个角色的所有字段都是 AI 必须消费的方向锚点——填了什么就用什么，不要忽略）：
 ${sceneCharLines}${namesGuard}${sceneRelLines}
