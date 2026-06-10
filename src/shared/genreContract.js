@@ -17,7 +17,8 @@ const GENRE_ALIASES = {
   thriller_action: ["动作", "谍战", "特工", "惊险", "动作悬疑", "枪战", "卧底"],
   sci_fi: ["科幻", "未来", "赛博朋克", "太空", "人工智能", "AI", "时间旅行"],
   horror: ["恐怖", "惊悚", "灵异", "心理惊悚", "怪谈"],
-  war_military: ["战争", "军旅", "军事", "抗战", "热血军营"]
+  war_military: ["战争", "军旅", "军事", "抗战", "热血军营"],
+  micro_drama: ["微短剧", "短剧", "竖屏", "爽剧", "赘婿", "甜宠短剧", "战神", "神豪", "真千金"]
 };
 
 const GENRE_BY_ID = new Map(GENRE_LIBRARY.map((g) => [g.id, g]));

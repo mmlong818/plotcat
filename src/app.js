@@ -3354,6 +3354,22 @@ function applySceneExpansion(planned) {
       script_excerpt: "",
       notes: ""
     });
+    // fulfills_setup 自动锚定：把伏笔的埋设/回收场指到这个新场，
+    // 写本时即触发「本场伏笔任务」硬性块，状态同步也随之闭环
+    const fulfills = String(item.fulfills_setup ?? "").trim();
+    if (fulfills) {
+      const isPay = fulfills.startsWith("pay:");
+      const key = fulfills.replace(/^(plant:|pay:)/, "").trim().slice(0, 12);
+      if (key) {
+        for (const arr of [list(appState.project.lock_layer?.projections?.setup_payoffs), list(appState.project.story_bible?.setup_payoffs)]) {
+          const sp = arr.find((x) => (x.setup_summary || "").includes(key));
+          if (!sp) continue;
+          const newScene = nextScenes[nextScenes.length - 1];
+          if (isPay) { if (!sp.payoff_scene_id) sp.payoff_scene_id = newScene.id; }
+          else if (!sp.setup_scene_id) sp.setup_scene_id = newScene.id;
+        }
+      }
+    }
   }
   // 安全网：规划漏掉的已有场景（尤其有成稿的）一律保留，追加到末尾，绝不丢场
   for (const scene of live) {
