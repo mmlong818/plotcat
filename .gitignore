@@ -29,3 +29,17 @@ tests/e2e/debug-page.mjs
 .claude/
 .superpowers/
 docs/superpowers/
+
+# 调试用临时数据快照（含真实剧本数据，严禁入库）
+.tmp-*
+tmp_*.json
+_projects.json
+
+# 数据库备份
+data/*.bak*
+
+# E2E 截图与走查产物目录
+tests/e2e/*-shots/
+tests/e2e/audit-*/
+tests/e2e/realcheck-10-runs/
+tests/e2e/_fullflow_verify.out
