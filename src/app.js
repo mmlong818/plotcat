@@ -1586,6 +1586,10 @@ function handleClick(event) {
     aiGenreRemedy();
     return;
   }
+  if (action === "ai-character-audit") {
+    aiCharacterAudit();
+    return;
+  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
@@ -2969,6 +2973,33 @@ async function aiGenreAudit() {
     alert(`契约审计失败：${error.message}`);
   } finally {
     appState.genreAuditLoading = false;
+    render();
+  }
+}
+
+// ── 人物档案兑现体检：档案承诺对照正文核验，结果存 character_hub ──────────────
+async function aiCharacterAudit() {
+  const written = list(appState.project.scene_workbench?.scenes).filter((sc) => (sc.script_full || "").trim().length > 200);
+  if (written.length < 3) {
+    alert("已写场次不足（<3 场），档案体检需要正文作对照。先写一些剧本再来。");
+    return;
+  }
+  appState.characterAuditLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("character_audit", appState.project, {});
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    if (!Array.isArray(data.characters)) throw new Error("AI 未返回体检结果");
+    appState.project.character_hub.fulfillment_audit = {
+      characters: data.characters,
+      audited_at: new Date().toISOString()
+    };
+    markDirty();
+  } catch (error) {
+    alert(`档案体检失败：${error.message}`);
+  } finally {
+    appState.characterAuditLoading = false;
     render();
   }
 }

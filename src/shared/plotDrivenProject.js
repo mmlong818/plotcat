@@ -661,7 +661,9 @@ export function ensurePlotDrivenProject(sourceProject) {
   const existingRelMap = list(project.character_hub?.relationship_map);
   project.character_hub = {
     ...derivedHub,
-    relationship_map: existingRelMap.length > 0 ? existingRelMap : derivedHub.relationship_map
+    relationship_map: existingRelMap.length > 0 ? existingRelMap : derivedHub.relationship_map,
+    // 档案兑现体检结果挂在 hub 上，重建时必须显式保留（否则 autosave 一轮就蒸发）
+    fulfillment_audit: project.character_hub?.fulfillment_audit ?? null
   };
   if (!project.structure_profile) {
     // 完全重建结构 + 卡片

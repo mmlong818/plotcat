@@ -532,6 +532,59 @@ JSON 输出（requirement_index 从 0 起，对应主导类型必备场景的列
   return { system, user };
 }
 
+// ── 人物档案兑现审计：档案承诺（弧光/秘密/声音/欲望）对照全片正文逐项核验 ──────
+// 治第八轮终审定性的「档案→正文无兑现回查」：档案写下的承诺被场景生成静默改写，
+// 而类型审计只看结构义务、看不见人物层的漂移。
+export function buildCharacterAuditPrompt(projectContext) {
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const characters = (ctx?.character_hub?.characters ?? []).filter((c) => (c.name ?? "").trim()).slice(0, 6);
+  const scenes = (ctx?.scene_workbench?.scenes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+
+  const charBlocks = characters.map((c) => [
+    `【${c.name}】（${c.story_role ?? ""}）`,
+    c.external_goal || c.external_want ? `- 外部目标：${c.external_goal ?? c.external_want}` : "",
+    c.dramatic_need || c.internal_need ? `- 内部需求：${c.dramatic_need ?? c.internal_need}` : "",
+    c.arc_start ? `- 弧光起点：${c.arc_start}` : "",
+    c.arc_end ? `- 弧光终点：${c.arc_end}` : "",
+    c.secret ? `- 秘密：${c.secret}` : "",
+    Array.isArray(c.voice_rules) && c.voice_rules.length ? `- 声音规则：${c.voice_rules.join("；")}` : ""
+  ].filter(Boolean).join("\n")).join("\n\n");
+
+  // 每场裁剪到 1200 字：保留 slug/对白主体，足够核验弧光与声音
+  const sceneDigest = scenes
+    .filter((s) => (s.script_full || "").trim().length > 50)
+    .map((s) => `—— 第 ${s.order_index} 场《${s.title}》——\n${String(s.script_full).slice(0, 1200)}`)
+    .join("\n\n");
+
+  const system = `你是剧本人物监理。任务：把每个角色档案里写下的「承诺」与全片正文逐项对照，揪出被静默改写或蒸发的部分。
+判定从严：档案承诺必须在正文里有具体场次的可见兑现，"大体符合"不算 fulfilled。`;
+
+  const user = `${projectSummary(projectContext)}
+
+人物档案（待核验的承诺清单）：
+${charBlocks}
+
+全片正文（每场截取前 1200 字）：
+${sceneDigest || "（还没有成稿）"}
+
+逐角色核验四项，JSON 输出：
+{
+  "characters": [
+    {
+      "name": "角色名（照抄档案）",
+      "arc": { "status": "fulfilled | partial | missing", "evidence": "起点见第X场…终点见第Y场…（或缺什么）" },
+      "secret": { "status": "fulfilled | partial | missing", "evidence": "在第X场埋设、第Y场揭示（或从未触及/提前泄露）" },
+      "voice": { "status": "fulfilled | partial | missing", "evidence": "声音规则是否贯穿；若有违规给一句原文示例与场次" },
+      "drift": ["档案承诺被正文改写的具体点（如：档案写由他执行的关键动作被移交他人；没有则空数组）"]
+    }
+  ],
+  "reasoning": "简短"
+}
+严格按 JSON 输出。`;
+
+  return { system, user };
+}
+
 // ── 类型契约修复方案：把审计发现的缺失/部分兑现/禁忌转化为可执行手术方案 ──────
 export function buildGenreRemedyPrompt(projectContext) {
   const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);

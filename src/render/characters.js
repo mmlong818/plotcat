@@ -354,6 +354,12 @@ function renderEditorPane(character, appState, characters) {
             </select>
           </label>
         ` : ""}
+        <button class="button button--ghost button--tiny" type="button"
+          data-action="ai-character-audit"
+          ${appState.characterAuditLoading ? "disabled" : ""}
+          title="把全部人物档案的承诺（弧光/秘密/声音规则）与全片正文逐项对照，揪出被静默改写的部分">
+          ${appState.characterAuditLoading ? "体检中…" : "✦ 档案兑现体检"}
+        </button>
         <button class="button button--tiny" type="button"
           data-action="ai-refine-character" data-id="${escapeHtml(character.id)}"
           ${refineLoading ? "disabled" : ""}>
@@ -363,6 +369,33 @@ function renderEditorPane(character, appState, characters) {
       </div>
     </div>
     ${refineError ? `<p class="ai-error-hint">${escapeHtml(refineError)}</p>` : ""}
+    ${(() => {
+      const audit = appState.project.character_hub?.fulfillment_audit;
+      const r = list(audit?.characters).find((x) => x.name === character.name);
+      if (!r) return "";
+      const chip = (st) => st === "fulfilled" ? `<span class="chip chip--soft" style="color:var(--success)">✓</span>`
+        : st === "partial" ? `<span class="chip chip--soft" style="color:var(--warning)">◐</span>`
+        : `<span class="chip chip--soft" style="color:var(--critical)">✗</span>`;
+      const row = (label, item) => item ? `
+        <div class="genre-contract-row">
+          <div class="genre-contract-row__head">${chip(item.status)}<strong>${label}</strong></div>
+          <p class="scene-summary-hint">${escapeHtml(item.evidence || "")}</p>
+        </div>` : "";
+      const drift = list(r.drift);
+      return `
+        <div class="summary-card" style="margin: 8px 0">
+          <p class="section-label">档案兑现体检${audit.audited_at ? `（${audit.audited_at.slice(0, 10)}）` : ""}</p>
+          <div class="stack">
+            ${row("弧光（起点→终点）", r.arc)}
+            ${row("秘密（埋设→揭示）", r.secret)}
+            ${row("声音规则", r.voice)}
+          </div>
+          ${drift.length ? `
+            <p class="section-label" style="color:var(--critical); margin-top:8px">⚠ 档案承诺被正文改写</p>
+            ${drift.map((d) => `<p class="scene-summary-hint">- ${escapeHtml(d)}</p>`).join("")}
+          ` : ""}
+        </div>`;
+    })()}
     ${renderCharacterEditorFields(character)}
   `;
 }
