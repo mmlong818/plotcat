@@ -939,6 +939,7 @@ async function saveAiConfigDraftCurrentV2() {
       body: JSON.stringify({ provider, model, ...(apiKey ? { apiKey } : {}), ...(baseUrl ? { baseUrl } : {}) })
     });
     appState.ai = payload.ai ?? appState.ai;
+    appState.llmProfiles = payload.profiles ?? appState.llmProfiles;
     appState.aiConfigDraft.provider = appState.ai.provider || provider;
     appState.aiConfigDraft.apiKey = "";
     appState.aiConfigDraft.model = appState.ai.model || model;
@@ -1430,6 +1431,25 @@ function handleClick(event) {
   if (action === "create-ai-step") { requestCreateStepSuggestionCurrent(target.dataset.step ?? getProjectCreateStep().id); return; }
   if (action === "create-ai-field") { requestCreateFieldSuggestionCurrent(target.dataset.field ?? ""); return; }
   if (action === "apply-concept-option") { applyConceptOptionCurrent(target.dataset.id ?? ""); return; }
+  if (action === "activate-llm-profile") {
+    fetchJson(`/api/ai/profiles/${encodeURIComponent(id)}/activate`, { method: "POST" })
+      .then((payload) => {
+        appState.ai = payload.ai ?? appState.ai;
+        appState.llmProfiles = payload.profiles ?? appState.llmProfiles;
+        appState.aiConfigDraft.provider = appState.ai.provider || appState.aiConfigDraft.provider;
+        appState.aiConfigDraft.model = appState.ai.model || "";
+        appState.createAssistant.message = `已切换到 ${appState.ai.model || appState.ai.provider}`;
+        _renderProjectCreateForm();
+      })
+      .catch((error) => { appState.createAssistant.error = error.message; _renderProjectCreateForm(); });
+    return;
+  }
+  if (action === "delete-llm-profile") {
+    fetchJson(`/api/ai/profiles/${encodeURIComponent(id)}`, { method: "DELETE" })
+      .then((payload) => { appState.llmProfiles = payload.profiles ?? []; _renderProjectCreateForm(); })
+      .catch(() => {});
+    return;
+  }
   if (action === "ai-provider-choice") {
     const provider = PROVIDER_LABELS[target.dataset.value] ? target.dataset.value : "openai";
     appState.aiConfigDraft.provider = provider;
@@ -2565,6 +2585,9 @@ dom.openSettingsButton.addEventListener("click", () => {
   appState.createAssistant.error = "";
   appState.settingsDialogOpen = true;
   render();
+  fetchJson("/api/ai/profiles")
+    .then((payload) => { appState.llmProfiles = payload.profiles ?? []; if (appState.settingsDialogOpen) render(); })
+    .catch(() => {});
 });
 if (dom.stepPrevButton) dom.stepPrevButton.addEventListener("click", () => goToAdjacentStep(-1));
 if (dom.stepNextButton) dom.stepNextButton.addEventListener("click", () => goToAdjacentStep(1));
