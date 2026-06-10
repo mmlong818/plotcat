@@ -32,7 +32,7 @@ import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
 import { listSources, getProvider } from "./src/knowledge/registry.js";
-import { completeText, completeTextStream } from "./src/server/llm.js";
+import { completeText, completeTextStream, getLlmConfig, setLlmConfig } from "./src/server/llm.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = 4173;
@@ -343,7 +343,20 @@ async function handleApi(request, response, pathname) {
   if (pathname === "/api/ai/config" && request.method === "POST") {
     try {
       const body = await readJsonBody(request);
-      json(response, 200, { ai: updateAiConfig(body) });
+      const previous = getLlmConfig();
+      const ai = updateAiConfig(body);
+      // 非 CLI provider：保存即做一次微型补全验证，坏 key/坏模型当场报错并回滚，
+      // 而不是等到用户写本时才在生成中途炸掉
+      if (ai.provider !== "claude_cli" && body.skipVerify !== true) {
+        try {
+          await completeText("只回复两个字：就绪", { retries: 0 });
+        } catch (verifyError) {
+          setLlmConfig(previous);
+          json(response, 400, { error: `连接验证失败：${verifyError.message.slice(0, 300)}` });
+          return true;
+        }
+      }
+      json(response, 200, { ai });
     } catch (error) {
       json(response, 400, { error: error.message });
     }
