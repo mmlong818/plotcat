@@ -10,6 +10,9 @@ function genreTagsOf(ctx, extra = "") {
   const raw = doc?.project?.genre ?? doc?.genre ?? doc?.genre_profile?.primary_genre ?? [];
   const tags = Array.isArray(raw) ? [...raw] : [raw];
   if (extra) tags.push(extra);
+  // 微短剧是作品形态不是题材：按 format 自动附加形态契约标签（黄金三秒/每集钩子等纪律）
+  const fmt = doc?.project?.format ?? doc?.format ?? "";
+  if (String(fmt).startsWith("micro_drama")) tags.push("微短剧");
   return tags.filter(Boolean);
 }
 

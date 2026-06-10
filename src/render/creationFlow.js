@@ -172,7 +172,7 @@ function renderStep1(creation) {
         <div class="cf-field">
           <label class="cf-label">题材类型 <span class="cf-label-opt">（第一个选中的是主导类型，再选最多 2 个做调味——主导给骨架，调味给肌理）</span></label>
           <div class="cf-genre-cards">
-            ${GENRE_LIBRARY.map((g) => {
+            ${GENRE_LIBRARY.filter((g) => g.kind !== "format").map((g) => {
               const selected = (creation.genres ?? []).includes(g.label);
               const idx = (creation.genres ?? []).indexOf(g.label);
               const badge = idx === 0 ? "主导" : idx > 0 ? "调味" : "";

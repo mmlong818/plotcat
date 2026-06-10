@@ -344,6 +344,7 @@ export const GENRE_LIBRARY = [
   {
     id: "micro_drama",
     label: "微短剧",
+    kind: "format",
     audience_promise: "在每集 1-3 分钟里获得一次完整的情绪击打——憋屈被打脸、卑微被看见、压抑被释放，且永远想知道下一集。",
     obligatory_scenes: [
       "黄金三秒钩子：第 1 集前 3 秒必须抛出强刺激（身份反差/当众羞辱/惊天误会），观众没有耐心等铺垫——铺垫藏在冲突里交代。",

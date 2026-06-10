@@ -42,13 +42,19 @@ export function resolveGenreBlend(genreTags = []) {
   const tags = Array.isArray(genreTags) ? genreTags : [genreTags];
   const seen = new Set();
   const resolved = [];
+  let formatContract = null;
   for (const tag of tags) {
     const g = resolveGenre(tag);
-    if (g && !seen.has(g.id)) { seen.add(g.id); resolved.push(g); }
+    if (!g || seen.has(g.id)) continue;
+    seen.add(g.id);
+    // 形态条目（微短剧）不是题材：不占主导/调味位，单独作为形态契约层叠加
+    if (g.kind === "format") { formatContract = g; continue; }
+    resolved.push(g);
   }
   return {
     primary: resolved[0] ?? null,
     secondaries: resolved.slice(1, 3),
+    formatContract,
     unrecognized: tags.filter((t) => String(t).trim() && !resolveGenre(t))
   };
 }
@@ -58,9 +64,17 @@ export function resolveGenreBlend(genreTags = []) {
 //   "full"  — 结构级步骤（logline/beat/概念/结构）：主类型全量契约 + 副类型冲突与调性
 //   "scene" — 场景级步骤（写本场/拆解）：禁忌全集 + 主类型观众承诺 + 副类型肌理提醒
 export function buildGenreBlendContract(genreTags = [], scope = "full") {
-  const { primary, secondaries } = resolveGenreBlend(genreTags);
-  if (!primary) return "";
+  const { primary, secondaries, formatContract } = resolveGenreBlend(genreTags);
+  if (!primary && !formatContract) return "";
   const parts = [];
+  if (!primary && formatContract) {
+    // 只有形态没有题材：形态纪律全量输出
+    parts.push(`【形态契约：${formatContract.label}】`);
+    parts.push(`观众承诺：${formatContract.audience_promise}`);
+    parts.push(`形态纪律（必须执行）：\n${formatContract.obligatory_scenes.map((x, i) => `${i + 1}. ${x}`).join("\n")}`);
+    parts.push(`形态禁忌：\n${formatContract.forbidden_patterns.map((x) => `- ${x}`).join("\n")}`);
+    return parts.join("\n\n");
+  }
 
   if (scope === "full") {
     parts.push(`【主导类型：${primary.label}】`);
@@ -76,7 +90,17 @@ export function buildGenreBlendContract(genreTags = [], scope = "full") {
     if (secondaries.length > 0) {
       parts.push(`【混合纪律】主导类型负责骨架（结构节点、幕高潮、结局形态），调味类型负责场景肌理（关系张力、调性、副线）。禁止两个类型各讲半部戏——每场戏都应同时被两种类型的能量穿过，而非交替切换。`);
     }
-  } else {
+  }
+  if (formatContract) {
+    if (scope === "full") {
+      parts.push(`【形态契约：${formatContract.label}】（与题材契约叠加：题材给故事内容，形态给节奏与钩子纪律）`);
+      parts.push(`形态纪律：\n${formatContract.obligatory_scenes.map((x, i) => `${i + 1}. ${x}`).join("\n")}`);
+      parts.push(`形态禁忌：\n${formatContract.forbidden_patterns.map((x) => `- ${x}`).join("\n")}`);
+    } else {
+      parts.push(`【形态纪律：${formatContract.label}】本场所属单集的结尾必须落在钩子上；爽点节奏按集兑付，禁止长剧式留白。`);
+    }
+  }
+  if (scope !== "full") {
     parts.push(`【类型契约：${[primary.label, ...secondaries.map((g) => g.label)].join(" × ")}】`);
     parts.push(`主导观众承诺：${primary.audience_promise}`);
     const allForbidden = [primary, ...secondaries].flatMap((g) => g.forbidden_patterns);
