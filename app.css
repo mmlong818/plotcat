@@ -4044,6 +4044,7 @@ a { color: var(--accent); text-decoration: none; }
   align-items: center;
   gap: 4px;
 }
+.scene-row__orphan { color: var(--warning); font-weight: 600; }
 
 /* 右侧关联区：折叠分组 */
 .scene-ctx { display: flex; flex-direction: column; gap: 4px; padding: 12px 0; }

@@ -69,18 +69,23 @@ function safePath(urlPath) {
 
 function readJsonBody(request) {
   return new Promise((resolve, reject) => {
-    let raw = "";
+    // 必须先收集 Buffer 再整体解码：`raw += chunk` 会把每个 chunk 单独 toString，
+    // HTTP chunk 边界切断多字节 UTF-8 字符时产生 U+FFFD（�），曾持续损坏所有项目文档
+    const chunks = [];
+    let size = 0;
     request.on("data", (chunk) => {
-      raw += chunk;
-      if (raw.length > 2_000_000) {
+      chunks.push(chunk);
+      size += chunk.length;
+      if (size > 2_000_000) {
         reject(new Error("请求体过大"));
       }
     });
     request.on("end", () => {
-      if (!raw) {
+      if (size === 0) {
         resolve({});
         return;
       }
+      const raw = Buffer.concat(chunks).toString("utf8");
       try {
         resolve(JSON.parse(raw));
       } catch (error) {
