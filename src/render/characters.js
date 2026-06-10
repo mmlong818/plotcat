@@ -10,14 +10,6 @@ const ROLE_GROUPS = [
   { key: "supporting",  label: "配角" },
 ];
 
-const LOCKABLE_FIELDS = [
-  "name", "story_role",
-  "external_goal", "dramatic_need", "contradiction", "pressure_point", "secret",
-  "notes",
-  "starting_mask", "arc_start", "arc_end",
-  "traits", "mbti", "core_drive"
-];
-
 function lockBadge(character, fieldKey) {
   const locked = list(character.locked_fields).includes(fieldKey);
   const title = locked ? "已锁定：AI 辅助修正时保持不变（点击解锁）" : "锁定此项：AI 修正时保持不变";
@@ -33,11 +25,6 @@ function lockedInputField(character, label, fieldName, value, options = {}) {
 
 function lockedTextareaField(character, label, fieldName, value, options = {}) {
   const base = textareaField(label, "character-field", fieldName, value, options);
-  return base.replace(/<label>([^<]*)<\/label>/, (_, l) => `<label class="field-label-row"><span>${l}</span>${lockBadge(character, fieldName)}</label>`);
-}
-
-function lockedSelectField(character, label, fieldName, value, choices) {
-  const base = selectField(label, "character-field", fieldName, value, choices);
   return base.replace(/<label>([^<]*)<\/label>/, (_, l) => `<label class="field-label-row"><span>${l}</span>${lockBadge(character, fieldName)}</label>`);
 }
 
@@ -417,4 +404,3 @@ export function renderCharactersPage(dom, appState, { getCharacter }) {
   `;
 }
 
-export { LOCKABLE_FIELDS };

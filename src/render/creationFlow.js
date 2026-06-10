@@ -605,132 +605,9 @@ const EVAL_STEP_INFO = {
 
 const SCORE_GUIDE = "评分参考：50=平庸 / 65=还行 / 75=不错 / 85=很好 / 90+=优秀";
 
-function renderEvalRulesModal(appState) {
-  if (!appState.evalRulesModalOpen) return "";
-  const rules = appState.evalRules ?? {};
-
-  const rows = Object.entries(EVAL_STEP_INFO).map(([key, { label, note }]) => {
-    const rule = rules[key] ?? { passScore: 70, maxRetry: 1 };
-    return `
-      <tr class="er-row">
-        <td class="er-cell er-cell--label">
-          <span class="er-step-name">${escapeHtml(label)}</span>
-          <span class="er-step-note">${escapeHtml(note)}</span>
-        </td>
-        <td class="er-cell er-cell--num">
-          <input class="er-input" type="number" min="0" max="100"
-            data-action="update-eval-rule"
-            data-step="${key}"
-            data-field="passScore"
-            value="${rule.passScore}" />
-        </td>
-        <td class="er-cell er-cell--num">
-          <input class="er-input" type="number" min="0" max="5"
-            data-action="update-eval-rule"
-            data-step="${key}"
-            data-field="maxRetry"
-            value="${rule.maxRetry}" />
-        </td>
-      </tr>`;
-  }).join("");
-
-  return `
-    <div class="er-backdrop" data-action="close-eval-rules">
-      <div class="er-panel" onclick="event.stopPropagation()">
-        <div class="er-header">
-          <h3 class="er-title">⚙ 一键生成评估规则</h3>
-          <button class="button button--ghost button--small" type="button"
-            data-action="close-eval-rules">✕</button>
-        </div>
-        <p class="er-hint">
-          <strong>通过分</strong>：AI 评分达到该分数即不再重试，直接进入下一步。<br>
-          <strong>最多重试</strong>：未达标时重新生成的次数（概念/梗概每轮生成6个取最佳，最终取所有轮中最高分）。<br>
-          ${escapeHtml(SCORE_GUIDE)}
-        </p>
-        <table class="er-table">
-          <thead>
-            <tr>
-              <th class="er-th">步骤 &amp; 评分维度</th>
-              <th class="er-th er-th--num">通过分</th>
-              <th class="er-th er-th--num">最多重试</th>
-            </tr>
-          </thead>
-          <tbody>${rows}</tbody>
-        </table>
-        <div class="er-footer">
-          <button class="cf-deco-btn cf-deco-btn--small" type="button"
-            data-action="close-eval-rules">完成</button>
-        </div>
-      </div>
-    </div>`;
-}
-
 // ── Auto-gen progress panel ───────────────────────────────────────────────
 
 const AUTO_GEN_STEPS = ["概念", "梗概", "角色", "剧情点", "幕结构"];
-
-function renderAutoProgress(autoGen) {
-  const stepIdx = autoGen.stepIdx ?? 0;
-  const phase = autoGen.phase ?? "generating";
-  const log = autoGen.log ?? [];
-  const preview = autoGen.preview ?? "";
-  const score = autoGen.score ?? null;
-  const retry = autoGen.retry ?? 0;
-  const error = autoGen.error ?? "";
-  const isDone = phase === "done" || phase === "finalizing";
-
-  const phaseLabel = {
-    generating:  "AI 生成中…",
-    evaluating:  "Linda Seger 评估中…",
-    retrying:    "重新生成（品质不足）…",
-    finalizing:  "正在创建项目…",
-    done:        "全部完成！",
-    error:       "出现错误"
-  }[phase] ?? phase;
-
-  const track = AUTO_GEN_STEPS.map((name, i) => {
-    const stepDone = isDone ? true : i < stepIdx;
-    const isCurrent = !isDone && i === stepIdx;
-    const cls = stepDone ? "is-done" : isCurrent ? "is-current" : "";
-    return `
-      <div class="cf-ap-step ${cls}">
-        <div class="cf-ap-dot">${stepDone ? "✓" : i + 1}</div>
-        <span class="cf-ap-step-name">${escapeHtml(name)}</span>
-      </div>`;
-  }).join('<div class="cf-ap-sep"></div>');
-
-  const previewTail = preview.length > 200 ? "…" + preview.slice(-200) : preview;
-  const logHtml = log.map((entry) => {
-    const isPass = typeof entry === "string" ? entry.startsWith("✓") : !!entry.passed;
-    const text = typeof entry === "string" ? entry : (entry.label ?? "");
-    return `
-      <div class="cf-ap-log-entry ${isPass ? "is-pass" : "is-fail"}">
-        <span class="cf-ap-log-text">${escapeHtml(text)}</span>
-      </div>`;
-  }).join("");
-
-  return `
-    <div class="cf-auto-progress">
-      <div class="cf-ap-header">
-        <span class="cf-ap-title">⚡ 一键生成</span>
-        ${!isDone ? `<button class="cf-ap-cancel" type="button" data-action="cancel-auto-gen">取消</button>` : ""}
-      </div>
-
-      <div class="cf-ap-track">${track}</div>
-
-      <div class="cf-ap-status">
-        <span class="cf-ap-phase">${escapeHtml(phaseLabel)}</span>
-        ${score !== null && score !== undefined && (phase === "evaluating" || phase === "retrying") ? `<span class="cf-ap-score-badge">评估分 ${score}</span>` : ""}
-        ${retry > 0 ? `<span class="cf-ap-retry-badge">第 ${retry + 1} 次尝试</span>` : ""}
-      </div>
-
-      ${error ? `<p class="cf-ap-error">${escapeHtml(error)}</p>` : ""}
-      ${previewTail && phase === "generating" ? `<pre class="cf-ap-preview">${escapeHtml(previewTail)}</pre>` : ""}
-
-      ${log.length > 0 ? `<div class="cf-ap-log">${logHtml}</div>` : ""}
-    </div>
-  `;
-}
 
 // ── Main render entry ─────────────────────────────────────────────────────
 
@@ -740,30 +617,23 @@ export function renderCreationFlowPage(dom, appState) {
   const step = creation.currentStep ?? 1;
 
   let mainContent = "";
-  if (creation.autoGen?.active) {
-    mainContent = renderAutoProgress(creation.autoGen);
-  } else {
-    let stepContent = "";
-    if (step === 1) stepContent = renderStep1(creation);
-    else if (step === 2) stepContent = renderStep2(creation);
-    else if (step === 3) stepContent = renderStep3New(creation);
-    else if (step === 4) stepContent = renderStep4New(creation);
-    else if (step === 5) stepContent = renderStep5New(creation);
-    mainContent = stepContent;
-  }
+  if (step === 1) mainContent = renderStep1(creation);
+  else if (step === 2) mainContent = renderStep2(creation);
+  else if (step === 3) mainContent = renderStep3New(creation);
+  else if (step === 4) mainContent = renderStep4New(creation);
+  else if (step === 5) mainContent = renderStep5New(creation);
 
   dom.creationContent.innerHTML = `
     <div class="creation-flow">
       <div class="cf-topbar">
         <button class="cf-back-btn" type="button" data-action="go-to-project">← 项目列表</button>
       </div>
-      ${creation.autoGen?.active ? "" : renderStepper(creation)}
+      ${renderStepper(creation)}
       <div class="cf-main">
         ${mainContent}
       </div>
-      ${creation.autoGen?.active ? "" : renderReasoningPanel(creation)}
-      ${creation.autoGen?.active ? "" : renderAiLoadingOverlay(creation)}
-      ${renderEvalRulesModal(appState)}
+      ${renderReasoningPanel(creation)}
+      ${renderAiLoadingOverlay(creation)}
     </div>
   `;
 }

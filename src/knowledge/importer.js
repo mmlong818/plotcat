@@ -84,4 +84,3 @@ export function buildImportPatch(detail, target) {
   return mapper(detail);
 }
 
-export const SUPPORTED_TARGETS = Object.keys(MAPPERS);

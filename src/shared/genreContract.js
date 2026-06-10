@@ -87,29 +87,3 @@ export function buildGenreBlendContract(genreTags = [], scope = "full") {
   return parts.join("\n\n");
 }
 
-// 契约兑现追踪：把主导类型的必备场景与项目场景表做启发式对位。
-// 返回 [{ index, requirement, matched_scene_ids, status }]
-export function auditGenreFulfillment(genreTags = [], scenes = []) {
-  const { primary } = resolveGenreBlend(genreTags);
-  if (!primary) return { genre: null, items: [] };
-  // 每条必备场景提取关键词组（顿号/冒号前的核心短语 + 2-4 字关键词）
-  const items = primary.obligatory_scenes.map((req, index) => {
-    const head = req.split("：")[0];
-    const keywords = (req.match(/[一-龥]{2,4}/g) ?? [])
-      .filter((w) => !/必须|不能|观众|场景|时刻|呈现|具体|建立|出现|这个|不是|而是/.test(w))
-      .slice(0, 10);
-    const matched = scenes.filter((s) => {
-      const text = [s.title, s.purpose, s.beat_summary, (s.script_full || "").slice(0, 800)].join("\n");
-      const hits = keywords.filter((w) => text.includes(w)).length;
-      return hits >= 2;
-    });
-    return {
-      index,
-      requirement: head,
-      full_text: req,
-      matched_scene_ids: matched.map((s) => s.id),
-      status: matched.length > 0 ? "fulfilled" : "missing"
-    };
-  });
-  return { genre: primary, items };
-}

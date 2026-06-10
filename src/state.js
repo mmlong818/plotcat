@@ -67,24 +67,6 @@ export const structureTemplateLabels = {
   custom: "自定义"
 };
 
-export const projectDraftFieldLabels = {
-  genre: "类型方向",
-  tone: "风格方向",
-  title: "项目名称",
-  logline: "一句话概念",
-  core_conflict: "核心冲突",
-  theme_question: "主题问题",
-  theme: "主题陈述",
-  protagonist: "主角",
-  motif: "视觉母题",
-  arc_start: "弧光起点",
-  arc_end: "弧光终点",
-  external_goal: "外部目标",
-  internal_need: "内部需要",
-  setting: "世界起点",
-  audience_promise: "观众承诺"
-};
-
 // 好莱坞行业标准：三幕（Three-Act Structure）为所有作品形态的默认结构
 // 四幕仅作为电视试播 / 季播的备选，五幕长片（救猫咪）为高级备选
 export const formatDefaultTemplates = {
@@ -150,15 +132,6 @@ export const PLOT_TROPE_OPTIONS = [
   "厄运变身", "诅咒契约", "帮派战争", "发奋图强", "夺宝奇兵"
 ];
 
-// ── 结局方向选项 ──────────────────────────────────────────────
-export const ENDING_DIRECTION_OPTIONS = [
-  "罪有应得", "相濡以沫", "生活美满", "实现自我", "劳燕分飞",
-  "天网恢恢", "结为夫妻", "寻得真爱", "家人团聚", "逍遥法外",
-  "公诸于世", "同归于尽", "成长蜕变", "终得归家",
-  "主角得到救赎", "主角彻底隐退", "皆有所悟", "主角梦碎",
-  "旗开得胜邪恶犹存", "主人公重拾理想信念", "宝藏永失"
-];
-
 export const plotTypeLabels = {
   mainline: "主线",
   enhancement: "强化",
@@ -178,12 +151,6 @@ export const sceneStatusLabels = {
   outline: "大纲",
   locked: "已锁定",
   scripted: "已写成稿"
-};
-
-export const relationshipStatusLabels = {
-  active: "使用中",
-  locked: "已锁定",
-  retired: "停用"
 };
 
 export const setupStatusLabels = {
@@ -351,18 +318,6 @@ export function buildCustomStructurePreset(rawActCount = 2) {
   return { acts, nodes, custom_act_count: actCount };
 }
 
-export function getDefaultTemplateForFormat(format) {
-  return formatDefaultTemplates[format] ?? "feature_film";
-}
-
-export function getStructureOptionsForFormat(format, currentTemplate = null) {
-  const values = [...(formatStructureOptions[format] ?? ["feature_film", "pilot_episode", "three_act", "four_act", "custom"])];
-  if (currentTemplate && !values.includes(currentTemplate)) {
-    values.unshift(currentTemplate);
-  }
-  return values.map((value) => [value, structureTemplateLabels[value] ?? value]);
-}
-
 export function createDefaultProjectDraft() {
   return {
     title: "",
@@ -387,43 +342,6 @@ export function createDefaultProjectDraft() {
   };
 }
 
-// ── 场景编织：场景目标模板 ──────────────────────────────────
-export const SCENE_GOAL_OPTIONS = ["说服对方", "逃离此地", "获取物品", "揭露真相", "保护某人", "赢得比赛", "完成仪式", "传递信息", "赢得信任", "摆脱追踪"];
-
-// ── 场景编织：场景结局 ──────────────────────────────────────
-export const SCENE_OUTCOME_OPTIONS = ["目标达成", "目标失败", "达成但有意外后果", "虽败但有意外收获"];
-
-// ── 场景编织：情感节拍 ──────────────────────────────────────
-export const EMOTION_OPTIONS = [
-  "喜悦", "信任", "恐惧", "惊讶", "悲伤", "厌恶", "愤怒", "期待",
-  "兴奋", "满足", "敬畏", "惊恐", "悔恨", "轻蔑", "恼怒", "希望",
-  "焦虑", "沮丧", "怀疑", "内疚", "自豪", "同情", "羞耻", "平静",
-  "释然", "困惑", "警惕", "乐观", "压抑", "绝望", "愉快", "紧张"
-];
-
-// ── 场景编织：对白与潜台词 ──────────────────────────────────
-export const DIALOGUE_STYLE_OPTIONS = [
-  { key: "naturalism", label: "自然主义", desc: "贴近生活的真实对话" },
-  { key: "dramatic",   label: "戏剧化",   desc: "富有张力的戏剧对话" },
-  { key: "humorous",   label: "幽默风趣", desc: "轻松诙谐的对话风格" },
-  { key: "poetic",     label: "诗意抒情", desc: "富有诗意的文艺对话" }
-];
-
-export const SUBTEXT_OPTIONS = [
-  "威胁（包装成关心）", "试探（包装成闲聊）", "爱意（包装成抱怨）",
-  "嫉妒（包装成祝福）", "恐惧（包装成愤怒）", "不信任（包装成赞美）",
-  "厌恶（包装成礼貌）", "怀念（包装成指责）", "自卑（包装成自大）", "愧疚（包装成指责）"
-];
-
-export const DIALOGUE_POWER_OPTIONS = ["平等", "主导", "被动", "审问"];
-export const DIALOGUE_PACE_OPTIONS  = ["快速交锋", "缓慢推进", "对峙沉默"];
-
-// ── 场景编织：行为与描述风格 ────────────────────────────────
-export const DESC_DENSITY_OPTIONS  = ["极简", "标准", "丰富"];
-export const WRITING_STYLE_OPTIONS = [
-  "冷静客观", "感官沉浸", "快节奏冲击", "诗意渲染",
-  "黑色幽默", "纪实风格", "超现实", "意识流", "极简主义", "巴洛克式"
-];
 
 // ── 角色心理剖面 ─────────────────────────────────────────────
 // MBTI 16 种人格类型（按四个集群分组）

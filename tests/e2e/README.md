@@ -16,9 +16,9 @@
 
 运行方式：先 `node server.js`（端口 4173），再 `node tests/e2e/<脚本>`。
 
-## 历史一次性排查脚本（inspect-* / realcheck-* / realuse-* / diag-* / probe-* / auto-*）
+## 历史一次性排查脚本
 
-多轮真实检查会话的产物，针对当时的 bug 现场，**不保证对当前代码可用**，仅作存档参考。
-新排查请新建脚本，不要在旧脚本上续写。
+已于 2026-06-11 清理（git 历史可找回）。新排查请新建脚本。
+`quality-lint.mjs` 是正式验收工具：`node tests/e2e/quality-lint.mjs all`，CRITICAL=0 才算过。
 
 截图产物目录（audit-*/、*-shots/、realcheck-10-runs/）已被 .gitignore 排除。

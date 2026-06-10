@@ -38,46 +38,6 @@ function createIssue({
   };
 }
 
-export function computeOverview(project) {
-  const anchor = project.intent_anchor;
-  const scenes = project.story_bible.scene_cards;
-  const setups = project.story_bible.setup_payoffs;
-  const anchorFilled = countFilled([
-    anchor.core_idea,
-    anchor.theme,
-    anchor.protagonist,
-    anchor.arc,
-    anchor.motif,
-    anchor.genre?.length
-  ]);
-  const sceneReadyCount = scenes.filter(
-    (scene) => scene.goal && scene.obstacle && scene.turn
-  ).length;
-
-  return [
-    {
-      label: "锚点完整度",
-      value: `${Math.round((anchorFilled / 6) * 100)}%`,
-      detail: `${anchorFilled} / 6 个关键锚点已锁定`
-    },
-    {
-      label: "场景完成度",
-      value: `${sceneReadyCount}/${scenes.length}`,
-      detail: "按目标 / 阻力 / 转折是否齐备计算"
-    },
-    {
-      label: "未回收伏笔",
-      value: `${setups.filter((item) => item.status === "open").length}`,
-      detail: "需要继续绑定回收场景"
-    },
-    {
-      label: "角色网络",
-      value: `${project.story_bible.characters.length}`,
-      detail: `${project.story_bible.relationships.length} 条关键关系张力`
-    }
-  ];
-}
-
 export function computeIssues(project) {
   const issues = [];
   const scenes = [...project.story_bible.scene_cards].sort(

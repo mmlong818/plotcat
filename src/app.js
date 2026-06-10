@@ -13,7 +13,13 @@ import {
 
 const RELATIONSHIP_TYPE_KIND_VALUES = new Set(RELATIONSHIP_TYPE_OPTIONS);
 
-import { escapeHtml, list, unique, splitTags, isBrokenPlaceholderText, formatTime } from "./utils.js";
+import {
+  escapeHtml,
+  list,
+  unique,
+  splitTags,
+  isBrokenPlaceholderText
+} from "./utils.js";
 
 import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
@@ -53,8 +59,6 @@ const dom = {
   seriesContent: document.querySelector("#series-content"),
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
-  stepPrevButton: document.querySelector("#step-prev-button"),
-  stepNextButton: document.querySelector("#step-next-button"),
   projectList: document.querySelector("#project-list"),
   projectCreateDialog: document.querySelector("#project-create-dialog"),
   projectCreateEyebrow: document.querySelector("#project-create-eyebrow"),
@@ -72,7 +76,6 @@ const dom = {
   plotsContent: document.querySelector("#plots-content"),
   charactersContent: document.querySelector("#characters-content"),
   relationshipsContent: document.querySelector("#relationships-content"),
-  genresContent: document.querySelector("#genres-content"),
   locksContent: document.querySelector("#locks-content"),
   scenesContent: document.querySelector("#scenes-content"),
   screenplayContent: document.querySelector("#screenplay-content"),
@@ -140,7 +143,6 @@ import {
   getCharacterRelationships,
   getRelationshipLinkedPlotCards,
   getSceneLinkedPlotCards,
-  getSceneLinkedCharacterIds,
   getSceneLinkedCharacters,
   getSceneLinkedRelationships,
   getSceneLinkedTimelineEvents,
@@ -153,21 +155,12 @@ import {
 } from "./logic/getters.js";
 
 import {
-  createPlotBoardLanes,
-  createPlotScenarioGroups,
-  getDefaultLaneIdForType,
-  getDefaultLaneKindForType,
-  getPlotLanes,
   getScenarioGroups,
   getPlotLane,
   getActiveScenarioGroup,
   getVisibleLanes,
-  getDefaultNodeForAct,
   getCardsInLaneAct,
-  nextLaneActOrder,
   ensurePlotBoardModel,
-  updatePlotCardLane,
-  getAutoPlotStatusForPlacement,
   applyPlotCardPlacement
 } from "./logic/plotBoard.js";
 
@@ -193,17 +186,6 @@ function shiftPlotCardWithinLane(cardId, direction) {
   card.order_index = other.order_index ?? currentOrder;
   other.order_index = currentOrder;
   markDirty();
-  render();
-}
-
-function setPlotBoardView(mode = "structure") {
-  appState.plotBoardView = mode === "rehearsal" ? "rehearsal" : "structure";
-  appState.project.plot_board.view_mode = appState.plotBoardView;
-  render();
-}
-
-function setPlotContextVisible(visible = true) {
-  appState.plotContextVisible = Boolean(visible);
   render();
 }
 
@@ -339,7 +321,6 @@ function saveLocalSnapshot() {
       projectList: appState.projectList,
       creation: serializeCreation(appState.creation),
       currentPage: appState.currentPage,
-      evalRules: appState.evalRules
     })
   );
 }
@@ -464,11 +445,6 @@ function setCurrentStep(stepId) {
     }
   }
   render();
-}
-
-function goToAdjacentStep(direction) {
-  const nextIndex = Math.max(0, Math.min(workflowSteps.length - 1, currentStepIndex() + direction));
-  setCurrentStep(workflowSteps[nextIndex].id);
 }
 
 // ── Structure template ───────────────────────────────────────────────────────
@@ -1060,22 +1036,6 @@ function updateProjectField(action, fieldName, value) {
   const selectedSetup = getSetup();
 
   if (action === "story-core-field") appState.project.story_core[fieldName] = value;
-  if (action === "structure-meta-field") {
-    if (fieldName === "template" && value !== appState.project.structure_profile.template) {
-      applyStructureTemplate(
-        value,
-        value === "custom"
-          ? appState.project.structure_profile?.custom_act_count ?? list(appState.project.structure_profile?.acts).length ?? 2
-          : null
-      );
-      return;
-    }
-    if (fieldName === "custom_act_count" && appState.project.structure_profile.template === "custom") {
-      applyStructureTemplate("custom", Number(value) || 2);
-      return;
-    }
-    appState.project.structure_profile[fieldName] = value;
-  }
   if (action === "series-field" && appState.seriesLibrary?.selected) {
     appState.seriesLibrary.selected[fieldName] = value;
     return;
@@ -1102,16 +1062,6 @@ function updateProjectField(action, fieldName, value) {
   if (action === "plot-field" && selectedPlot) selectedPlot[fieldName] = value;
   if (action === "character-field" && selectedCharacter) selectedCharacter[fieldName] = value;
   if (action === "relationship-field" && selectedRelationship) selectedRelationship[fieldName] = value;
-  if (action === "genre-field") {
-    if (fieldName === "secondary_genres_text") appState.project.genre_profile.secondary_genres = splitTags(value);
-    else if (fieldName === "tone_words_text") appState.project.genre_profile.tone_words = splitTags(value);
-    else appState.project.genre_profile[fieldName] = value;
-    // 类型契约引擎以 project.genre 为真源：主/副类型编辑后同步回写
-    if (fieldName === "primary_genre" || fieldName === "secondary_genres_text") {
-      const gp = appState.project.genre_profile;
-      appState.project.project.genre = [gp.primary_genre, ...list(gp.secondary_genres)].filter(Boolean);
-    }
-  }
   if (action === "timeline-field" && selectedTimeline) {
     const v = fieldName === "story_day" ? Number(value) || 1 : value;
     selectedTimeline[fieldName] = v;
@@ -1513,89 +1463,9 @@ function handleClick(event) {
     _renderProjectCreateForm();
     return;
   }
-  if (action === "toggle-ai-config") { appState.aiConfigOpen = !appState.aiConfigOpen; _renderProjectCreateForm(); return; }
   if (action === "fetch-ai-models") { fetchAiModelOptionsCurrentV2(); return; }
   if (action === "save-ai-config") { saveAiConfigDraftCurrentV2(); return; }
   if (action === "disconnect-ai-config") { disconnectAiConfigDraftCurrentV2(); return; }
-  if (action === "open-creation-flow") {
-    appState.currentPage = "creation";
-    appState.createDialogOpen = false;
-    if (!appState.creation) {
-      appState.creation = {
-        currentStep: 1,
-        genres: [],
-        era: "",
-        conceptHint: "",
-        conceptChoices: [],
-        selectedConceptIdx: -1,
-        selectedConcept: null,
-        conceptCustom: "",
-        conceptCustomOpen: false,
-        synopsisChoices: [],
-        selectedSynopsisIdx: -1,
-        selectedSynopsis: null,
-        synopsisCustom: "",
-        synopsisCustomOpen: false,
-        characterProposals: [],
-        confirmedCharacters: [],
-        sceneProposals: [],
-        selectedSceneIds: new Set(),
-        selectedStructure: { primary: null, devices: [], lens: [] },
-        actStructure: null,
-        actStructureChoice: null,
-        loadingStep: -1,
-        aiError: "",
-        lastReasoning: "",
-        reasoningPanelOpen: false,
-        autoGen: null
-      };
-    }
-    saveLocalSnapshot();
-    render();
-    renderCreationPage();
-    return;
-  }
-  if (action === "new-creation-flow") {
-    appState.currentPage = "creation";
-    appState.createDialogOpen = false;
-    appState.creation = {
-      currentStep: 1,
-      genres: [],
-      era: "",
-      conceptHint: "",
-      conceptChoices: [],
-      selectedConceptIdx: -1,
-      selectedConcept: null,
-      conceptCustom: "",
-      conceptCustomOpen: false,
-      synopsisChoices: [],
-      selectedSynopsisIdx: -1,
-      selectedSynopsis: null,
-      synopsisCustom: "",
-      synopsisCustomOpen: false,
-      characterProposals: [],
-      confirmedCharacters: [],
-      sceneProposals: [],
-      selectedSceneIds: new Set(),
-      selectedStructureId: null,
-      actStructure: null,
-      actStructureChoice: null,
-      loadingStep: -1,
-      aiError: "",
-      lastReasoning: "",
-      reasoningPanelOpen: false
-    };
-    saveLocalSnapshot();
-    render();
-    renderCreationPage();
-    return;
-  }
-  if (action === "open-create-dialog") {
-    resetProjectCreateWizard();
-    appState.createDialogOpen = true;
-    render();
-    return;
-  }
   if (action === "toggle-draft-tone") {
     const val = target.dataset.value ?? "";
     appState.projectDraft.tone = appState.projectDraft.tone === val ? "" : val;
@@ -1623,22 +1493,6 @@ function handleClick(event) {
     return;
   }
   // ── 场景编织事件处理 ──────────────────────────────────────────
-  if (action === "select-scene-goal") {
-    const scene = getScene();
-    if (scene) { scene.scene_goal_template = scene.scene_goal_template === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-outcome") {
-    const scene = getScene();
-    if (scene) { scene.scene_outcome = scene.scene_outcome === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-emotion") {
-    const scene = getScene();
-    const fieldName = target.dataset.field;
-    if (scene && fieldName) { scene[fieldName] = scene[fieldName] === id ? "" : id; markDirty(); render(); }
-    return;
-  }
   if (action === "select-scene-dialogue-style") {
     const scene = getScene();
     if (scene) { scene.dialogue_style = scene.dialogue_style === id ? "" : id; markDirty(); render(); }
@@ -1810,12 +1664,6 @@ function handleClick(event) {
     }
     return;
   }
-  if (action === "select-ending-direction") {
-    const current = appState.project.story_core.ending_direction ?? "";
-    appState.project.story_core.ending_direction = current === id ? "" : id;
-    markDirty(); render();
-    return;
-  }
   if (action === "toggle-draft-genre") {
     const val = target.dataset.value ?? "";
     const current = Array.isArray(appState.projectDraft.genre) ? appState.projectDraft.genre : [];
@@ -1939,37 +1787,10 @@ function handleClick(event) {
     if (structId) applyLibraryStructure(structId);
     return;
   }
-  if (action === "trigger-poster-upload") {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "image/*";
-    input.onchange = () => {
-      const file = input.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        appState.project.story_core.poster_base64 = e.target.result;
-        markDirty();
-        render();
-      };
-      reader.readAsDataURL(file);
-    };
-    input.click();
-    return;
-  }
-  if (action === "remove-poster") {
-    event.stopPropagation();
-    appState.project.story_core.poster_base64 = "";
-    markDirty();
-    render();
-    return;
-  }
   if (action === "go-step") return setCurrentStep(id);
   if (action === "jump-to-plot-card") { appState.selection.plotCardId = id; appState.plotFilter = "all"; setCurrentStep("plots"); return; }
   if (action === "jump-to-character") { appState.selection.characterId = id; setCurrentStep("characters"); return; }
-  if (action === "jump-to-relationship") { appState.selection.relationshipId = id; setCurrentStep("relationships"); return; }
   if (action === "jump-to-scene") { appState.selection.sceneId = id; setCurrentStep("scenes"); return; }
-  if (action === "set-plot-filter") { appState.plotFilter = id; render(); return; }
   if (action === "select-plot-card") { appState.selection.plotCardId = id; render(); return; }
   if (action === "open-plot-editor") { appState.plotEditorOpen = true; render(); return; }
   if (action === "close-plot-editor") { appState.plotEditorOpen = false; render(); return; }
@@ -2414,9 +2235,6 @@ function handleClick(event) {
     if (!w) alert("浏览器拦截了弹窗，请允许后重试。");
     return;
   }
-  if (action === "set-plot-view") { setPlotBoardView(target.dataset.id ?? "structure"); return; }
-  if (action === "toggle-plot-context") { setPlotContextVisible(!appState.plotContextVisible); return; }
-  if (action === "set-scenario-group") { appState.activeScenarioGroupId = target.dataset.id ?? null; render(); return; }
   if (action === "move-plot-card-position") { shiftPlotCardWithinLane(target.dataset.id ?? "", Number(target.dataset.direction) || 0); }
   if (action === "cancel-reset") { appState.resetConfirmPending = false; renderAiSettingsDialog(dom, appState, aiGetters); return; }
   if (action === "confirm-reset") {
@@ -2476,18 +2294,6 @@ function handleInput(event) {
   if (action === "node-field") {
     const node = list(appState.project.structure_profile?.nodes).find((item) => item.id === event.target.dataset.id);
     if (node) node[fieldName] = event.target.value;
-    markDirty();
-    return;
-  }
-  if (action === "convention-field") {
-    const item = list(appState.project.genre_profile?.conventions).find((c) => c.id === event.target.dataset.id);
-    if (item) item[fieldName] = event.target.value;
-    markDirty();
-    return;
-  }
-  if (action === "taboo-field") {
-    const item = list(appState.project.genre_profile?.taboos).find((t) => t.id === event.target.dataset.id);
-    if (item) item[fieldName] = event.target.value;
     markDirty();
     return;
   }
@@ -2557,9 +2363,6 @@ async function bootstrap() {
     if (localSnapshot.currentPage === "creation") {
       appState.currentPage = "creation";
     }
-  }
-  if (localSnapshot?.evalRules) {
-    appState.evalRules = { ...appState.evalRules, ...localSnapshot.evalRules };
   }
 
   try {
@@ -2652,8 +2455,6 @@ dom.openSettingsButton.addEventListener("click", () => {
     .then((payload) => { appState.llmProfiles = payload.profiles ?? []; if (appState.settingsDialogOpen) render(); })
     .catch(() => {});
 });
-if (dom.stepPrevButton) dom.stepPrevButton.addEventListener("click", () => goToAdjacentStep(-1));
-if (dom.stepNextButton) dom.stepNextButton.addEventListener("click", () => goToAdjacentStep(1));
 dom.closeSettingsButton.addEventListener("click", () => { appState.settingsDialogOpen = false; render(); });
 dom.closeLibraryButton.addEventListener("click", closeStructureLibrary);
 dom.structureLibraryDialog.addEventListener("click", (event) => {
@@ -3940,24 +3741,6 @@ function handleCreationClick(action, target) {
 
   const c = appState.creation;
 
-  if (action === "pulse-set-mode") {
-    c.pulseMode = target.dataset.value ?? "经典";
-    renderCreationPage();
-    return true;
-  }
-  if (action === "pulse-set-genre") {
-    c.pulseGenre = c.pulseGenre === (target.dataset.value ?? "") ? "" : (target.dataset.value ?? "");
-    renderCreationPage();
-    return true;
-  }
-  if (action === "select-pulse-seed") {
-    const idx = Number(target.dataset.idx ?? -1);
-    if (idx >= 0 && idx < (c.pulseSeeds ?? []).length) {
-      c.selectedPulseSeedIdx = idx;
-    }
-    renderCreationPage();
-    return true;
-  }
   if (action === "proceed-from-pulse") {
     const seed = (c.pulseSeeds ?? [])[c.selectedPulseSeedIdx];
     if (seed) {
@@ -4080,33 +3863,6 @@ function handleCreationClick(action, target) {
     return true;
   }
 
-  if (action === "use-concept-custom") {
-    const text = (c.conceptCustom ?? "").trim();
-    if (text) {
-      c.selectedConcept = { title: "自定义点子", hook: text, core_conflict: "", unique_angle: "" };
-      c.selectedConceptIdx = -1;
-    }
-    renderCreationPage();
-    return true;
-  }
-  if (action === "select-synopsis") {
-    const idx = Number(target.dataset.idx ?? -1);
-    if (idx >= 0 && idx < (c.synopsisChoices ?? []).length) {
-      c.selectedSynopsisIdx = idx;
-      c.selectedSynopsis = c.synopsisChoices[idx];
-    }
-    renderCreationPage();
-    return true;
-  }
-  if (action === "use-synopsis-custom") {
-    const text = (c.synopsisCustom ?? "").trim();
-    if (text) {
-      c.selectedSynopsis = { version_label: "自定义梗概", summary: text, narrative_angle: "" };
-      c.selectedSynopsisIdx = -1;
-    }
-    renderCreationPage();
-    return true;
-  }
   if (action === "confirm-character") {
     const idx = Number(target.dataset.idx ?? -1);
     if (idx >= 0 && (c.characterProposals ?? [])[idx]) c.characterProposals[idx]._status = "confirmed";
@@ -4182,55 +3938,8 @@ function handleCreationClick(action, target) {
     if (idx >= 0) handleRegenSingleCharacter(idx);
     return true;
   }
-  if (action === "toggle-scene") {
-    const sid = target.dataset.sceneId ?? "";
-    if (!sid) return true;
-    const ids = c.selectedSceneIds ?? new Set();
-    if (ids.has(sid)) { ids.delete(sid); } else { ids.add(sid); }
-    c.selectedSceneIds = ids;
-    renderCreationPage();
-    return true;
-  }
-  if (action === "select-structure") {
-    const zone = target.dataset.structZone ?? "primary";
-    const id = target.dataset.structId ?? null;
-    if (!id) return true;
-    c.selectedStructure = c.selectedStructure ?? { primary: null, devices: [], lens: [] };
-    const sel = c.selectedStructure;
-    if (zone === "primary") {
-      sel.primary = sel.primary === id ? null : id;
-    } else if (zone === "device") {
-      const idx = (sel.devices ?? []).indexOf(id);
-      if (idx >= 0) { sel.devices = sel.devices.filter((d) => d !== id); }
-      else if ((sel.devices ?? []).length < 2) { sel.devices = [...(sel.devices ?? []), id]; }
-    } else if (zone === "lens") {
-      const idx = (sel.lens ?? []).indexOf(id);
-      if (idx >= 0) { sel.lens = sel.lens.filter((l) => l !== id); }
-      else { sel.lens = [...(sel.lens ?? []), id]; }
-    }
-    saveLocalSnapshot();
-    renderCreationPage();
-    return true;
-  }
-  if (action === "confirm-act-structure") {
-    c.actStructure = c.actStructureChoice;
-    renderCreationPage();
-    return true;
-  }
-  if (action === "finalize-creation") {
-    callCreationFinalizeAPI();
-    return true;
-  }
   if (action === "ai-generate-characters-cf") {
     handleGenerateCharactersCF();
-    return true;
-  }
-  if (action === "ai-generate-key-scenes") {
-    handleGenerateKeyScenes();
-    return true;
-  }
-  if (action === "ai-generate-act-structure") {
-    handleGenerateActStructure();
     return true;
   }
   if (action === "cancel-cf-ai") {
@@ -4245,126 +3954,10 @@ function handleCreationClick(action, target) {
     setCurrentPage("project");
     return true;
   }
-  if (action === "one-click-generate") {
-    handleOneClickGenerate();
-    return true;
-  }
-  if (action === "cancel-auto-gen") {
-    _autoGenCancelled = true;
-    _cfAbortController?.abort();
-    if (appState.creation) {
-      appState.creation.autoGen = null;
-      renderCreationPage();
-    }
-    return true;
-  }
-  if (action === "open-eval-rules") {
-    appState.evalRulesModalOpen = true;
-    renderCreationPage();
-    return true;
-  }
-  if (action === "close-eval-rules") {
-    appState.evalRulesModalOpen = false;
-    renderCreationPage();
-    return true;
-  }
   return false;
 }
 
 // ── Async AI handlers ─────────────────────────────────────────────────────────
-
-async function handleGenerateWorkbenchCharacters() {
-  appState.characterGen = { loading: true, progress: "分析项目信息…", error: "" };
-  renderCharactersPage(dom, appState, characterGetters);
-
-  const existingChars = list(appState.project.character_hub?.characters);
-  const mainRoles = ["protagonist", "antagonist", "ally"];
-  const missingRoles = mainRoles.filter(
-    (role) => !existingChars.some((c) => c.story_role === role)
-  );
-  const needsGeneration = missingRoles.length > 0 || existingChars.some((c) => !c.external_goal && !c.dramatic_need);
-
-  if (!needsGeneration) {
-    appState.characterGen = { loading: false, progress: "", error: "" };
-    renderCharactersPage(dom, appState, characterGetters);
-    return;
-  }
-
-  appState.characterGen.progress = "生成主要角色…";
-  renderCharactersPage(dom, appState, characterGetters);
-
-  const projectCtx = {
-    project: appState.project.project,
-    story_core: appState.project.story_core,
-    intent_anchor: appState.project.intent_anchor,
-    character_hub: appState.project.character_hub,
-    story_bible: appState.project.story_bible
-  };
-
-  const count = Math.max(missingRoles.length, 1) + (existingChars.length === 0 ? 2 : 0);
-  const result = await callGenerateAPI("characters", projectCtx, {
-    count: Math.min(count + existingChars.filter((c) => !c.external_goal).length, 4),
-    focusRole: missingRoles.length > 0 ? missingRoles.join("+") : "主角+对手"
-  });
-
-  if (result.error && !result.characters && !(result.choices?.[0]?.data?.characters)) {
-    appState.characterGen = { loading: false, progress: "", error: result.error };
-    renderCharactersPage(dom, appState, characterGetters);
-    return;
-  }
-
-  const generated = result.characters ?? result.choices?.[0]?.data?.characters ?? [];
-  const roleLabels = { protagonist: "主角", antagonist: "对手", ally: "盟友", opponent_ally: "复杂盟友", supporting: "配角" };
-
-  for (const gen of generated) {
-    const role = gen.story_role ?? "supporting";
-    const existing = list(appState.project.character_hub?.characters).find((c) => c.story_role === role);
-
-    if (existing) {
-      // 只补空字段
-      if (!existing.external_goal) existing.external_goal = gen.desire ?? "";
-      if (!existing.dramatic_need) existing.dramatic_need = gen.need ?? "";
-      if (!existing.contradiction) existing.contradiction = gen.wound ?? gen.belief ?? "";
-      if (!existing.arc_start) existing.arc_start = gen.arc_start ?? "";
-      if (!existing.arc_end) existing.arc_end = gen.arc_end ?? "";
-      if (!existing.archetype && gen.archetype) existing.archetype = gen.archetype;
-      if (!existing.name || existing.name === "主角" || existing.name === "未命名人物") {
-        existing.name = gen.name || existing.name;
-      }
-    } else {
-      // 新建角色
-      const newChar = {
-        id: createId("char"),
-        name: gen.name || roleLabels[role] || "新人物",
-        story_role: role,
-        external_goal: gen.desire ?? "",
-        dramatic_need: gen.need ?? "",
-        contradiction: gen.wound ?? gen.belief ?? "",
-        starting_mask: "",
-        pressure_point: "",
-        arc_start: gen.arc_start ?? "",
-        arc_end: gen.arc_end ?? "",
-        secret: "",
-        notes: gen.relationship_hook ?? "",
-        archetype: gen.archetype ?? "",
-        traits: [],
-        locked_fields: [],
-        mbti: "",
-        core_drive: "",
-        linked_plot_ids: []
-      };
-      list(appState.project.character_hub?.characters).push(newChar);
-    }
-  }
-
-  // 默认选中主角
-  const protagonist = list(appState.project.character_hub?.characters).find((c) => c.story_role === "protagonist");
-  if (protagonist) appState.selection.characterId = protagonist.id;
-
-  appState.characterGen = { loading: false, progress: "", error: "" };
-  markDirty();
-  renderCharactersPage(dom, appState, characterGetters);
-}
 
 async function handleRefineCharacter(characterId) {
   const character = list(appState.project.character_hub?.characters).find((c) => c.id === characterId);
@@ -4797,293 +4390,6 @@ async function handleRegenSingleCharacter(idx) {
   renderCreationPage();
 }
 
-async function handleGenerateKeyScenes() {
-  const c = appState.creation;
-  c.loadingStep = 5;
-  c.aiError = "";
-  c.streamPreview = "";
-  c.sceneProposals = [];
-  c.selectedSceneIds = new Set();
-  renderCreationPage();
-
-  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
-  const result = await callGenerateAPIStream("key_scenes", {
-    genres: c.genres ?? [],
-    concept: c.selectedConcept ?? {},
-    synopsis: c.selectedSynopsis ?? {},
-    characters: confirmedChars
-  }, {}, (text) => streamingOnChunk(c, text));
-
-  if (result.cancelled) { return; }
-  c.loadingStep = -1;
-  c.streamPreview = "";
-  if (result.error) {
-    c.aiError = result.error;
-  } else {
-    c.sceneProposals = (result.choices ?? []).map((ch) => ch.data ?? ch);
-    c.lastReasoning = result.reasoning ?? "";
-  }
-  renderCreationPage();
-}
-
-async function handleGenerateActStructure() {
-  const c = appState.creation;
-  c.loadingStep = 6;
-  c.aiError = "";
-  c.streamPreview = "";
-  c.actStructureChoice = null;
-  c.actStructure = null;
-  renderCreationPage();
-
-  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
-  const selectedScenes = (c.sceneProposals ?? []).filter((s) => {
-    const sid = s.id ?? s.title ?? "";
-    return (c.selectedSceneIds ?? new Set()).has(sid);
-  });
-  const result = await callGenerateAPIStream("act_structure", {
-    genres: c.genres ?? [],
-    concept: c.selectedConcept ?? {},
-    synopsis: c.selectedSynopsis ?? {},
-    characters: confirmedChars,
-    scenes: selectedScenes
-  }, {}, (text) => streamingOnChunk(c, text));
-
-  if (result.cancelled) { return; }
-  c.loadingStep = -1;
-  c.streamPreview = "";
-  if (result.error) {
-    c.aiError = result.error;
-  } else {
-    const choice = result.choices?.[0];
-    c.actStructureChoice = choice?.data ?? choice ?? null;
-    c.lastReasoning = result.reasoning ?? "";
-  }
-  renderCreationPage();
-}
-
-async function callCreationFinalizeAPI() {
-  const c = appState.creation;
-  c.loadingStep = 99;
-  c.aiError = "";
-  renderCreationPage();
-
-  const confirmedChars = (c.characterProposals ?? []).filter((p) => p._status === "confirmed");
-  const selectedScenes = (c.sceneProposals ?? []).filter((s) => {
-    const sid = s.id ?? s.title ?? "";
-    return (c.selectedSceneIds ?? new Set()).has(sid);
-  });
-
-  try {
-    const response = await fetch("/api/creation-flow/finalize", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        genres: c.genres ?? [],
-        concept: c.selectedConcept ?? {},
-        synopsis: c.selectedSynopsis ?? {},
-        characters: confirmedChars,
-        scenes: selectedScenes,
-        structure: c.selectedStructure ?? { primary: null, devices: [], lens: [] }
-      })
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    c.loadingStep = -1;
-    if (data.projectId) {
-      await loadProjectFromServer(data.projectId);
-      appState.creation = null;
-      saveLocalSnapshot();
-      setCurrentPage("workflow");
-      setCurrentStep("structure");
-      render();
-    } else {
-      c.aiError = data.error ?? "创建失败";
-      renderCreationPage();
-    }
-  } catch (err) {
-    c.loadingStep = -1;
-    c.aiError = err.message;
-    renderCreationPage();
-  }
-}
-
-// ── 一键生成 ──────────────────────────────────────────────────────────────────
-
-async function callEvaluateAPI(step, content, context) {
-  try {
-    const response = await fetch("/api/evaluate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ step, content, context })
-    });
-    if (!response.ok) return { score: 0, error: `HTTP ${response.status}` };
-    const data = await response.json();
-    // 如果服务器返回 raw_output 说明 Claude 输出无法解析，在控制台记录
-    if (data.raw_output) {
-      console.warn(`[evaluate] ${step} Claude 输出解析失败，原始：`, data.raw_output.slice(0, 200));
-    }
-    return { score: 0, ...data };
-  } catch (err) {
-    return { score: 0, error: err.message };
-  }
-}
-
-let _autoGenCancelled = false;
-
-async function handleOneClickGenerate() {
-  const c = appState.creation;
-  _autoGenCancelled = false;
-
-  c.autoGen = { active: true, phase: "generating", stepIdx: 0, stepName: "概念", retry: 0, log: [], score: null, preview: "", error: "" };
-  c.loadingStep = -1;
-  renderCreationPage();
-
-  const check = () => !_autoGenCancelled && !!c.autoGen?.active;
-
-  const setPhase = (phase, extra = {}) => {
-    if (!c.autoGen) return;
-    Object.assign(c.autoGen, { phase, ...extra });
-    renderCreationPage();
-  };
-
-  const addLog = (msg) => {
-    if (!c.autoGen) return;
-    c.autoGen.log.push(msg);
-    renderCreationPage();
-  };
-
-  async function runStep(stepIdx, stepName, generate, evaluate, select, passScore = 80, maxRetry = 2) {
-    if (!check()) return false;
-    Object.assign(c.autoGen, { stepIdx, stepName, retry: 0, score: null });
-
-    let bestResult = null;
-    let bestScore = -1;
-    let bestEval = null;
-
-    for (let attempt = 0; attempt <= maxRetry; attempt++) {
-      if (!check()) return false;
-      setPhase("generating", { retry: attempt, score: null, preview: "" });
-
-      const genResult = await generate();
-      if (!check()) return false;
-      if (genResult.cancelled) return false;
-      if (genResult.error) {
-        if (attempt < maxRetry) { addLog(`${stepName}生成出错，重试…`); continue; }
-        break;
-      }
-
-      setPhase("evaluating", { score: null });
-      const evalResult = await evaluate(genResult);
-      if (!check()) return false;
-
-      const score = typeof evalResult.score === "number" ? evalResult.score : 0;
-      const fb = evalResult.feedback ? `「${evalResult.feedback}」` : "";
-      const evalFailed = evalResult.raw_output || (score === 0 && evalResult.error);
-      setPhase("evaluating", { score: evalFailed ? "?" : score });
-
-      if (score > bestScore) { bestScore = score; bestResult = genResult; bestEval = evalResult; }
-
-      if (evalFailed) {
-        addLog(`⚠ ${stepName}评分失败（${evalResult.error ?? "解析异常"}），跳过此次评估`);
-        // 评估失败时跳过不计入重试，直接选用本次结果
-        select(genResult, evalResult);
-        addLog(`✓ ${stepName}完成（评估跳过）`);
-        return true;
-      }
-
-      if (score >= passScore) {
-        select(genResult, evalResult);
-        addLog(`✓ ${stepName}完成（${score}分${fb}）${attempt > 0 ? `，第${attempt + 1}次` : ''}`);
-        return true;
-      }
-      if (attempt < maxRetry) addLog(`${stepName}${score}分${fb}（需${passScore}+），重新生成…`);
-    }
-
-    if (bestResult) {
-      select(bestResult, bestEval);
-      addLog(`✓ ${stepName}完成（${bestScore}分，已取最佳）`);
-      return true;
-    }
-    return false;
-  }
-
-  const chunkHandler = (text) => { if (c.autoGen) c.autoGen.preview = ((c.autoGen.preview ?? "").slice(-600)) + text; };
-
-  const rules = appState.evalRules;
-
-  // ── 概念 ──────────────────────────────────────────────────────────
-  const ok0 = await runStep(0, "概念",
-    () => callGenerateAPIStream("concept", {}, { genres: c.genres ?? [], conceptHint: c.conceptHint ?? "", era: c.era ?? "", count: 6 }, chunkHandler),
-    (result) => callEvaluateAPI("concepts", (result.choices ?? []).map(ch => ch.data ?? ch), { genres: c.genres ?? [], conceptHint: c.conceptHint ?? "" }),
-    (result, evalResult) => {
-      const concepts = (result.choices ?? []).map(ch => ch.data ?? ch);
-      const idx = Math.min(evalResult?.best_idx ?? 0, concepts.length - 1);
-      c.conceptChoices = concepts;
-      c.selectedConceptIdx = idx;
-      c.selectedConcept = concepts[idx] ?? concepts[0];
-    },
-    rules.concept.passScore, rules.concept.maxRetry
-  );
-  if (!ok0) { setPhase("error", { error: "概念步骤失败" }); return; }
-
-  // ── 梗概 ──────────────────────────────────────────────────────────
-  const ok1 = await runStep(1, "梗概",
-    () => callGenerateAPIStream("synopsis", { genres: c.genres ?? [], concept: c.selectedConcept ?? {} }, { count: 6 }, chunkHandler),
-    (result) => callEvaluateAPI("synopsis", (result.choices ?? []).map(ch => ch.data ?? ch), { genres: c.genres ?? [], concept: c.selectedConcept ?? {} }),
-    (result, evalResult) => {
-      const synopses = (result.choices ?? []).map(ch => ch.data ?? ch);
-      const idx = Math.min(evalResult?.best_idx ?? 0, synopses.length - 1);
-      c.synopsisChoices = synopses;
-      c.selectedSynopsisIdx = idx;
-      c.selectedSynopsis = synopses[idx] ?? synopses[0];
-    },
-    rules.synopsis.passScore, rules.synopsis.maxRetry
-  );
-  if (!ok1) { setPhase("error", { error: "梗概步骤失败" }); return; }
-
-  // ── 角色 ──────────────────────────────────────────────────────────
-  const synopsis = c.selectedSynopsis ?? {};
-  const charCtx = { project: { project: { genre: c.genres ?? [], logline: synopsis.summary ?? "" }, story_core: { premise: synopsis.summary ?? "" } } };
-  const ok2 = await runStep(2, "角色",
-    () => callGenerateAPIStream("characters", charCtx, { count: 4 }, chunkHandler),
-    (result) => callEvaluateAPI("characters", result.choices?.[0]?.data?.characters ?? [], { genres: c.genres ?? [], synopsis }),
-    (result) => { c.characterProposals = (result.choices?.[0]?.data?.characters ?? []).map(ch => ({ ...ch, _status: "confirmed" })); },
-    rules.characters.passScore, rules.characters.maxRetry
-  );
-  if (!ok2) { setPhase("error", { error: "角色步骤失败" }); return; }
-
-  // ── 剧情点 ────────────────────────────────────────────────────────
-  const ok3 = await runStep(3, "剧情点",
-    () => callGenerateAPIStream("key_scenes", { genres: c.genres ?? [], concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {}, characters: c.characterProposals ?? [] }, {}, chunkHandler),
-    (result) => callEvaluateAPI("key_scenes", (result.choices ?? []).map(ch => ch.data ?? ch), { synopsis: c.selectedSynopsis ?? {} }),
-    (result) => {
-      const scenes = (result.choices ?? []).map(ch => ch.data ?? ch);
-      c.sceneProposals = scenes;
-      c.selectedSceneIds = new Set(scenes.map((s, i) => s.id ?? s.title ?? String(i)));
-    },
-    rules.key_scenes.passScore, rules.key_scenes.maxRetry
-  );
-  if (!ok3) { setPhase("error", { error: "剧情点步骤失败" }); return; }
-
-  // ── 幕结构 ────────────────────────────────────────────────────────
-  const ok4 = await runStep(4, "幕结构",
-    () => callGenerateAPIStream("act_structure", { genres: c.genres ?? [], concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {}, characters: c.characterProposals ?? [], scenes: c.sceneProposals ?? [] }, {}, chunkHandler),
-    (result) => callEvaluateAPI("act_structure", result.choices?.[0]?.data ?? result.choices?.[0] ?? {}, { concept: c.selectedConcept ?? {}, synopsis: c.selectedSynopsis ?? {} }),
-    (result) => { c.actStructureChoice = result.choices?.[0]?.data ?? result.choices?.[0] ?? null; },
-    rules.act_structure.passScore, rules.act_structure.maxRetry
-  );
-  if (!ok4) { setPhase("error", { error: "幕结构步骤失败" }); return; }
-
-  // ── 创建项目 ──────────────────────────────────────────────────────
-  if (!check()) return;
-  setPhase("finalizing", { stepIdx: 5, stepName: "创建项目" });
-  await callCreationFinalizeAPI();
-  // Success navigates away; if still here, finalize failed
-  if (c.autoGen) {
-    setPhase("error", { error: c.aiError || "创建项目失败" });
-  }
-}
-
 // ── Creation input handler ────────────────────────────────────────────────────
 
 function handleCreationInput(action, target) {
@@ -5126,16 +4432,6 @@ function handleCreationInput(action, target) {
     c.pulseTarget = target.value;
     return true;
   }
-  if (action === "update-eval-rule") {
-    const step = target.dataset.step;
-    const field = target.dataset.field;
-    const value = Number(target.value);
-    if (step && field && appState.evalRules[step] && !isNaN(value)) {
-      appState.evalRules[step][field] = value;
-      saveLocalSnapshot();
-    }
-    return true;
-  }
   return false;
 }
 
@@ -5156,15 +4452,6 @@ document.addEventListener("input", (event) => {
 }, true);
 
 // Wire up the "AI 创作流程" nav button
-const pageCreationButton = document.querySelector("#page-creation-button");
-if (pageCreationButton) {
-  pageCreationButton.addEventListener("click", () => {
-    appState.currentPage = "creation";
-    appState.createDialogOpen = false;
-    render();
-    renderCreationPage();
-  });
-}
 
 // Initial render of creation page if it's visible
 renderCreationPage();
