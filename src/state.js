@@ -496,7 +496,8 @@ export const appState = {
   aiConfigDraft: {
     provider: "openai",
     apiKey: "",
-    model: ""
+    model: "",
+    baseUrl: ""
   },
   aiModelCatalog: {
     options: [],

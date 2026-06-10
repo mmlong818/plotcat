@@ -751,12 +751,26 @@ function updateDraftField(fieldName, value) {
 
 // ── AI config ────────────────────────────────────────────────────────────────
 
+const PROVIDER_LABELS = {
+  claude_cli: "Claude CLI（订阅）",
+  anthropic: "Anthropic API",
+  openai: "OpenAI",
+  gemini: "Gemini",
+  custom: "兼容端点"
+};
+
 function providerChoiceLabel(value) {
-  return value === "gemini" ? "Gemini" : "OpenAI";
+  return PROVIDER_LABELS[value] ?? "OpenAI";
 }
 
 function defaultModelForProvider(value) {
-  return value === "gemini" ? "gemini-2.0-flash" : "gpt-5";
+  return {
+    claude_cli: "",
+    anthropic: "claude-sonnet-4-6",
+    openai: "gpt-5.4-mini",
+    gemini: "gemini-2.5-flash",
+    custom: "deepseek-v4-flash"
+  }[value] ?? "gpt-5.4-mini";
 }
 
 function isAiConfigBusy() {
@@ -899,16 +913,19 @@ async function saveAiConfigDraftCurrentV2() {
   const provider = appState.aiConfigDraft.provider || "openai";
   const apiKey = appState.aiConfigDraft.apiKey.trim();
   const model = appState.aiConfigDraft.model.trim();
+  const baseUrl = (appState.aiConfigDraft.baseUrl || "").trim();
   const hasStoredConnection = appState.ai.configured && appState.ai.provider === provider;
-  if (!apiKey && !hasStoredConnection) {
-    appState.createAssistant.error = "先填入 API Key，或保留当前连接。";
-    _renderProjectCreateForm();
-    return;
-  }
-  if (!model) {
-    appState.createAssistant.error = "先获取模型列表并选一个模型。";
-    _renderProjectCreateForm();
-    return;
+  if (provider !== "claude_cli") {
+    if (!apiKey && !hasStoredConnection) {
+      appState.createAssistant.error = "先填入 API Key，或保留当前连接。";
+      _renderProjectCreateForm();
+      return;
+    }
+    if (!model) {
+      appState.createAssistant.error = "先填写或选择一个模型。";
+      _renderProjectCreateForm();
+      return;
+    }
   }
   appState.createAssistant.loading = true;
   appState.createAssistant.target = "ai-config";
@@ -919,7 +936,7 @@ async function saveAiConfigDraftCurrentV2() {
   try {
     const payload = await fetchJson("/api/ai/config", {
       method: "POST",
-      body: JSON.stringify(apiKey ? { provider, apiKey, model } : { provider, model })
+      body: JSON.stringify({ provider, model, ...(apiKey ? { apiKey } : {}), ...(baseUrl ? { baseUrl } : {}) })
     });
     appState.ai = payload.ai ?? appState.ai;
     appState.aiConfigDraft.provider = appState.ai.provider || provider;
@@ -1277,6 +1294,8 @@ const projectCreateHelpers = {
 
 function _renderProjectCreateForm() {
   renderProjectCreateForm(dom, appState, projectCreateHelpers);
+  // 设置弹窗与创建表单共用 AI 配置 action；弹窗打开时同步刷新，否则 provider 切换等操作视觉上不生效
+  if (appState.settingsDialogOpen) renderAiSettingsDialog(dom, appState, aiGetters);
 }
 
 // ── Drag / scroll infrastructure ─────────────────────────────────────────────
@@ -1411,9 +1430,10 @@ function handleClick(event) {
   if (action === "create-ai-field") { requestCreateFieldSuggestionCurrent(target.dataset.field ?? ""); return; }
   if (action === "apply-concept-option") { applyConceptOptionCurrent(target.dataset.id ?? ""); return; }
   if (action === "ai-provider-choice") {
-    const provider = target.dataset.value === "gemini" ? "gemini" : "openai";
+    const provider = PROVIDER_LABELS[target.dataset.value] ? target.dataset.value : "openai";
     appState.aiConfigDraft.provider = provider;
-    appState.aiConfigDraft.model = "";
+    appState.aiConfigDraft.model = defaultModelForProvider(provider);
+    appState.aiConfigDraft.baseUrl = provider === "custom" ? (appState.aiConfigDraft.baseUrl || "https://api.deepseek.com/v1") : "";
     appState.aiModelCatalog.provider = "";
     appState.aiModelCatalog.options = [];
     appState.createAssistant.error = "";
