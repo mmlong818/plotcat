@@ -224,6 +224,24 @@ function normalizeProject() {
     if (!isBrokenPlaceholderText(card.title)) return;
     card.title = card.summary?.trim() || card.change?.trim() || structureNodes.get(card.node_id)?.title || "未命名剧情卡";
   });
+  // 伏笔状态自动同步：回收场已成稿且能找到回收痕迹 → closed；
+  // 回收场被删/未写 → 回退 open。顺带迁移历史非法状态 resolved。
+  const sceneById = new Map(scenes.map((s) => [s.id, s]));
+  for (const arr of [list(appState.project.lock_layer?.projections?.setup_payoffs), list(appState.project.story_bible?.setup_payoffs)]) {
+    for (const sp of arr) {
+      if (sp.status === "resolved") sp.status = "closed";
+      if (!sp.payoff_scene_id) continue;
+      const payScene = sceneById.get(sp.payoff_scene_id);
+      if (!payScene) { sp.status = "open"; sp.payoff_scene_id = ""; continue; }
+      const script = (payScene.script_full || "");
+      if (script.trim().length < 200) { if (sp.status === "closed") sp.status = "open"; continue; }
+      const tokens = String(sp.payoff_summary || sp.setup_summary || "").match(/[一-龥]{2,6}/g) ?? [];
+      const hit = tokens.some((t) => script.includes(t));
+      if (hit && sp.status === "open") sp.status = "closed";
+      if (!hit && sp.status === "closed" && sp.payoff_summary) sp.status = "partial";
+    }
+  }
+
   // 关系字段单一真相：kind=预设类型槽，type=显示名。
   // 旧数据只有 type（值恰为预设之一）时一次性补全 kind，渲染层从此只读 kind
   relationships.forEach((rel) => {
@@ -3302,7 +3320,7 @@ async function aiExtractContinuity() {
         setup_summary: item.setup_summary,
         setup_scene_id: sceneByOrder.get(Number(item.setup_scene_order))?.id ?? "",
         expected_payoff_window: item.expected_payoff_window ?? "",
-        status: payoffVerified ? "resolved" : "open",
+        status: payoffVerified ? "closed" : "open",
         payoff_scene_id: payoffVerified ? payoffScene.id : "",
         payoff_summary: payoffVerified ? (item.payoff_summary ?? "") : ""
       };
