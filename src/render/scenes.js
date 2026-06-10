@@ -139,6 +139,21 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                     </div>
 
                     <div class="scene-edv2__field">
+                      ${(() => {
+                        const setups = list(appState.project.lock_layer?.projections?.setup_payoffs);
+                        const plant = setups.filter((sp) => sp.setup_scene_id === selectedScene.id && (sp.setup_summary || "").trim());
+                        const pay = setups.filter((sp) => sp.payoff_scene_id === selectedScene.id && (sp.setup_summary || "").trim());
+                        if (!plant.length && !pay.length) return "";
+                        return `
+                          <div class="scene-edv2__alert" style="margin-bottom:8px">
+                            <span class="scene-edv2__alert-icon">⚓</span>
+                            <span class="scene-edv2__alert-text">本场伏笔任务（AI 写本场会强制执行）：
+                              ${plant.map((sp) => `<span class="chip chip--soft">埋设 · ${escapeHtml(sp.setup_summary.slice(0, 18))}</span>`).join(" ")}
+                              ${pay.map((sp) => `<span class="chip chip--soft" style="color:var(--warning)">回收 · ${escapeHtml(sp.setup_summary.slice(0, 18))}</span>`).join(" ")}
+                            </span>
+                          </div>
+                        `;
+                      })()}
                       <label class="scene-edv2__field-label">关联剧情卡 <span class="scene-edv2__field-hint">${linkedPlotCards.length} 张</span></label>
                       ${renderPlotChecklist(appState, selectedScene.linked_plot_card_ids)}
                     </div>

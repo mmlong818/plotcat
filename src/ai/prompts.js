@@ -673,6 +673,20 @@ export function buildSceneExpansionPrompt(projectContext, options) {
   const existingLines = existingScenes.map((s, i) =>
     `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${s.purpose || ""}${(s.script_full || "").trim().length > 50 ? "｜已有成稿，不可删改" : "｜未写稿"}`
   ).join("\n") || "（还没有场景）";
+  // 资料库三件套驱动扩场：时间线定顺序、世界规则定边界、伏笔定埋设/回收位
+  const expTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? [])
+    .slice().sort((a, b) => (a.story_day ?? 0) - (b.story_day ?? 0))
+    .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n");
+  const expRules = (ctx?.lock_layer?.projections?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? ""}`).join("\n");
+  const expSetups = (ctx?.lock_layer?.projections?.setup_payoffs ?? [])
+    .filter((s) => (s.setup_summary || "").trim())
+    .map((s) => `- 【${s.status === "closed" ? "已回收" : "待回收"}】${s.setup_summary}${s.expected_payoff_window ? `（预期回收：${s.expected_payoff_window}）` : ""}`).join("\n");
+  const libraryBlock = [
+    expTimeline ? `故事内时间线（场景顺序不得违反此因果序）：\n${expTimeline}` : "",
+    expRules ? `世界规则（每场都必须遵守）：\n${expRules}` : "",
+    expSetups ? `伏笔清单（规划时必须给每条「待回收」伏笔安排明确的埋设场与回收场——在对应新场的 purpose 里写明）：\n${expSetups}` : ""
+  ].filter(Boolean).join("\n\n");
 
   const expansionBlend = buildGenreBlendContract(genreTagsOf(ctx), "full");
   const system = `你是一位好莱坞资深剧本统筹，擅长把结构节拍拆解成完整的拍摄场景序列。
@@ -695,6 +709,7 @@ ${cardLines}
 
 已有场景（id 必须原样保留在规划里；标注「已有成稿」的场景禁止删除或改写其定位）：
 ${existingLines}
+${libraryBlock ? `\n${libraryBlock}\n` : ""}
 
 请输出全片完整场景表（含已有场景的位置 + 新增场景），按最终放映顺序排列：
 - 每张剧情卡拆成 2-4 场（按其戏剧重量决定），整体凑到目标场数 ±4
@@ -1010,6 +1025,15 @@ export function buildSceneScriptPrompt(projectContext, options) {
     .slice(0, 6)
     .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n") || "（无）";
   const setupBlock = buildSetupTrackingBlock(ctx);
+  // 本场定向伏笔任务：资料库里把埋设/回收锚定到本场的伏笔，是硬性任务而非参考
+  const allSetups = ctx?.lock_layer?.projections?.setup_payoffs ?? ctx?.story_bible?.setup_payoffs ?? [];
+  const mustPlant = allSetups.filter((s) => s.setup_scene_id === target.id && (s.setup_summary || "").trim());
+  const mustPay = allSetups.filter((s) => s.payoff_scene_id === target.id && (s.setup_summary || "").trim());
+  const setupTaskBlock = (mustPlant.length || mustPay.length) ? [
+    "【本场伏笔任务（硬性，缺一即废稿）】",
+    ...mustPlant.map((s) => `- 必须在本场埋设：${s.setup_summary}——埋得不显山露水，观众此刻不应意识到它的分量${s.expected_payoff_window ? `（将在「${s.expected_payoff_window}」回收）` : ""}`),
+    ...mustPay.map((s) => `- 必须在本场回收：${s.setup_summary}${s.payoff_summary ? `——回收方式：${s.payoff_summary}` : ""}。细节（编号/外观/措辞）必须与埋设场完全一致`)
+  ].join("\n") : "";
   const genreContract = buildGenreContractBlock(ctx);
 
   const allowedNames = Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean);
@@ -1096,7 +1120,7 @@ ${lockedRules}
 
 时间线参考（最近事件）：
 ${lockedTimeline}
-${setupBlock ? `\n全片伏笔追踪（本场涉及下列任何物件/信息/人物时，细节必须与此处设定完全一致，不得自造与之矛盾的编号、日期、数量；若本场正处于某伏笔的埋设或回收时机，请自然地把它埋下或回收）：\n${setupBlock}\n` : ""}${genreContract ? `\n类型契约（本场要主动兑现下列期待、避开禁区）：\n${genreContract}\n` : ""}
+${setupTaskBlock ? `\n${setupTaskBlock}\n` : ""}${setupBlock ? `\n全片伏笔追踪（防矛盾参考：本场涉及下列任何物件/信息/人物时，细节必须与此处设定完全一致，不得自造与之矛盾的编号、日期、数量）：\n${setupBlock}\n` : ""}${genreContract ? `\n类型契约（本场要主动兑现下列期待、避开禁区）：\n${genreContract}\n` : ""}
 对白风格：${dialogueStyle}（自然主义=贴近生活；戏剧化=高张力；幽默=诙谐；诗意=抒情）
 潜台词类型：${subtextType || "根据场景情感选择"}
 
@@ -1718,6 +1742,8 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
   ).join("\n");
 
   const blendContract = buildGenreBlendContract(genreTagsOf(projectCtx, Array.isArray(meta?.genre) ? meta.genre.join("、") : meta?.genre), "full");
+  const actWorldRules = (projectCtx?.lock_layer?.projections?.world_rules ?? projectCtx?.story_bible?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? ""}`).filter((l) => l.length > 2).join("\n");
 
   const system = `你是一位好莱坞专业编剧顾问，擅长根据故事具体信息为每个叙事节点提炼实际发生的情节。
 严格要求：
@@ -1734,7 +1760,7 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
 主角：${protagonist || "待定"}
 主题：${theme || "待定"}
 ${charLines ? `\n主要角色：\n${charLines}` : ""}
-${blendContract ? `\n${blendContract}\n（本幕节点的情节提炼必须落在主导类型的必备场景轨道上；调味类型用于给情节加肌理，不改骨架）\n` : ""}
+${blendContract ? `\n${blendContract}\n（本幕节点的情节提炼必须落在主导类型的必备场景轨道上；调味类型用于给情节加肌理，不改骨架）\n` : ""}${actWorldRules ? `\n世界规则（情节不得违反）：\n${actWorldRules}\n` : ""}
 当前幕：${actTitle}
 此幕叙事目的：${actPurpose}
 
