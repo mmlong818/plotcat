@@ -623,7 +623,8 @@ export function ensurePlotDrivenProject(sourceProject) {
     logline: project.project?.logline ?? "",
     theme_question: project.project?.theme_question ?? "",
     tone: project.project?.tone ?? "",
-    status: project.project?.status ?? "development"
+    status: project.project?.status ?? "development",
+    series_id: project.project?.series_id ?? ""
   };
   project.intent_anchor = {
     id: project.intent_anchor?.id ?? makeId("anchor"),

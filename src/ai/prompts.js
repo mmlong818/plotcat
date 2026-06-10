@@ -13,6 +13,23 @@ function genreTagsOf(ctx, extra = "") {
   return tags.filter(Boolean);
 }
 
+// 系列库（挂载的世界观资产）→ prompt 注入块。来源标注 [系列]，项目级条目排在其后（优先级更高）
+function seriesBlocksOf(ctx) {
+  const sb = ctx?.series_bible ?? ctx?.project?.series_bible;
+  if (!sb) return { rules: "", timeline: "", regulars: "", regularNames: [] };
+  const rules = (sb.world_rules ?? [])
+    .map((r) => `- [系列] ${r.rule_statement ?? ""}${r.scope ? `（${r.scope}）` : ""}`)
+    .filter((l) => l.length > 8).join("\n");
+  const timeline = (sb.timeline_events ?? [])
+    .map((e) => `- [系列·第 ${e.story_day ?? "?"} 天] ${e.summary ?? ""}`)
+    .filter((l) => l.length > 12).join("\n");
+  const regulars = (sb.regulars ?? [])
+    .filter((c) => (c.name ?? "").trim())
+    .map((c) => `【系列常驻·${c.name}】${c.role ? `（${c.role}）` : ""}${c.bio ?? ""}${c.voice ? `｜声音规则：${c.voice}` : ""}`)
+    .join("\n");
+  return { rules, timeline, regulars, regularNames: (sb.regulars ?? []).map((c) => (c.name ?? "").trim()).filter(Boolean) };
+}
+
 const HOLLYWOOD_SHOWRUNNER_PERSONA = `
 你的身份：好莱坞 A 级 showrunner，10+ 年实战，参与过艾美/金球级别项目，深度师承 Save the Cat（Snyder）、Story（McKee）、Into the Woods（Yorke）、The Anatomy of Story（Truby）四大体系。
 
@@ -673,7 +690,8 @@ export function buildSceneExpansionPrompt(projectContext, options) {
   const existingLines = existingScenes.map((s, i) =>
     `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${s.purpose || ""}${(s.script_full || "").trim().length > 50 ? "｜已有成稿，不可删改" : "｜未写稿"}`
   ).join("\n") || "（还没有场景）";
-  // 资料库三件套驱动扩场：时间线定顺序、世界规则定边界、伏笔定埋设/回收位
+  // 资料库三件套驱动扩场：时间线定顺序、世界规则定边界、伏笔定埋设/回收位（含系列库）
+  const expSeries = seriesBlocksOf(ctx);
   const expTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? [])
     .slice().sort((a, b) => (a.story_day ?? 0) - (b.story_day ?? 0))
     .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n");
@@ -683,6 +701,9 @@ export function buildSceneExpansionPrompt(projectContext, options) {
     .filter((s) => (s.setup_summary || "").trim())
     .map((s) => `- 【${s.status === "closed" ? "已回收" : "待回收"}】${s.setup_summary}${s.expected_payoff_window ? `（预期回收：${s.expected_payoff_window}）` : ""}`).join("\n");
   const libraryBlock = [
+    expSeries.rules ? `系列世界规则（本系列所有作品共守）：\n${expSeries.rules}` : "",
+    expSeries.timeline ? `系列时间线（本片必须落在此因果序内）：\n${expSeries.timeline}` : "",
+    expSeries.regulars ? `系列常驻人物（可在场景中出场）：\n${expSeries.regulars}` : "",
     expTimeline ? `故事内时间线（场景顺序不得违反此因果序）：\n${expTimeline}` : "",
     expRules ? `世界规则（每场都必须遵守）：\n${expRules}` : "",
     expSetups ? `伏笔清单（规划时必须给每条「待回收」伏笔安排明确的埋设场与回收场——在对应新场的 purpose 里写明）：\n${expSetups}` : ""
@@ -1019,11 +1040,14 @@ export function buildSceneScriptPrompt(projectContext, options) {
       sceneRels.map((r) => "- " + buildRelationshipPortrait(r, charById)).join("\n")
     : "";
 
-  const lockedRules = (ctx?.lock_layer?.projections?.world_rules ?? ctx?.story_bible?.world_rules ?? [])
-    .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}（${r.scope ?? ""}）`).join("\n") || "（无）";
-  const lockedTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? ctx?.story_bible?.timeline_events ?? [])
+  const seriesBlocks = seriesBlocksOf(ctx);
+  const projectRules = (ctx?.lock_layer?.projections?.world_rules ?? ctx?.story_bible?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}（${r.scope ?? ""}）`).join("\n");
+  const lockedRules = [seriesBlocks.rules, projectRules].filter(Boolean).join("\n") || "（无）";
+  const projectTimeline = (ctx?.lock_layer?.projections?.timeline_events ?? ctx?.story_bible?.timeline_events ?? [])
     .slice(0, 6)
-    .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n") || "（无）";
+    .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n");
+  const lockedTimeline = [seriesBlocks.timeline, projectTimeline].filter(Boolean).join("\n") || "（无）";
   const setupBlock = buildSetupTrackingBlock(ctx);
   // 本场定向伏笔任务：资料库里把埋设/回收锚定到本场的伏笔，是硬性任务而非参考
   const allSetups = ctx?.lock_layer?.projections?.setup_payoffs ?? ctx?.story_bible?.setup_payoffs ?? [];
@@ -1036,7 +1060,7 @@ export function buildSceneScriptPrompt(projectContext, options) {
   ].join("\n") : "";
   const genreContract = buildGenreContractBlock(ctx);
 
-  const allowedNames = Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean);
+  const allowedNames = [...Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean), ...seriesBlocks.regularNames];
   const namesGuard = allowedNames.length > 0
     ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。`
     : "";
@@ -1112,7 +1136,7 @@ ${target.conflict_proposition ? `\n【戏剧主张（最重要，必须由这条
 必须由那个人亲手执行，不得移交给配角代劳——主角的高潮动作被别人代做是结构性失格。
 
 本场出场人物（必须使用这些名字，不得替换；每个角色的所有字段都是 AI 必须消费的方向锚点——填了什么就用什么，不要忽略）：
-${sceneCharLines}${namesGuard}${sceneRelLines}
+${sceneCharLines}${seriesBlocks.regulars ? `\n\n系列常驻人物（如剧情需要可出场，人设与声音必须与档案一致）：\n${seriesBlocks.regulars}` : ""}${namesGuard}${sceneRelLines}
 ${prevTail}${nextHint}${antiRepeatBlock}
 
 已锁定世界规则（须遵守）：
@@ -1742,8 +1766,9 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
   ).join("\n");
 
   const blendContract = buildGenreBlendContract(genreTagsOf(projectCtx, Array.isArray(meta?.genre) ? meta.genre.join("、") : meta?.genre), "full");
-  const actWorldRules = (projectCtx?.lock_layer?.projections?.world_rules ?? projectCtx?.story_bible?.world_rules ?? [])
-    .map((r) => `- ${r.rule_statement ?? ""}`).filter((l) => l.length > 2).join("\n");
+  const actSeries = seriesBlocksOf(projectCtx);
+  const actWorldRules = [actSeries.rules, (projectCtx?.lock_layer?.projections?.world_rules ?? projectCtx?.story_bible?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? ""}`).filter((l) => l.length > 2).join("\n")].filter(Boolean).join("\n");
 
   const system = `你是一位好莱坞专业编剧顾问，擅长根据故事具体信息为每个叙事节点提炼实际发生的情节。
 严格要求：

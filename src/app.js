@@ -22,6 +22,7 @@ import { renderScenesPage } from "./render/scenes.js";
 import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
 import { openFountainPreview } from "./render/fountainViewer.js";
 import { renderLocksPage } from "./render/locks.js";
+import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
 import { renderStructureLibraryDialog } from "./render/structureLibrary.js";
@@ -49,6 +50,7 @@ const dom = {
   resetConfirmArea: document.querySelector("#reset-confirm-area"),
   pageProjectButton: document.querySelector("#page-project-button"),
   pageLibraryButton: document.querySelector("#page-library-button"),
+  seriesContent: document.querySelector("#series-content"),
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
   stepPrevButton: document.querySelector("#step-prev-button"),
@@ -1074,6 +1076,29 @@ function updateProjectField(action, fieldName, value) {
     }
     appState.project.structure_profile[fieldName] = value;
   }
+  if (action === "series-field" && appState.seriesLibrary?.selected) {
+    appState.seriesLibrary.selected[fieldName] = value;
+    return;
+  }
+  if (action === "series-item-field" && appState.seriesLibrary?.selected) {
+    const section = target.dataset.section;
+    const idx = Number(target.dataset.idx);
+    const item = appState.seriesLibrary.selected?.[section]?.[idx];
+    if (item) item[fieldName] = fieldName === "story_day" ? Number(value) || 1 : value;
+    return;
+  }
+  if (action === "series-mount") {
+    appState.project.project.series_id = value;
+    if (value) {
+      fetchJson(`/api/series/${encodeURIComponent(value)}`)
+        .then((p) => { appState.project.series_bible = p.series; markDirty(); render(); })
+        .catch(() => { markDirty(); render(); });
+    } else {
+      delete appState.project.series_bible;
+      markDirty(); render();
+    }
+    return;
+  }
   if (action === "plot-field" && selectedPlot) selectedPlot[fieldName] = value;
   if (action === "character-field" && selectedCharacter) selectedCharacter[fieldName] = value;
   if (action === "relationship-field" && selectedRelationship) selectedRelationship[fieldName] = value;
@@ -1234,6 +1259,14 @@ function renderHero() {
   }
   dom.hero.classList.add("is-topbar", "is-compact");
   dom.heroSide.hidden = false;
+  if (appState.currentPage === "series") {
+    dom.heroEyebrow.textContent = "系列库";
+    dom.heroEyebrow.title = "系列库 · 跨项目世界观";
+    dom.heroTitle.textContent = "";
+    dom.saveButton.hidden = true;
+    dom.resetButton.hidden = true;
+    return;
+  }
   if (appState.currentPage === "library") {
     dom.heroEyebrow.textContent = "资料库";
     dom.heroEyebrow.title = "资料库";
@@ -1253,7 +1286,7 @@ function renderHero() {
 function renderPageVisibility() {
   dom.pageProjectButton.classList.toggle("is-active", appState.currentPage === "project");
   if (dom.pageLibraryButton) {
-    dom.pageLibraryButton.classList.toggle("is-active", appState.currentPage === "library");
+    dom.pageLibraryButton.classList.toggle("is-active", appState.currentPage === "library" || appState.currentPage === "series");
     dom.pageLibraryButton.hidden = appState.currentPage === "creation";
   }
   dom.pagePanels.forEach((panel) => {
@@ -1430,6 +1463,7 @@ function render() {
   renderCharactersPage(dom, appState, characterGetters);
   renderRelationshipsPage(dom, appState, relationshipGetters);
   renderLocksPage(dom, appState, lockGetters);
+  renderSeriesLibraryPage(dom, appState);
   renderScenesPage(dom, appState, sceneGetters);
   renderScreenplayPage(dom, appState);
   if (appState.creation) renderCreationPage();
@@ -1717,6 +1751,7 @@ function handleClick(event) {
     auditScriptSpeakers();
     return;
   }
+  if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
   if (action === "library-back") {
     setCurrentPage(appState.libraryReturnPage ?? "project");
     return;
@@ -2589,12 +2624,22 @@ dom.pageProjectButton.addEventListener("click", () => {
 if (dom.pageLibraryButton) {
   dom.pageLibraryButton.addEventListener("click", () => {
     if (appState.currentPage === "creation") appState.creation = null;
-    if (appState.currentPage === "library") {
+    if (appState.currentPage === "library" || appState.currentPage === "series") {
       setCurrentPage(appState.libraryReturnPage ?? "project");
       return;
     }
     appState.libraryReturnPage = appState.currentPage === "workflow" ? "workflow" : "project";
-    setCurrentPage("library");
+    // 项目中心 → 系列库（跨项目世界观）；项目内 → 该项目的资料库
+    if (appState.currentPage === "project") {
+      loadSeriesLibrary();
+      setCurrentPage("series");
+    } else {
+      // 项目资料库的系列挂载选择器需要系列清单
+      fetchJson("/api/series")
+        .then((p) => { appState.seriesLibrary = { ...(appState.seriesLibrary ?? { selected: null, loading: false }), list: p.series ?? [] }; render(); })
+        .catch(() => {});
+      setCurrentPage("library");
+    }
   });
 }
 dom.openSettingsButton.addEventListener("click", () => {
@@ -3075,9 +3120,10 @@ const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士长?|医�
 
 // 从剧本文本中找出不在项目人物名单里的对白说话人
 function findUnknownSpeakers(script) {
-  const roster = new Set(
-    list(appState.project.character_hub?.characters).map((c) => (c.name || "").trim()).filter(Boolean)
-  );
+  const roster = new Set([
+    ...list(appState.project.character_hub?.characters).map((c) => (c.name || "").trim()),
+    ...list(appState.project.series_bible?.regulars).map((c) => (c.name || "").trim())
+  ].filter(Boolean));
   const unknown = new Set();
   const lines = String(script).split(/\r?\n/).map((l) => l.trim());
   for (let i = 0; i < lines.length; i++) {
@@ -3223,6 +3269,91 @@ async function aiGenreRemedy() {
     appState.genreRemedyLoading = false;
     normalizeProject();
     render();
+  }
+}
+
+// ── 系列库（跨项目世界观）数据流 ──────────────────────────────────────────────
+async function loadSeriesLibrary(selectId = null) {
+  appState.seriesLibrary = appState.seriesLibrary ?? { list: [], selected: null, loading: false };
+  try {
+    const payload = await fetchJson("/api/series");
+    appState.seriesLibrary.list = payload.series ?? [];
+    const targetId = selectId ?? appState.seriesLibrary.selected?.id ?? appState.seriesLibrary.list[0]?.id;
+    if (targetId) {
+      const detail = await fetchJson(`/api/series/${encodeURIComponent(targetId)}`);
+      appState.seriesLibrary.selected = detail.series;
+    } else {
+      appState.seriesLibrary.selected = null;
+    }
+  } catch (error) {
+    appState.seriesLibrary.list = [];
+  }
+  render();
+}
+
+async function saveSelectedSeries() {
+  const s = appState.seriesLibrary;
+  if (!s?.selected) return;
+  s.loading = true; render();
+  try {
+    const payload = s.selected.id
+      ? await fetchJson(`/api/series/${encodeURIComponent(s.selected.id)}`, { method: "PUT", body: JSON.stringify(s.selected) })
+      : await fetchJson("/api/series", { method: "POST", body: JSON.stringify(s.selected) });
+    s.selected = payload.series;
+    const listPayload = await fetchJson("/api/series");
+    s.list = listPayload.series ?? s.list;
+    // 当前项目若挂载了这个系列，刷新只读视图
+    if (appState.project?.project?.series_id === s.selected.id) {
+      appState.project.series_bible = s.selected;
+    }
+  } catch (error) {
+    alert(`保存失败：${error.message}`);
+  } finally {
+    s.loading = false; render();
+  }
+}
+
+function handleSeriesAction(action, id, target) {
+  const s = appState.seriesLibrary = appState.seriesLibrary ?? { list: [], selected: null, loading: false };
+  const sel = s.selected;
+  switch (action) {
+    case "series-create":
+      s.selected = { id: "", name: "新系列", description: "", world_rules: [], timeline_events: [], regulars: [] };
+      render();
+      return true;
+    case "series-select":
+      loadSeriesLibrary(id);
+      return true;
+    case "series-save":
+      saveSelectedSeries();
+      return true;
+    case "series-delete":
+      if (!sel) return true;
+      if (!confirm(`删除系列「${sel.name}」？挂载它的项目会失去系列注入（项目自身数据不受影响）。`)) return true;
+      fetchJson(`/api/series/${encodeURIComponent(sel.id)}`, { method: "DELETE" })
+        .then(() => { s.selected = null; loadSeriesLibrary(); })
+        .catch((e) => alert(e.message));
+      return true;
+    case "series-add-rule":
+      if (sel) { sel.world_rules = list(sel.world_rules); sel.world_rules.push({ rule_statement: "", scope: "" }); render(); }
+      return true;
+    case "series-del-rule":
+      if (sel) { sel.world_rules.splice(Number(id), 1); render(); }
+      return true;
+    case "series-add-event":
+      if (sel) { sel.timeline_events = list(sel.timeline_events); sel.timeline_events.push({ story_day: sel.timeline_events.length + 1, summary: "" }); render(); }
+      return true;
+    case "series-del-event":
+      if (sel) { sel.timeline_events.splice(Number(id), 1); render(); }
+      return true;
+    case "series-add-regular":
+      if (sel) { sel.regulars = list(sel.regulars); sel.regulars.push({ name: "", role: "", bio: "", voice: "" }); render(); }
+      return true;
+    case "series-del-regular":
+      if (sel) { sel.regulars.splice(Number(id), 1); render(); }
+      return true;
+    default:
+      return false;
   }
 }
 

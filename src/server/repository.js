@@ -315,14 +315,21 @@ export function loadProject(projectId = null) {
     .prepare("SELECT document_json FROM project_documents WHERE project_id = ?")
     .get(targetProjectId);
 
-  return mergeProjectDocuments(
+  const merged = mergeProjectDocuments(
     baseProject,
     documentRow?.document_json ? parseDocument(documentRow.document_json) : null
   );
+  // 挂载系列库：只读注入字段，saveProject 时剥离，绝不写回项目文档
+  if (merged.project?.series_id) {
+    merged.series_bible = getSeriesBible(merged.project.series_id);
+  }
+  return merged;
 }
 
 export function saveProject(project) {
   const nextProject = ensurePlotDrivenProject(project);
+  // series_bible 是 loadProject 附加的只读视图，严禁随文档落库（会让系列数据分叉）
+  delete nextProject.series_bible;
   const projectId = nextProject.project.id;
 
   // 新建项目撞名时自动加序号，避免项目中心出现多个无法区分的同名项目
@@ -738,4 +745,56 @@ export function summarizeProjectForClient(projectId) {
   return buildProjectSummary(project, {
     version_count: listProjectVersions(projectId).length
   });
+}
+
+// ── 系列库（Series Bible）：跨项目共享的世界观资产 ────────────────────────────
+// document_json 结构：{ world_rules:[], timeline_events:[], regulars:[] }
+// regulars = 系列常驻人物档案（只读注入生成，不并入项目 character_hub）
+
+export function listSeriesBibles() {
+  const db = getDb();
+  return db.prepare("SELECT id, name, description, updated_at FROM series_bibles ORDER BY updated_at DESC").all();
+}
+
+export function getSeriesBible(seriesId) {
+  if (!seriesId) return null;
+  const db = getDb();
+  const row = db.prepare("SELECT * FROM series_bibles WHERE id = ?").get(seriesId);
+  if (!row) return null;
+  let doc = {};
+  try { doc = JSON.parse(row.document_json); } catch { doc = {}; }
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description,
+    updated_at: row.updated_at,
+    world_rules: Array.isArray(doc.world_rules) ? doc.world_rules : [],
+    timeline_events: Array.isArray(doc.timeline_events) ? doc.timeline_events : [],
+    regulars: Array.isArray(doc.regulars) ? doc.regulars : []
+  };
+}
+
+export function saveSeriesBible(series) {
+  const db = getDb();
+  const id = series.id || `series_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+  const doc = {
+    world_rules: Array.isArray(series.world_rules) ? series.world_rules : [],
+    timeline_events: Array.isArray(series.timeline_events) ? series.timeline_events : [],
+    regulars: Array.isArray(series.regulars) ? series.regulars : []
+  };
+  db.prepare(`
+    INSERT INTO series_bibles (id, name, description, document_json, updated_at)
+    VALUES (?, ?, ?, ?, datetime('now'))
+    ON CONFLICT(id) DO UPDATE SET
+      name = excluded.name,
+      description = excluded.description,
+      document_json = excluded.document_json,
+      updated_at = datetime('now')
+  `).run(id, (series.name || "未命名系列").trim(), series.description ?? "", JSON.stringify(doc));
+  return getSeriesBible(id);
+}
+
+export function deleteSeriesBible(seriesId) {
+  getDb().prepare("DELETE FROM series_bibles WHERE id = ?").run(seriesId);
+  return listSeriesBibles();
 }
