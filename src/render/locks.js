@@ -1,5 +1,6 @@
 import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState } from "../utils.js";
 import { setupStatusLabels } from "../state.js";
+import { resolveGenreBlend } from "../shared/genreContract.js";
 
 const LOCKS_TABS = [
   { id: "timeline", label: "时间线" },
@@ -31,6 +32,66 @@ function renderGenreItems(items = [], actionPrefix = "convention", emptyMessage 
   `;
 }
 
+function renderGenreFulfillment(appState) {
+  const tags = list(appState.project.project?.genre);
+  const blend = resolveGenreBlend(tags);
+  if (!blend.primary) {
+    return `
+      <div class="summary-card">
+        <p class="section-label">类型契约</p>
+        <p class="scene-summary-hint">还没有可识别的类型标签。在上方「主类型」填入（如：悬疑、爱情、科幻、古装……），系统会自动挂载对应的类型契约——必备场景、禁忌与观众承诺将注入所有 AI 生成步骤。</p>
+      </div>
+    `;
+  }
+  const audit = appState.project.genre_profile?.fulfillment_audit ?? null;
+  const auditByIndex = new Map(list(audit?.fulfillment).map((f) => [f.requirement_index, f]));
+  const statusChip = (st) =>
+    st === "fulfilled" ? `<span class="chip chip--soft" style="color:var(--success)">✓ 已兑现</span>`
+    : st === "partial" ? `<span class="chip chip--soft" style="color:var(--warning)">◐ 部分</span>`
+    : `<span class="chip chip--soft" style="color:var(--critical)">✗ 缺失</span>`;
+  const reqRows = blend.primary.obligatory_scenes.map((req, i) => {
+    const head = req.split("：")[0];
+    const r = auditByIndex.get(i);
+    return `
+      <div class="genre-contract-row">
+        <div class="genre-contract-row__head">
+          ${r ? statusChip(r.status) : `<span class="chip chip--muted">未检查</span>`}
+          <strong>${escapeHtml(head)}</strong>
+          ${r && list(r.scene_orders).length ? `<span class="scene-summary-hint">→ 第 ${r.scene_orders.join("、")} 场</span>` : ""}
+        </div>
+        <p class="scene-summary-hint">${escapeHtml(r?.note || req.split("：").slice(1).join("：").slice(0, 80))}</p>
+      </div>
+    `;
+  }).join("");
+  const taboos = list(audit?.taboo_violations);
+  const tabooBlock = taboos.length ? `
+    <div style="margin-top:10px">
+      <p class="section-label" style="color:var(--critical)">⚠ 踩中禁忌</p>
+      ${taboos.map((t) => `<p class="scene-summary-hint">第 ${list(t.scene_orders).join("、")} 场：${escapeHtml(t.taboo)} — ${escapeHtml(t.note || "")}</p>`).join("")}
+    </div>
+  ` : "";
+  const balance = audit?.blend_balance ? `<p class="scene-summary-hint" style="margin-top:8px">混合配比：${escapeHtml(audit.blend_balance)}</p>` : "";
+  return `
+    <div class="summary-card">
+      <div class="list-card__head">
+        <div>
+          <p class="section-label">类型契约 · 兑现追踪</p>
+          <h3>
+            <span class="chip chip--soft" style="font-weight:700">${escapeHtml(blend.primary.label)}（主导）</span>
+            ${blend.secondaries.map((g) => `<span class="chip chip--muted">${escapeHtml(g.label)}（调味）</span>`).join(" ")}
+          </h3>
+        </div>
+        <button class="button button--ghost button--tiny" type="button" data-action="ai-genre-audit" ${appState.genreAuditLoading ? "disabled" : ""} title="AI 逐条核验主导类型的必备场景是否在场景表中有真实落点，并检查禁忌">${appState.genreAuditLoading ? "审计中…" : "✦ 检查契约兑现"}</button>
+      </div>
+      <p class="scene-summary-hint" style="margin:2px 0 10px">${escapeHtml(blend.primary.audience_promise)}</p>
+      <div class="stack">${reqRows}</div>
+      ${tabooBlock}
+      ${balance}
+      ${blend.unrecognized.length ? `<p class="scene-summary-hint" style="margin-top:8px">未识别的类型标签：${blend.unrecognized.map(escapeHtml).join("、")}（不影响使用，但不会挂载知识库契约）</p>` : ""}
+    </div>
+  `;
+}
+
 function renderGenresTab(appState) {
   const profile = appState.project.genre_profile;
   return `
@@ -44,6 +105,7 @@ function renderGenresTab(appState) {
           ${inputField("气质词", "genre-field", "tone_words_text", list(profile.tone_words).join("、"), { full: true })}
         </div>
       </div>
+      ${renderGenreFulfillment(appState)}
       <div class="genre-workbench__grid">
         <div class="summary-card">
           <div class="list-card__head">

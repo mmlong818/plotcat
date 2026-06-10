@@ -9416,3 +9416,59 @@ body[data-active-step] .char-card:hover {
 
 
 
+
+/* ── 创作流程：类型卡片选择器（主导/调味） ─────────────────────── */
+.cf-genre-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 8px;
+}
+.cf-genre-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  background: var(--cf-s2, var(--surface-3));
+  border: 1px solid var(--cf-border, var(--border));
+  border-radius: 10px;
+  color: var(--cf-text-2, var(--ink-2));
+  font: inherit;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: border-color 140ms, background 140ms, color 140ms;
+}
+.cf-genre-card:hover { border-color: var(--cf-gold-dim, var(--border-strong)); }
+.cf-genre-card.is-active {
+  border-color: var(--cf-gold, var(--accent));
+  color: var(--cf-gold, var(--accent));
+  background: var(--cf-s3, var(--accent-soft));
+}
+.cf-genre-card__badge {
+  position: absolute;
+  top: -7px;
+  right: -4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--cf-gold, var(--accent));
+  color: var(--cf-bg, #fff);
+}
+
+/* ── 资料库：类型契约兑现追踪 ─────────────────────────────────── */
+.genre-contract-row {
+  padding: 9px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md, 10px);
+  background: var(--paper);
+}
+.genre-contract-row + .genre-contract-row { margin-top: 6px; }
+.genre-contract-row__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.genre-contract-row p { margin: 4px 0 0; }

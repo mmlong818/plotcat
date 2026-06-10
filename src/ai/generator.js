@@ -10,6 +10,7 @@ import {
   buildSceneBreakdownPrompt,
   buildSceneExpansionPrompt,
   buildContinuityExtractionPrompt,
+  buildGenreAuditPrompt,
   buildActRaterPrompt,
   buildDiagnosisPrompt,
   buildPulsePrompt,
@@ -30,15 +31,7 @@ import {
   buildEvaluateActStructurePrompt
 } from './prompts.js';
 
-let GENRE_LIBRARY = {};
 let BEAT_SHEET_LIBRARY = {};
-
-try {
-  const genreModule = await import('../data/genreLibrary.js');
-  GENRE_LIBRARY = genreModule.GENRE_LIBRARY ?? {};
-} catch {
-  // 知识库文件尚未创建，使用空对象
-}
 
 try {
   const beatModule = await import('../data/beatSheetLibrary.js');
@@ -53,12 +46,7 @@ function makeId() {
   return `choice_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
 }
 
-function getGenreData(projectContext) {
-  const p = projectContext?.project ?? projectContext;
-  const genres = p?.project?.genre ?? p?.genre_profile?.primary_genre ?? [];
-  const primaryGenre = Array.isArray(genres) ? genres[0] : genres;
-  return primaryGenre ? (GENRE_LIBRARY[primaryGenre] ?? null) : null;
-}
+// 类型知识注入已迁移到 prompts.js（shared/genreContract.js 的混合契约），不再在此层取库
 
 function getBeatData(template) {
   return BEAT_SHEET_LIBRARY[template] ?? null;
@@ -347,6 +335,7 @@ const FORMATTERS = {
   scene_breakdown: (parsed) => [{ id: makeId(), label: '场景拆解', content: parsed.entry_state ?? '', data: parsed }],
   scene_expansion: (parsed) => [{ id: makeId(), label: '全片场景表', content: `${(parsed.scenes ?? []).length} 场`, data: parsed }],
   continuity_extraction: (parsed) => [{ id: makeId(), label: '连续性提炼', content: `${(parsed.setup_payoffs ?? []).length} 组伏笔 / ${(parsed.timeline_events ?? []).length} 条时间线`, data: parsed }],
+  genre_audit: (parsed) => [{ id: makeId(), label: '类型契约审计', content: `${(parsed.fulfillment ?? []).filter((f) => f.status === 'fulfilled').length}/${(parsed.fulfillment ?? []).length} 兑现`, data: parsed }],
   act_rater: (parsed) => [{ id: makeId(), label: '幕评师', content: `${parsed.overall?.score ?? '?'}/10`, data: parsed }],
   diagnosis: formatDiagnosisChoices,
   concept: formatConceptChoices,
@@ -373,6 +362,7 @@ const PROMPT_BUILDERS = {
   scene_breakdown: (ctx, opts) => buildSceneBreakdownPrompt(ctx, opts),
   scene_expansion: (ctx, opts) => buildSceneExpansionPrompt(ctx, opts),
   continuity_extraction: (ctx) => buildContinuityExtractionPrompt(ctx),
+  genre_audit: (ctx) => buildGenreAuditPrompt(ctx),
   act_rater: (ctx, opts) => buildActRaterPrompt(ctx, opts),
   diagnosis: (ctx) => buildDiagnosisPrompt(ctx),
   concept: (_ctx, opts) => buildConceptPrompt(opts),
@@ -390,9 +380,8 @@ const PROMPT_BUILDERS = {
 export function buildPromptForStep(step, projectContext, options) {
   const builder = PROMPT_BUILDERS[step];
   if (!builder) throw new Error(`未知的生成步骤: ${step}`);
-  const genreData = getGenreData(projectContext);
   const beatData = options?.template ? getBeatData(options.template) : null;
-  const { system, user } = builder(projectContext, options, genreData, beatData);
+  const { system, user } = builder(projectContext, options, null, beatData);
   return `${system}\n\n---\n\n${user}`;
 }
 
@@ -409,10 +398,9 @@ export async function generateContent(step, projectContext, options, apiKey) {
   const builder = PROMPT_BUILDERS[step];
   if (!builder) throw new Error(`未知的生成步骤: ${step}`);
 
-  const genreData = getGenreData(projectContext);
   const beatData = options?.template ? getBeatData(options.template) : null;
 
-  const { system, user } = builder(projectContext, options, genreData, beatData);
+  const { system, user } = builder(projectContext, options, null, beatData);
   const parsed = await callClaude(system, user);
 
   const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);

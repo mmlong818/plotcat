@@ -1,4 +1,6 @@
 import { escapeHtml } from "../utils.js";
+import { GENRE_LIBRARY } from "../data/genreLibrary.js";
+import { resolveGenreBlend } from "../shared/genreContract.js";
 
 // 「新建项目」准备阶段 5 步（与项目编辑阶段的 6 步 workflow 区分开 — 这是设置阶段不是正式创作）
 const CREATION_STEPS = [
@@ -165,6 +167,30 @@ function renderStep1(creation) {
               `<option value="${val}" ${fmt === val ? "selected" : ""}>${escapeHtml(label)}${val === "feature" ? "（最常用）" : ""}</option>`
             ).join("")}
           </select>
+        </div>
+
+        <div class="cf-field">
+          <label class="cf-label">题材类型 <span class="cf-label-opt">（第一个选中的是主导类型，再选最多 2 个做调味——主导给骨架，调味给肌理）</span></label>
+          <div class="cf-genre-cards">
+            ${GENRE_LIBRARY.map((g) => {
+              const selected = (creation.genres ?? []).includes(g.label);
+              const idx = (creation.genres ?? []).indexOf(g.label);
+              const badge = idx === 0 ? "主导" : idx > 0 ? "调味" : "";
+              return `
+                <button class="cf-genre-card ${selected ? "is-active" : ""}" type="button"
+                  data-action="cf-toggle-genre" data-id="${escapeHtml(g.label)}"
+                  title="${escapeHtml(g.audience_promise)}">
+                  <span class="cf-genre-card__name">${escapeHtml(g.label)}</span>
+                  ${badge ? `<span class="cf-genre-card__badge">${badge}</span>` : ""}
+                </button>
+              `;
+            }).join("")}
+          </div>
+          ${(() => {
+            const blend = resolveGenreBlend(creation.genres ?? []);
+            if (!blend.primary) return `<p class="cf-step-sub" style="margin-top:6px">选定后，该类型的观众承诺 / 必备场景 / 禁忌将作为契约注入后续所有 AI 生成。</p>`;
+            return `<p class="cf-step-sub" style="margin-top:6px">📜 ${escapeHtml(blend.primary.audience_promise)}${blend.secondaries.length ? `<br/>调味：${blend.secondaries.map((g) => escapeHtml(g.label)).join("、")}——只加肌理，不抢骨架。` : ""}</p>`;
+          })()}
         </div>
 
         <div class="cf-field cf-field--collapsible">

@@ -1,3 +1,18 @@
+import { buildGenreBlendContract } from "../shared/genreContract.js";
+
+// 从任意 ctx 形状提取类型标签数组。
+// 兼容三种形状：完整项目文档（有 genre_profile/scene_workbench 顶层键）、
+// { project: 完整文档 } 信封、以及裸元数据 { genre: [...] }
+function genreTagsOf(ctx, extra = "") {
+  const doc = (ctx?.genre_profile || ctx?.scene_workbench || ctx?.plot_board) ? ctx
+    : (ctx?.project?.genre_profile || ctx?.project?.scene_workbench) ? ctx.project
+    : ctx;
+  const raw = doc?.project?.genre ?? doc?.genre ?? doc?.genre_profile?.primary_genre ?? [];
+  const tags = Array.isArray(raw) ? [...raw] : [raw];
+  if (extra) tags.push(extra);
+  return tags.filter(Boolean);
+}
+
 const HOLLYWOOD_SHOWRUNNER_PERSONA = `
 你的身份：好莱坞 A 级 showrunner，10+ 年实战，参与过艾美/金球级别项目，深度师承 Save the Cat（Snyder）、Story（McKee）、Into the Woods（Yorke）、The Anatomy of Story（Truby）四大体系。
 
@@ -69,14 +84,10 @@ function structureSummary(ctx) {
   }).join("\n");
 }
 
-export function buildLoglinePrompt(projectContext, options, genreData) {
+export function buildLoglinePrompt(projectContext, options) {
   const { keywords = "", genre = "", style = [], avoid = [], count = 3 } = options ?? {};
-  const genreInfo = genreData ? `
-类型规范（${genreData.name ?? genre}）：
-必要场景：${(genreData.obligatory_scenes ?? []).join("、") || "无"}
-禁忌模式：${(genreData.forbidden_patterns ?? []).join("、") || "无"}
-观众承诺：${genreData.audience_promise ?? ""}
-` : "";
+  const blendContract = buildGenreBlendContract(genreTagsOf(projectContext, genre), "full");
+  const genreInfo = blendContract ? `\n${blendContract}\n` : "";
 
   const system = `你是一位专业的故事创意引擎，擅长创作有强钩子、反常设定、高冲突前提和内置反转潜力的Logline。
 ${DRAMA_PRINCIPLES}`;
@@ -165,17 +176,18 @@ ${selectedLogline || "（请基于项目概念）"}
   return { system, user };
 }
 
-export function buildCharactersPrompt(projectContext, options, genreData) {
+export function buildCharactersPrompt(projectContext, options) {
   const { count = 3, focusRole = "", theme = "" } = options ?? {};
   const ctx = projectContext?.project ?? projectContext;
   const treatment = ctx?.story_core?.premise ?? ctx?.project?.logline ?? "";
   const existingChars = charactersSummary(projectContext);
+  const blendContract = buildGenreBlendContract(genreTagsOf(projectContext), "full");
 
   const system = `你是一位专业人物设计师，擅长创造有欲望、需求、创伤和内置弧光的立体角色。
 ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
-
+${blendContract ? `\n${blendContract}\n（人物设计必须服务主导类型的观众承诺；若有调味类型，至少一个主要角色要成为它的载体）\n` : ""}
 Treatment摘要：${treatment || "参见项目概念"}
 已有角色：
 ${existingChars}
@@ -219,17 +231,18 @@ ${existingChars}
   return { system, user };
 }
 
-export function buildBeatSheetPrompt(projectContext, options, genreData, beatData) {
+export function buildBeatSheetPrompt(projectContext, options, _genreData, beatData) {
   const { template = "save_the_cat", genre = "" } = options ?? {};
   const frameworkInfo = beatData ? Object.entries(beatData).map(([key, beat]) => {
     return `- ${beat.name ?? key}（${beat.percentage ?? ""}）：${beat.ai_instruction ?? beat.description ?? ""}`;
   }).join("\n") : "（使用经典节拍框架）";
+  const blendContract = buildGenreBlendContract(genreTagsOf(projectContext, genre), "full");
 
   const system = `你是一位结构大师，专注于将Treatment精确映射到节拍框架，让每个节拍都有情感驱动力。
 ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
-
+${blendContract ? `\n${blendContract}\n（节拍映射必须覆盖主导类型的全部必备场景——每个必备场景至少对应一个节拍）\n` : ""}
 角色情况：
 ${charactersSummary(projectContext)}
 
@@ -439,12 +452,14 @@ function buildSetupTrackingBlock(ctx) {
 // 类型契约——必备常规 + 禁区 + 观众承诺，喂给写本场/幕评师
 function buildGenreContractBlock(ctx) {
   const gp = ctx?.genre_profile;
-  if (!gp) return "";
   const list_ = (v) => (Array.isArray(v) ? v : []);
-  const conventions = list_(gp.conventions).filter((c) => (c.name || "").trim());
-  const taboos = list_(gp.taboos).filter((t) => (t.name || "").trim());
+  const conventions = list_(gp?.conventions).filter((c) => (c.name || "").trim());
+  const taboos = list_(gp?.taboos).filter((t) => (t.name || "").trim());
   const parts = [];
-  if (gp.audience_promise) parts.push(`观众承诺：${gp.audience_promise}`);
+  // 知识库混合契约（主导类型禁忌全集 + 调味肌理提醒）
+  const blendContract = buildGenreBlendContract(genreTagsOf(ctx), "scene");
+  if (blendContract) parts.push(blendContract);
+  if (gp?.audience_promise) parts.push(`观众承诺：${gp.audience_promise}`);
   if (conventions.length) {
     parts.push("类型必备（兑现下列期待，缺失即失约）：\n" + conventions.map((c) =>
       `- ${c.name}${c.status === "required" ? "（必备）" : ""}${c.description ? "：" + c.description : ""}`).join("\n"));
@@ -454,6 +469,48 @@ function buildGenreContractBlock(ctx) {
       `- ${t.name}${t.description ? "：" + t.description : ""}`).join("\n"));
   }
   return parts.join("\n");
+}
+
+// ── 类型契约兑现审计：逐条核验主导类型的必备场景是否在场景表中有真实落点 ──────
+export function buildGenreAuditPrompt(projectContext) {
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const tags = genreTagsOf(ctx);
+  const scenes = (ctx?.scene_workbench?.scenes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const sceneLines = scenes.map((s) =>
+    `第 ${s.order_index} 场《${s.title}》｜${s.purpose || ""}${s.beat_summary ? `｜转折：${s.beat_summary}` : ""}`
+  ).join("\n");
+  const blendContract = buildGenreBlendContract(tags, "full");
+
+  const system = `你是类型片剧本监理。任务：逐条核验「主导类型必备场景」在场景表中是否有真实落点，并检查是否踩中类型禁忌。
+判定标准从严：必备场景要求的戏剧功能必须真的由某场戏承担（不是擦边沾到关键词），否则判 missing。`;
+
+  const user = `${projectSummary(projectContext)}
+
+${blendContract}
+
+全片场景表：
+${sceneLines || "（还没有场景）"}
+
+JSON 输出（requirement_index 从 0 起，对应主导类型必备场景的列出顺序）：
+{
+  "fulfillment": [
+    {
+      "requirement_index": 0,
+      "requirement": "必备场景名（照抄冒号前短语）",
+      "status": "fulfilled | partial | missing",
+      "scene_orders": [承担该功能的场次号],
+      "note": "一句话判定理由（fulfilled 说哪场怎么兑现的；missing 说缺什么）"
+    }
+  ],
+  "taboo_violations": [
+    { "taboo": "踩中的禁忌（照抄开头短语）", "scene_orders": [场次号], "note": "一句话证据" }
+  ],
+  "blend_balance": "若是混合类型：一句话评估调味类型的存在感（不足/适中/喧宾夺主）；单类型填空字符串",
+  "reasoning": "简短"
+}
+严格按 JSON 输出。`;
+
+  return { system, user };
 }
 
 // ── 连续性提炼：从剧情卡与场景表中提炼伏笔追踪与时间线，回填资料库 ──────────
@@ -533,8 +590,10 @@ export function buildSceneExpansionPrompt(projectContext, options) {
     `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${s.purpose || ""}${(s.script_full || "").trim().length > 50 ? "｜已有成稿，不可删改" : "｜未写稿"}`
   ).join("\n") || "（还没有场景）";
 
+  const expansionBlend = buildGenreBlendContract(genreTagsOf(ctx), "full");
   const system = `你是一位好莱坞资深剧本统筹，擅长把结构节拍拆解成完整的拍摄场景序列。
 一个剧情节拍（剧情卡）在成片中通常需要 2-4 场戏来完成：铺垫场、执行场、余波场。
+${expansionBlend ? `\n${expansionBlend}\n拆场时检查：主导类型的每个必备场景都必须在场景表中有明确落点；混合类型时按「主导给骨架、调味给肌理」分配每场的能量。\n` : ""}
 拆场原则：
 - 每场必须有独立的戏剧任务（谁要什么/谁挡着/赌注），不是把一场掰成两半
 - 地点与时段变化即是分场；同一节拍可以跨多个地点推进
@@ -1043,6 +1102,7 @@ ${structureSummary(projectContext)}
 export function buildConceptPrompt(options) {
   const { genres = [], conceptHint = "", era = "", count = 3 } = options ?? {};
   const genreStr = genres.join("、") || "不限";
+  const blendContract = buildGenreBlendContract(genres, "full");
 
   const system = `你是一位专业故事开发顾问，擅长为长片项目提炼高概念、高差异化的故事点子。
 字符串内部禁止使用英文双引号，用书名号《》代替。`;
@@ -1050,6 +1110,7 @@ export function buildConceptPrompt(options) {
   const user = `类型：${genreStr}
 年代/背景：${era || "不限"}
 创意方向：${conceptHint || "（开放，AI自由发挥）"}
+${blendContract ? `\n${blendContract}\n（概念必须天然长在主导类型的观众承诺上；若是混合类型，钩子里要能同时听见两种类型的声音，而不是 A 类型故事贴 B 类型标签）\n` : ""}
 
 请生成${count}个差异明显的故事概念，每个必须有独特的切入角度。
 
@@ -1569,6 +1630,8 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
     `- ${nodeTitle}（${nodeType}）`
   ).join("\n");
 
+  const blendContract = buildGenreBlendContract(genreTagsOf(projectCtx, Array.isArray(meta?.genre) ? meta.genre.join("、") : meta?.genre), "full");
+
   const system = `你是一位好莱坞专业编剧顾问，擅长根据故事具体信息为每个叙事节点提炼实际发生的情节。
 严格要求：
 - story_title：不超过12字，必须用本故事的真实人物名+具体行动命名，禁止任何框架术语（如"开场""诱因""转折""建立""危机"等）
@@ -1584,7 +1647,7 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
 主角：${protagonist || "待定"}
 主题：${theme || "待定"}
 ${charLines ? `\n主要角色：\n${charLines}` : ""}
-
+${blendContract ? `\n${blendContract}\n（本幕节点的情节提炼必须落在主导类型的必备场景轨道上；调味类型用于给情节加肌理，不改骨架）\n` : ""}
 当前幕：${actTitle}
 此幕叙事目的：${actPurpose}
 
