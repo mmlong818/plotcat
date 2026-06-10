@@ -124,338 +124,50 @@ function getOrderedNodes(actId = null) {
     .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
 }
 
-// ── Data getters ─────────────────────────────────────────────────────────────
+import {
+  getLivePlotCards,
+  getPlotCard,
+  getCharacter,
+  getRelationship,
+  getScene,
+  getTimelineEvent,
+  getWorldRule,
+  getSetup,
+  getCharacterNameById,
+  getCharacterLinkedPlotCards,
+  getCharacterRelationships,
+  getRelationshipLinkedPlotCards,
+  getSceneLinkedPlotCards,
+  getSceneLinkedCharacterIds,
+  getSceneLinkedCharacters,
+  getSceneLinkedRelationships,
+  getSceneLinkedTimelineEvents,
+  getRelationshipLinkedScenes,
+  getRelationshipLinkedTimelineEvents,
+  getCharacterLinkedScenes,
+  getPlotLinkedRelationships,
+  getPlotLinkedScenes,
+  getPlotLinkedTimelineEvents
+} from "./logic/getters.js";
 
-// 未被软删除的剧情卡（废纸篓恢复/清除走原始数组，不经过这里）
-function getLivePlotCards() {
-  return list(appState.project.plot_board?.cards).filter((card) => !card.deleted_at);
-}
-
-function getPlotCard(cardId = appState.selection.plotCardId) {
-  return getLivePlotCards().find((card) => card.id === cardId) ?? null;
-}
-
-function getCharacter(characterId = appState.selection.characterId) {
-  return list(appState.project.character_hub?.characters).find((item) => item.id === characterId) ?? null;
-}
-
-function getRelationship(relationshipId = appState.selection.relationshipId) {
-  return list(appState.project.character_hub?.relationship_map).find((item) => item.id === relationshipId) ?? null;
-}
-
-function getScene(sceneId = appState.selection.sceneId) {
-  return list(appState.project.scene_workbench?.scenes).find((item) => item.id === sceneId) ?? null;
-}
-
-function getTimelineEvent(eventId = appState.selection.timelineId) {
-  return list(appState.project.lock_layer?.projections?.timeline_events).find((item) => item.id === eventId) ?? null;
-}
-
-function getWorldRule(ruleId = appState.selection.worldRuleId) {
-  return list(appState.project.lock_layer?.projections?.world_rules).find((item) => item.id === ruleId) ?? null;
-}
-
-function getSetup(setupId = appState.selection.setupId) {
-  return list(appState.project.lock_layer?.projections?.setup_payoffs).find((item) => item.id === setupId) ?? null;
-}
-
-function getCharacterNameById(characterId = "") {
-  return list(appState.project.character_hub?.characters).find((item) => item.id === characterId)?.name ?? "未定人物";
-}
-
-function getCharacterLinkedPlotCards(characterId) {
-  return getLivePlotCards()
-    .filter((card) => list(card.character_ids).includes(characterId))
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getCharacterRelationships(characterId) {
-  return list(appState.project.character_hub?.relationship_map).filter(
-    (relationship) =>
-      relationship.source_character_id === characterId || relationship.target_character_id === characterId
-  );
-}
-
-function getRelationshipLinkedPlotCards(relationship) {
-  if (!relationship) return [];
-  const pairIds = [relationship.source_character_id, relationship.target_character_id].filter(Boolean);
-  return getLivePlotCards()
-    .filter((card) => pairIds.every((characterId) => list(card.character_ids).includes(characterId)))
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getSceneLinkedPlotCards(scene) {
-  if (!scene) return [];
-  const linkedIds = new Set(list(scene.linked_plot_card_ids));
-  return getLivePlotCards()
-    .filter((card) => linkedIds.has(card.id))
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getSceneLinkedCharacterIds(scene) {
-  if (!scene) return [];
-  const ids = new Set();
-  if (scene.pov_character_id) ids.add(scene.pov_character_id);
-  getSceneLinkedPlotCards(scene).forEach((card) => {
-    list(card.character_ids).forEach((characterId) => { if (characterId) ids.add(characterId); });
-  });
-  return Array.from(ids);
-}
-
-function getSceneLinkedCharacters(scene) {
-  const ids = new Set(getSceneLinkedCharacterIds(scene));
-  return list(appState.project.character_hub?.characters).filter((character) => ids.has(character.id));
-}
-
-function getSceneLinkedRelationships(scene) {
-  const characterIds = new Set(getSceneLinkedCharacterIds(scene));
-  if (characterIds.size < 2) return [];
-  return list(appState.project.character_hub?.relationship_map).filter(
-    (relationship) =>
-      characterIds.has(relationship.source_character_id) &&
-      characterIds.has(relationship.target_character_id)
-  );
-}
-
-function getSceneLinkedTimelineEvents(scene) {
-  const characterIds = new Set(getSceneLinkedCharacterIds(scene));
-  if (characterIds.size === 0) return [];
-  return list(appState.project.lock_layer?.projections?.timeline_events)
-    .filter((event) => list(event.participants).some((characterId) => characterIds.has(characterId)))
-    .sort((left, right) => {
-      const leftDay = Number(left.story_day) || 9999;
-      const rightDay = Number(right.story_day) || 9999;
-      if (leftDay !== rightDay) return leftDay - rightDay;
-      return (Number(left.sequence_index) || 9999) - (Number(right.sequence_index) || 9999);
-    });
-}
-
-function getRelationshipLinkedScenes(relationship) {
-  if (!relationship) return [];
-  const pairIds = [relationship.source_character_id, relationship.target_character_id].filter(Boolean);
-  if (pairIds.length < 2) return [];
-  return list(appState.project.scene_workbench?.scenes)
-    .filter((scene) => pairIds.every((characterId) => getSceneLinkedCharacterIds(scene).includes(characterId)))
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getRelationshipLinkedTimelineEvents(relationship) {
-  if (!relationship) return [];
-  const pairIds = [relationship.source_character_id, relationship.target_character_id].filter(Boolean);
-  if (pairIds.length < 2) return [];
-  return list(appState.project.lock_layer?.projections?.timeline_events)
-    .filter((event) => pairIds.every((characterId) => list(event.participants).includes(characterId)))
-    .sort((left, right) => {
-      const leftDay = Number(left.story_day) || 9999;
-      const rightDay = Number(right.story_day) || 9999;
-      if (leftDay !== rightDay) return leftDay - rightDay;
-      return (Number(left.sequence_index) || 9999) - (Number(right.sequence_index) || 9999);
-    });
-}
-
-function getCharacterLinkedScenes(characterId) {
-  if (!characterId) return [];
-  const linkedCardIds = new Set(getCharacterLinkedPlotCards(characterId).map((card) => card.id));
-  return list(appState.project.scene_workbench?.scenes)
-    .filter(
-      (scene) =>
-        scene.pov_character_id === characterId ||
-        list(scene.linked_plot_card_ids).some((plotCardId) => linkedCardIds.has(plotCardId))
-    )
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getPlotLinkedRelationships(card) {
-  if (!card) return [];
-  const characterIds = list(card.character_ids);
-  if (characterIds.length < 2) return [];
-  return list(appState.project.character_hub?.relationship_map).filter(
-    (relationship) =>
-      characterIds.includes(relationship.source_character_id) &&
-      characterIds.includes(relationship.target_character_id)
-  );
-}
-
-function getPlotLinkedScenes(card) {
-  if (!card) return [];
-  return list(appState.project.scene_workbench?.scenes)
-    .filter((scene) => list(scene.linked_plot_card_ids).includes(card.id))
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function getPlotLinkedTimelineEvents(card) {
-  if (!card) return [];
-  const characterIds = new Set(list(card.character_ids));
-  return list(appState.project.lock_layer?.projections?.timeline_events)
-    .filter((event) => list(event.participants).some((characterId) => characterIds.has(characterId)))
-    .sort((left, right) => {
-      const leftDay = Number(left.story_day) || 9999;
-      const rightDay = Number(right.story_day) || 9999;
-      if (leftDay !== rightDay) return leftDay - rightDay;
-      return (Number(left.sequence_index) || 9999) - (Number(right.sequence_index) || 9999);
-    });
-}
-
-// ── Plot board model ─────────────────────────────────────────────────────────
-
-appState.plotBoardView = appState.plotBoardView || "structure";
-appState.activeScenarioGroupId = appState.activeScenarioGroupId || null;
-
-const PLOT_BOARD_LANE_PRESETS = [
-  { id: "lane_main", title: "正式主线", kind: "canonical_mainline", sort_order: 10, color_slot: "orange", is_canonical: true, scenario_group_id: null, notes: "" },
-  { id: "lane_subplot", title: "支线", kind: "subplot", sort_order: 20, color_slot: "blue", is_canonical: true, scenario_group_id: null, notes: "" },
-  { id: "lane_undefined", title: "未定义", kind: "undefined", sort_order: 90, color_slot: "gray", is_canonical: false, scenario_group_id: null, notes: "" },
-  { id: "lane_scenario_a", title: "方案轨", kind: "scenario", sort_order: 110, color_slot: "purple", is_canonical: false, scenario_group_id: "scenario_core", notes: "" }
-];
-
-const PLOT_SCENARIO_GROUP_PRESETS = [
-  { id: "scenario_core", title: "方案对照", question: "当前主问题有哪些不同解法", status: "exploring", promoted_lane_id: null, notes: "" }
-];
-
-function createPlotBoardLanes() {
-  return PLOT_BOARD_LANE_PRESETS.map((lane) => ({ ...lane }));
-}
-
-function createPlotScenarioGroups() {
-  return PLOT_SCENARIO_GROUP_PRESETS.map((group) => ({ ...group }));
-}
-
-function getDefaultLaneIdForType(type = "") {
-  if (type === "mainline") return "lane_main";
-  if (type === "enhancement") return "lane_subplot";
-  return "lane_undefined";
-}
-
-function getDefaultLaneKindForType(type = "") {
-  if (type === "mainline") return "canonical_mainline";
-  if (type === "enhancement") return "subplot";
-  return "undefined";
-}
-
-function getPlotLanes() {
-  return list(appState.project.plot_board?.lanes).sort((left, right) => (left.sort_order ?? 999) - (right.sort_order ?? 999));
-}
-
-function getScenarioGroups() {
-  return list(appState.project.plot_board?.scenario_groups);
-}
-
-function getPlotLane(laneId = "") {
-  return getPlotLanes().find((lane) => lane.id === laneId) ?? null;
-}
-
-function getActiveScenarioGroup() {
-  const groups = getScenarioGroups();
-  if (groups.length === 0) return null;
-  return groups.find((group) => group.id === appState.activeScenarioGroupId) ?? groups[0];
-}
-
-function getVisibleLanes() {
-  const activeScenarioGroupId = getActiveScenarioGroup()?.id ?? null;
-  return getPlotLanes()
-    .filter((lane) => lane.kind !== "scenario" || !activeScenarioGroupId || lane.scenario_group_id === activeScenarioGroupId)
-    // "未定义"和"方案轨 B"轨道始终不显示在主网格；落在其中的卡片仍可通过底部卡片库访问
-    .filter((lane) => lane.kind !== "undefined")
-    .filter((lane) => lane.id !== "lane_scenario_b");
-}
-
-function getDefaultNodeForAct(actId = "", preferredNodeId = "") {
-  const nodes = list(appState.project.structure_profile?.nodes);
-  const preferred = nodes.find((node) => node.id === preferredNodeId && node.act_id === actId);
-  if (preferred) return preferred;
-  return nodes.find((node) => node.act_id === actId) ?? nodes[0] ?? null;
-}
-
-function getCardsInLaneAct(laneId = "", actId = "") {
-  return list(appState.project.plot_board?.cards)
-    .filter((card) => card.lane_id === laneId && card.act_id === actId)
-    .sort((left, right) => (left.order_index ?? 9999) - (right.order_index ?? 9999));
-}
-
-function nextLaneActOrder(laneId = "", actId = "") {
-  const cards = getCardsInLaneAct(laneId, actId);
-  return (cards[cards.length - 1]?.order_index ?? 0) + 10;
-}
-
-function ensurePlotBoardModel(project) {
-  if (!project.plot_board) project.plot_board = { cards: [] };
-  if (!Array.isArray(project.plot_board.lanes) || project.plot_board.lanes.length === 0) {
-    project.plot_board.lanes = createPlotBoardLanes();
-  }
-  // 迁移旧版语义色名 → 颜色名（CSS 只保留颜色名一套选择器）
-  const LEGACY_COLOR_SLOTS = { main: "orange", subplot: "blue", "scenario-a": "purple", "scenario-b": "purple", undefined: "gray" };
-  project.plot_board.lanes = project.plot_board.lanes.map((lane) =>
-    LEGACY_COLOR_SLOTS[lane.color_slot] ? { ...lane, color_slot: LEGACY_COLOR_SLOTS[lane.color_slot] } : lane
-  );
-  if (!Array.isArray(project.plot_board.scenario_groups) || project.plot_board.scenario_groups.length === 0) {
-    project.plot_board.scenario_groups = createPlotScenarioGroups();
-  }
-  project.plot_board.view_mode = project.plot_board.view_mode === "rehearsal" ? "rehearsal" : "structure";
-  const lanesById = new Map(list(project.plot_board.lanes).map((lane) => [lane.id, lane]));
-  const nodesById = new Map(list(project.structure_profile?.nodes).map((node) => [node.id, node]));
-  const counters = new Map();
-  project.plot_board.cards = list(project.plot_board.cards).map((card) => {
-    const node = nodesById.get(card.node_id);
-    // 结构节点是幕归属的真源：卡片挂在节点上，act_id 一律从节点派生，
-    // 修复结构重建后 act_id 变成孤儿 ID / 空值的历史数据
-    if (node?.act_id) card = { ...card, act_id: node.act_id };
-    // 旧版创作流程生成的卡片缺 type/lane_id，被兜底进「未定义」轨导致空板：
-    // 凡是挂在有效结构节点上、又从未被指定类型的卡片，自愈归位到正式主线
-    if (card.lane_id === "lane_undefined" && !card.type && node) {
-      card = { ...card, type: "mainline", lane_id: "lane_main" };
-    }
-    const laneId = lanesById.has(card.lane_id) ? card.lane_id : getDefaultLaneIdForType(card.type);
-    const lane = lanesById.get(laneId);
-    const key = `${laneId}:${card.act_id || ""}`;
-    const nextOrder = (counters.get(key) ?? 0) + 10;
-    const order = Number(card.order_index) || nextOrder;
-    counters.set(key, Math.max(nextOrder, order));
-    return {
-      ...card,
-      lane_id: laneId,
-      lane_kind: lane?.kind ?? getDefaultLaneKindForType(card.type),
-      order_index: order,
-      scenario_group_id: lane?.kind === "scenario" ? card.scenario_group_id || lane.scenario_group_id || project.plot_board.scenario_groups[0]?.id || null : null,
-      is_canonical: card.is_canonical != null ? card.is_canonical : lane?.kind === "canonical_mainline" || lane?.kind === "subplot"
-    };
-  });
-  appState.plotBoardView = project.plot_board.view_mode;
-  const groups = list(project.plot_board.scenario_groups);
-  const activeScenarioGroup = groups.find((group) => group.id === appState.activeScenarioGroupId);
-  if (!activeScenarioGroup) {
-    appState.activeScenarioGroupId = groups[0]?.id ?? null;
-  }
-  return project;
-}
-
-function updatePlotCardLane(card, laneId) {
-  const lane = getPlotLane(laneId);
-  if (!card || !lane) return;
-  card.lane_id = lane.id;
-  card.lane_kind = lane.kind;
-  card.is_canonical = lane.kind === "canonical_mainline" || lane.kind === "subplot";
-  card.scenario_group_id = lane.kind === "scenario" ? lane.scenario_group_id || appState.activeScenarioGroupId || getScenarioGroups()[0]?.id || null : null;
-}
-
-function getAutoPlotStatusForPlacement(card) {
-  if (!card) return "draft";
-  if (card.lane_kind === "undefined") return "draft";
-  if (card.lane_kind === "scenario") return "exploring";
-  return "review";
-}
-
-function applyPlotCardPlacement(card, options = {}) {
-  if (!card) return;
-  appState.selection.plotCardId = card.id;
-  const laneId = options.laneId || card.lane_id;
-  const actId = options.actId || card.act_id;
-  updatePlotCardLane(card, laneId);
-  const targetNode = getDefaultNodeForAct(actId, options.nodeId || card.node_id);
-  card.act_id = actId;
-  card.node_id = targetNode?.id ?? card.node_id;
-  card.order_index = options.keepOrder ? card.order_index : nextLaneActOrder(card.lane_id, card.act_id);
-  card.status = getAutoPlotStatusForPlacement(card);
-}
+import {
+  createPlotBoardLanes,
+  createPlotScenarioGroups,
+  getDefaultLaneIdForType,
+  getDefaultLaneKindForType,
+  getPlotLanes,
+  getScenarioGroups,
+  getPlotLane,
+  getActiveScenarioGroup,
+  getVisibleLanes,
+  getDefaultNodeForAct,
+  getCardsInLaneAct,
+  nextLaneActOrder,
+  ensurePlotBoardModel,
+  updatePlotCardLane,
+  getAutoPlotStatusForPlacement,
+  applyPlotCardPlacement
+} from "./logic/plotBoard.js";
 
 function movePlotCardToLaneAct(cardId, laneId, actId, nodeId = "") {
   const card = getPlotCard(cardId);
@@ -3254,6 +2966,33 @@ async function aiReviseSceneWithRater(sceneId) {
   await aiWriteSceneScript(sceneId, { silent: true });
 }
 
+// 通用称谓（路人/职务），不算「名单外人名」
+const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士|医生|警察|警员|司机|保安|旁白|画外音|众人|群众|记者|主持人|播音员|法医|助理|秘书|售货员|收银员|清洁工|门卫|邻居|乘客|售票员)[甲乙丙丁ABC]?$/;
+
+// 从剧本文本中找出不在项目人物名单里的对白说话人
+function findUnknownSpeakers(script) {
+  const roster = new Set(
+    list(appState.project.character_hub?.characters).map((c) => (c.name || "").trim()).filter(Boolean)
+  );
+  const unknown = new Set();
+  const lines = String(script).split(/\r?\n/).map((l) => l.trim());
+  for (let i = 0; i < lines.length; i++) {
+    // 对白说话人行：2-6 个汉字独立成行（允许带括注），且下一行紧跟对白文本
+    const m = lines[i].match(/^([一-龥]{2,6})(（[^）]*）)?$/);
+    if (!m) continue;
+    let j = i + 1;
+    while (j < lines.length && !lines[j]) j++;
+    const next = lines[j] ?? "";
+    // 下一行必须像对白（有内容且本身不是另一个独立人名行），否则当作短动作行跳过
+    if (!next || /^([一-龥]{2,6})(（[^）]*）)?$/.test(next)) continue;
+    const name = m[1];
+    if (roster.has(name) || GENERIC_SPEAKER_RE.test(name)) continue;
+    if (/^(清晨|上午|正午|午后|黄昏|夜晚|深夜|黎明|同时|稍后|片刻|内景|外景)$/.test(name)) continue;
+    unknown.add(name);
+  }
+  return Array.from(unknown);
+}
+
 // ── AI 全片场景表规划：剧情卡 1:N 拆场，凑齐作品形态的标准场数 ────────────────
 const SCENE_TARGETS_BY_FORMAT = {
   feature: 32, feature_film: 32, feature_or_pilot: 28,
@@ -3383,6 +3122,12 @@ async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
     liveScene.script_full = script;
     // AI 成稿后回写场景工作流状态，避免场景页一直停留在手填「草稿」与剧本页口径打架
     liveScene.status = "scripted";
+    // 人名白名单事后校验：抓对白说话人行，比对项目人物名单，发现名单外人名立即提示
+    const unknownNames = findUnknownSpeakers(script);
+    if (unknownNames.length > 0) {
+      const warn = `⚠ 名单外人物名：${unknownNames.join("、")}（请检查是否应为已有角色，或在人物页补建）`;
+      liveScene.screenplay_notes = [liveScene.screenplay_notes, warn].filter(Boolean).join("\n");
+    }
     // 幕评师修稿指令是一次性的：本轮重写已消费，清空避免影响后续无关生成
     if (liveScene.rater_directives) liveScene.rater_directives = "";
     if (data.end_hook || data.emotion_arc) {
