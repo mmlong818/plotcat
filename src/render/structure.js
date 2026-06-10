@@ -1,5 +1,5 @@
-import { escapeHtml, field, inputField, textareaField, selectField, list } from "../utils.js";
-import { structureTemplateLabels, formatStructureOptions, ENDING_DIRECTION_OPTIONS } from "../state.js";
+import { escapeHtml, field, inputField, textareaField, list } from "../utils.js";
+import { structureTemplateLabels, formatStructureOptions } from "../state.js";
 
 // 节拍名采用行业通用术语（Save the Cat / Hero's Journey 通译）
 const NODE_TYPE_LABELS = {

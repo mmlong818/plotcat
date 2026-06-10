@@ -1,5 +1,5 @@
-import { escapeHtml, inputField, textareaField, selectField, field, list, renderEmptyState } from "../utils.js";
-import { plotTypeLabels, plotStatusLabels, storyRoleLabels, PLOT_TROPE_OPTIONS, PLOT_MACGUFFIN_OPTIONS, PLOT_CATALYST_OPTIONS, PLOT_CONFLICT_TYPE_OPTIONS, PLOT_TWIST_OPTIONS } from "../state.js";
+import { escapeHtml, list } from "../utils.js";
+import { plotTypeLabels, plotStatusLabels, PLOT_TROPE_OPTIONS, PLOT_MACGUFFIN_OPTIONS, PLOT_CATALYST_OPTIONS, PLOT_CONFLICT_TYPE_OPTIONS, PLOT_TWIST_OPTIONS } from "../state.js";
 
 const STATUS_LABELS = {
   draft: "草稿", exploring: "探索中", review: "待审", locked: "已锁定", discarded: "废弃",
@@ -7,20 +7,6 @@ const STATUS_LABELS = {
 const STATUS_CLASS = {
   draft: "pgs-draft", exploring: "pgs-explore", review: "pgs-review", locked: "pgs-locked", discarded: "pgs-discard",
 };
-
-function renderCharacterChecklist(appState, selectedIds = []) {
-  const selected = new Set(list(selectedIds));
-  return `
-    <div class="check-list">
-      ${list(appState.project.character_hub?.characters)
-        .map((ch) => `
-          <label class="check-list__item">
-            <input type="checkbox" data-action="plot-character-toggle" data-id="${escapeHtml(ch.id)}" ${selected.has(ch.id) ? "checked" : ""}/>
-            <span>${escapeHtml(ch.name)}</span>
-          </label>`)
-        .join("")}
-    </div>`;
-}
 
 function renderPCard(appState, card, lane) {
   const isActive = card.id === appState.selection.plotCardId;

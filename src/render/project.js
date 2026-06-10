@@ -1,4 +1,4 @@
-import { escapeHtml, list, renderEmptyState } from "../utils.js";
+import { escapeHtml, list } from "../utils.js";
 import { formatLabels, projectStatusLabels, projectCreateStepsCurrent, projectFormatChoices, TONE_OPTIONS } from "../state.js";
 import { formatTime } from "../utils.js";
 

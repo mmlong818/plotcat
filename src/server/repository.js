@@ -731,22 +731,6 @@ export function restoreProjectVersion(projectId, versionId) {
   return saveProject(snapshot);
 }
 
-export function getProjectWorkspace(projectId = null) {
-  const targetProjectId = projectId ?? getFallbackProjectId();
-  return {
-    project: loadProject(targetProjectId),
-    projects: listProjects(),
-    versions: listProjectVersions(targetProjectId)
-  };
-}
-
-export function summarizeProjectForClient(projectId) {
-  const project = loadProject(projectId);
-  return buildProjectSummary(project, {
-    version_count: listProjectVersions(projectId).length
-  });
-}
-
 // ── 系列库（Series Bible）：跨项目共享的世界观资产 ────────────────────────────
 // document_json 结构：{ world_rules:[], timeline_events:[], regulars:[] }
 // regulars = 系列常驻人物档案（只读注入生成，不并入项目 character_hub）
