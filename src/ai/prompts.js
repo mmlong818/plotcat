@@ -513,6 +513,79 @@ JSON 输出（requirement_index 从 0 起，对应主导类型必备场景的列
   return { system, user };
 }
 
+// ── 类型契约修复方案：把审计发现的缺失/部分兑现/禁忌转化为可执行手术方案 ──────
+export function buildGenreRemedyPrompt(projectContext) {
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const audit = ctx?.genre_profile?.fulfillment_audit;
+  const scenes = (ctx?.scene_workbench?.scenes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const characters = ctx?.character_hub?.characters ?? [];
+  const cards = (ctx?.plot_board?.cards ?? []).filter((c) => !c.deleted_at);
+  const blendContract = buildGenreBlendContract(genreTagsOf(ctx), "full");
+
+  const problems = [];
+  for (const f of (audit?.fulfillment ?? [])) {
+    if (f.status === "missing") problems.push(`[缺失] ${f.requirement}：${f.note || ""}`);
+    else if (f.status === "partial") problems.push(`[部分兑现，涉及第 ${(f.scene_orders ?? []).join("、")} 场] ${f.requirement}：${f.note || ""}`);
+  }
+  for (const t of (audit?.taboo_violations ?? [])) {
+    problems.push(`[踩禁忌，第 ${(t.scene_orders ?? []).join("、")} 场] ${t.taboo}：${t.note || ""}`);
+  }
+
+  const sceneLines = scenes.map((s) =>
+    `第 ${s.order_index} 场《${s.title}》｜${s.purpose || ""}${(s.script_full || "").trim().length > 50 ? "｜已成稿" : "｜未写稿"}`
+  ).join("\n");
+  const charLines = characters.slice(0, 8).map((c) => `- ${c.name}（${c.story_role ?? ""}）`).join("\n");
+  const cardLines = cards.map((c) => `id=${c.id}｜${c.title}`).join("\n");
+
+  const system = `你是类型片剧本医生。任务：针对契约审计发现的问题，给出**最小侵入**的手术方案——
+能通过重写既有场次解决的，写成该场的修稿指令；确实需要新增场次的（如缺失的结构节点），给出完整的新场方案。
+原则：尊重已成稿场次的既有内容（指令应是"在保留本场现有节拍的基础上叠加/调整"，不是推倒重来）；新增场次越少越好。`;
+
+  const user = `${projectSummary(projectContext)}
+
+${blendContract}
+
+待修复问题清单（来自契约审计）：
+${problems.join("\n") || "（无）"}
+
+角色名单（人物名必须严格使用）：
+${charLines}
+
+剧情卡（新场挂卡用）：
+${cardLines}
+
+全片场景表：
+${sceneLines}
+
+JSON 输出：
+{
+  "scene_directives": [
+    {
+      "scene_order": 场次号(数字),
+      "directive": "该场修稿指令：1.[severity] 问题\\n   定位：…\\n   要求：…（保留现有节拍的前提下如何叠加类型义务，具体到动作/信息/台词方向）"
+    }
+  ],
+  "new_scenes": [
+    {
+      "insert_after_order": 插入在第几场之后(数字),
+      "card_id": "挂靠的剧情卡 id",
+      "title": "场名（人物+动作，≤14 字）",
+      "purpose": "本场谁要做什么，赌什么（≤40 字）",
+      "obstacle": "具体阻力（≤40 字）",
+      "beat_summary": "本场转折（≤40 字）",
+      "location": "具体地点",
+      "time_of_day": "黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜 之一",
+      "pov_name": "视点人物名（名单内）",
+      "fulfills": "兑现哪条必备场景"
+    }
+  ],
+  "reasoning": "手术思路（哪些靠重写、哪些必须新增、为什么）"
+}
+严格按 JSON 输出。`;
+
+  return { system, user };
+}
+
 // ── 连续性提炼：从剧情卡与场景表中提炼伏笔追踪与时间线，回填资料库 ──────────
 export function buildContinuityExtractionPrompt(projectContext) {
   const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
