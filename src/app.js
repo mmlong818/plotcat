@@ -1902,6 +1902,10 @@ function handleClick(event) {
     aiReviseFullScreenplayWithRater();
     return;
   }
+  if (action === "ai-expand-scenes") {
+    aiExpandScenes();
+    return;
+  }
   if (action === "library-back") {
     setCurrentPage(appState.libraryReturnPage ?? "project");
     return;
@@ -3248,6 +3252,84 @@ async function aiReviseSceneWithRater(sceneId) {
   appState.raterResult = null;
   render();
   await aiWriteSceneScript(sceneId, { silent: true });
+}
+
+// ── AI 全片场景表规划：剧情卡 1:N 拆场，凑齐作品形态的标准场数 ────────────────
+const SCENE_TARGETS_BY_FORMAT = {
+  feature: 32, feature_film: 32, feature_or_pilot: 28,
+  tv_pilot: 26, pilot: 26, series: 26,
+  short: 12, micro_drama: 60, microdrama: 60
+};
+
+function applySceneExpansion(planned) {
+  const live = list(appState.project.scene_workbench?.scenes);
+  const byId = new Map(live.map((s) => [s.id, s]));
+  const charByName = new Map(list(appState.project.character_hub?.characters).map((c) => [c.name, c.id]));
+  const cardById = new Map(getLivePlotCards().map((c) => [c.id, c]));
+  const used = new Set();
+  const nextScenes = [];
+  for (const item of planned) {
+    if (item.existing_scene_id && byId.has(item.existing_scene_id)) {
+      if (used.has(item.existing_scene_id)) continue;
+      used.add(item.existing_scene_id);
+      nextScenes.push(byId.get(item.existing_scene_id));
+      continue;
+    }
+    const card = cardById.get(item.card_id);
+    if (!card) continue;
+    nextScenes.push({
+      id: createId("scene"),
+      order_index: 0,
+      title: item.title || card.title || "未命名场景",
+      act_id: card.act_id,
+      linked_plot_card_ids: [card.id],
+      pov_character_id: charByName.get((item.pov_name || "").trim()) ?? "",
+      location: item.location ?? "",
+      time_of_day: item.time_of_day ?? "",
+      purpose: item.purpose ?? "",
+      obstacle: item.obstacle ?? "",
+      beat_summary: item.beat_summary ?? "",
+      entry_state: "",
+      exit_state: "",
+      status: "draft",
+      script_excerpt: "",
+      notes: ""
+    });
+  }
+  // 安全网：规划漏掉的已有场景（尤其有成稿的）一律保留，追加到末尾，绝不丢场
+  for (const scene of live) {
+    if (!used.has(scene.id)) nextScenes.push(scene);
+  }
+  nextScenes.forEach((scene, index) => { scene.order_index = index + 1; });
+  appState.project.scene_workbench.scenes = nextScenes;
+}
+
+async function aiExpandScenes() {
+  const cards = getLivePlotCards();
+  if (cards.length === 0) {
+    alert("还没有剧情卡。请先在「剧情开发」生成剧情卡，再规划全片场景表。");
+    return;
+  }
+  const format = appState.project.project.format ?? "feature";
+  const target = SCENE_TARGETS_BY_FORMAT[format] ?? 28;
+  const existing = list(appState.project.scene_workbench?.scenes);
+  if (!confirm(`AI 将把 ${cards.length} 张剧情卡拆成约 ${target} 场的全片场景表（一个节拍通常需要 2-4 场戏）。\n已有 ${existing.length} 场全部保留（含成稿），新场景按放映顺序插入。继续？`)) return;
+  appState.sceneExpandLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("scene_expansion", appState.project, { targetSceneCount: target });
+    if (result.error) throw new Error(result.error);
+    const planned = list(result.choices?.[0]?.data?.scenes);
+    if (planned.length === 0) throw new Error("AI 未返回场景表");
+    applySceneExpansion(planned);
+    markDirty();
+  } catch (error) {
+    alert(`扩场失败：${error.message}`);
+  } finally {
+    appState.sceneExpandLoading = false;
+    normalizeProject();
+    render();
+  }
 }
 
 async function aiBreakdownScene(sceneId) {

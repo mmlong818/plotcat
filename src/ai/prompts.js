@@ -456,6 +456,74 @@ function buildGenreContractBlock(ctx) {
   return parts.join("\n");
 }
 
+// ── 全片场景表规划：把剧情卡拆成 1:N 场景，使总场数达到作品形态标准 ──────────
+export function buildSceneExpansionPrompt(projectContext, options) {
+  const { targetSceneCount = 30 } = options ?? {};
+  const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);
+  const cards = (ctx?.plot_board?.cards ?? []).filter((c) => !c.deleted_at);
+  const acts = ctx?.structure_profile?.acts ?? [];
+  const nodes = ctx?.structure_profile?.nodes ?? [];
+  const actById = new Map(acts.map((a) => [a.id, a]));
+  const nodeById = new Map(nodes.map((n) => [n.id, n]));
+  const characters = ctx?.character_hub?.characters ?? [];
+  const existingScenes = ctx?.scene_workbench?.scenes ?? [];
+
+  const cardLines = cards.map((c, i) => {
+    const act = actById.get(c.act_id) ?? actById.get(nodeById.get(c.node_id)?.act_id);
+    const node = nodeById.get(c.node_id);
+    return `[卡 ${i + 1}] id=${c.id}｜${c.title || "未命名"}（${act?.title ?? "?"}·${node?.title ?? node?.node_type ?? "?"}）\n  摘要：${c.summary || "（空）"}`;
+  }).join("\n");
+  const charLines = characters.slice(0, 8).map((c) => `- ${c.name}（${c.story_role ?? ""}）`).join("\n");
+  const existingLines = existingScenes.map((s, i) =>
+    `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${(s.script_full || "").trim().length > 50 ? "已有成稿，不可删改" : "未写稿"}`
+  ).join("\n") || "（还没有场景）";
+
+  const system = `你是一位好莱坞资深剧本统筹，擅长把结构节拍拆解成完整的拍摄场景序列。
+一个剧情节拍（剧情卡）在成片中通常需要 2-4 场戏来完成：铺垫场、执行场、余波场。
+拆场原则：
+- 每场必须有独立的戏剧任务（谁要什么/谁挡着/赌注），不是把一场掰成两半
+- 地点与时段变化即是分场；同一节拍可以跨多个地点推进
+- 场与场之间要有呼吸节奏：高张力场之后接缓冲场
+- 人物名必须严格使用主要角色名单中的名字`;
+
+  const user = `项目：${ctx?.project?.title ?? "未命名"}（logline：${ctx?.project?.logline ?? ""}）
+目标总场数：${targetSceneCount} 场左右（当前只有 ${existingScenes.length} 场，需要拆细）
+
+主要角色：
+${charLines || "（无）"}
+
+剧情卡（按结构顺序）：
+${cardLines}
+
+已有场景（id 必须原样保留在规划里；标注「已有成稿」的场景禁止删除或改写其定位）：
+${existingLines}
+
+请输出全片完整场景表（含已有场景的位置 + 新增场景），按最终放映顺序排列：
+- 每张剧情卡拆成 2-4 场（按其戏剧重量决定），整体凑到目标场数 ±4
+- 已有场景用 existing_scene_id 引用并安排进顺序；新场景给 card_id + 完整字段
+
+JSON 输出：
+{
+  "scenes": [
+    { "existing_scene_id": "（已有场景的 id，此时其余字段可省略）" },
+    {
+      "card_id": "所属剧情卡 id",
+      "title": "场名（人物+具体动作，≤14 字，不要带「场景」后缀）",
+      "purpose": "本场谁要做什么，赌的是什么（≤40 字）",
+      "obstacle": "具体阻力（≤40 字）",
+      "beat_summary": "本场转折点（≤40 字）",
+      "location": "具体地点",
+      "time_of_day": "黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜 之一",
+      "pov_name": "本场视点人物名（必须在主要角色名单内）"
+    }
+  ],
+  "reasoning": "拆场思路（简短）"
+}
+严格按 JSON 输出，不要其他内容。`;
+
+  return { system, user };
+}
+
 export function buildSceneBreakdownPrompt(projectContext, options) {
   const { sceneId = "" } = options ?? {};
   const ctx = (projectContext?.scene_workbench || projectContext?.story_bible) ? projectContext : (projectContext?.project ?? projectContext);

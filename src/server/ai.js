@@ -1,13 +1,11 @@
 import { buildExpertOutput } from "../logic/experts.js";
-import { spawn } from "child_process";
+import { spawnClaude } from "./spawnClaude.js";
 
 const CLAUDE_TIMEOUT_MS = 300_000;
 
 function callClaudeSubprocessOnce(prompt) {
   return new Promise((resolve, reject) => {
-    const proc = spawn("claude", ["-p", "--output-format", "text"], {
-      stdio: ["pipe", "pipe", "pipe"]
-    });
+    const proc = spawnClaude(["-p", "--output-format", "text"]);
     proc.stdout.setEncoding("utf8");
     proc.stderr.setEncoding("utf8");
     proc.stdin.setDefaultEncoding("utf8");

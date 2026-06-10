@@ -53,7 +53,10 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
               <p class="section-label">场景导航</p>
               <h3>场景列表</h3>
             </div>
-            <button class="button button--ghost button--tiny" type="button" data-action="add-scene">新增场景</button>
+            <div style="display:flex; gap:6px">
+              <button class="button button--ghost button--tiny" type="button" data-action="ai-expand-scenes" ${appState.sceneExpandLoading ? "disabled" : ""} title="把剧情卡拆成 2-4 场/卡的全片场景表，凑齐作品形态标准场数">${appState.sceneExpandLoading ? "规划中…" : "✦ AI 规划场景表"}</button>
+              <button class="button button--ghost button--tiny" type="button" data-action="add-scene">新增场景</button>
+            </div>
           </div>
           <div class="stack workbench-scroll-list">
             ${scenes

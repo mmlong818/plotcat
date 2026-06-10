@@ -32,7 +32,7 @@ import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
 import { listSources, getProvider } from "./src/knowledge/registry.js";
-import { spawn } from "node:child_process";
+import { spawnClaude } from "./src/server/spawnClaude.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = 4173;
@@ -487,7 +487,7 @@ async function handleApi(request, response, pathname) {
     try { prompt = buildPromptForStep(step, projectContext, options); }
     catch (e) { stopHeartbeat(); response.write(`data: ${JSON.stringify({ type: "error", message: e.message })}\n\n`); response.end(); return true; }
 
-    const proc = spawn("claude", ["-p", "--output-format", "text"], { stdio: ["pipe", "pipe", "pipe"] });
+    const proc = spawnClaude(["-p", "--output-format", "text"]);
     proc.stdout.setEncoding("utf8");
     proc.stderr.setEncoding("utf8");
     proc.stdin.setDefaultEncoding("utf8");
@@ -547,7 +547,7 @@ async function handleApi(request, response, pathname) {
     try {
       const prompt = buildEvaluatePromptForStep(step, content, context ?? {});
       const result = await new Promise((resolve, reject) => {
-        const proc = spawn("claude", ["-p", "--output-format", "text"], { stdio: ["pipe", "pipe", "pipe"] });
+        const proc = spawnClaude(["-p", "--output-format", "text"]);
         proc.stdout.setEncoding("utf8");
         proc.stderr.setEncoding("utf8");
         proc.stdin.setDefaultEncoding("utf8");
@@ -796,7 +796,7 @@ async function handleApi(request, response, pathname) {
       const { system, user } = buildAnalyzeAnchorPrompt(anchor, genres);
       const fullPrompt = `${system}\n\n---\n\n${user}`;
       const result = await new Promise((resolve, reject) => {
-        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
         proc.stdout.setEncoding("utf8");
         proc.stderr.setEncoding("utf8");
         proc.stdin.setDefaultEncoding("utf8");
@@ -832,7 +832,7 @@ async function handleApi(request, response, pathname) {
       const { system, user } = buildWorkbenchQuestionsPrompt(wb, context, anchor, genres);
       const fullPrompt = `${system}\n\n---\n\n${user}`;
       const result = await new Promise((resolve, reject) => {
-        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
         proc.stdout.setEncoding("utf8");
         proc.stderr.setEncoding("utf8");
         proc.stdin.setDefaultEncoding("utf8");
@@ -872,7 +872,7 @@ async function handleApi(request, response, pathname) {
       );
       const fullPrompt = `${system}\n\n---\n\n${user}`;
       const result = await new Promise((resolve, reject) => {
-        const proc = spawn("claude", ["-p", "--output-format", "text", "--effort", "low"], { stdio: ["pipe", "pipe", "pipe"] });
+        const proc = spawnClaude(["-p", "--output-format", "text", "--effort", "low"]);
         proc.stdout.setEncoding("utf8");
         proc.stderr.setEncoding("utf8");
         proc.stdin.setDefaultEncoding("utf8");
