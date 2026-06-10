@@ -382,6 +382,11 @@ function ensurePlotBoardModel(project) {
   if (!Array.isArray(project.plot_board.lanes) || project.plot_board.lanes.length === 0) {
     project.plot_board.lanes = createPlotBoardLanes();
   }
+  // 迁移旧版语义色名 → 颜色名（CSS 只保留颜色名一套选择器）
+  const LEGACY_COLOR_SLOTS = { main: "orange", subplot: "blue", "scenario-a": "purple", "scenario-b": "purple", undefined: "gray" };
+  project.plot_board.lanes = project.plot_board.lanes.map((lane) =>
+    LEGACY_COLOR_SLOTS[lane.color_slot] ? { ...lane, color_slot: LEGACY_COLOR_SLOTS[lane.color_slot] } : lane
+  );
   if (!Array.isArray(project.plot_board.scenario_groups) || project.plot_board.scenario_groups.length === 0) {
     project.plot_board.scenario_groups = createPlotScenarioGroups();
   }
@@ -528,6 +533,14 @@ function normalizeProject() {
       .map((id) => cardById.get(id))
       .find((card) => card && scene.title === `${card.title} 场景`);
     if (suffixSource) scene.title = suffixSource.title;
+    // 迁移旧版注入到 notes 的幕评师修稿指令 → 专用 rater_directives 字段
+    const legacyTag = "【上轮幕评师修稿指令】";
+    if (scene.notes && scene.notes.includes(legacyTag)) {
+      const idx = scene.notes.indexOf(legacyTag);
+      const block = scene.notes.slice(idx + legacyTag.length).trim();
+      if (!scene.rater_directives && block) scene.rater_directives = block;
+      scene.notes = scene.notes.slice(0, idx).trim();
+    }
     // 1) 关联剧情卡的幕是真源：卡片挂在结构节点上，场景跟随卡片，
     //    修复「场景创建时卡片 act 为空 → 全部兜底进第一幕」的历史数据
     const linkedCardActId = scene.linked_plot_card_ids
@@ -3088,15 +3101,13 @@ async function aiReviseFullScreenplayWithRater() {
   }
   if (!confirm(`将按全片评审指令重写 ${bySceneId.size} 场剧本，可能耗时较长。继续？`)) return;
 
-  const tag = "【上轮幕评师修稿指令】";
   for (const [sceneId, dirs] of bySceneId) {
     const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
     if (!scene) continue;
-    const block = dirs.map((d, i) =>
+    // 修稿指令存专用字段，不污染用户可见的创作笔记（notes）；写本成功后一次性消费清空
+    scene.rater_directives = dirs.map((d, i) =>
       `${i + 1}. [${d.severity}] ${d.issue}\n   定位：${d.location_hint || "（未给定位）"}\n   要求：${d.directive}`
     ).join("\n");
-    const oldNotes = (scene.notes || "").replace(new RegExp(tag + "[\\s\\S]*?(?=\\n\\n|$)", "g"), "").trim();
-    scene.notes = `${oldNotes}\n\n${tag}\n${block}`.trim();
   }
   markDirty();
   appState.raterResult = null;
@@ -3130,11 +3141,8 @@ async function aiReviseSceneWithRater(sceneId) {
   const directives = (rater.data.revision_directives || []).map((d, i) =>
     `${i + 1}. [${d.severity}] ${d.issue}\n   定位：${d.location_hint}\n   要求：${d.directive}`
   ).join("\n");
-  // 把修稿指令注入到 notes 字段（buildSceneScriptPrompt 会读 notes 作为"创作笔记"），
-  // 这样下次 ai-write-scene-script 时 prompt 会包含这些指令
-  const tag = "【上轮幕评师修稿指令】";
-  const oldNotes = (scene.notes || "").replace(new RegExp(tag + "[\\s\\S]*?(?=\\n\\n|$)", "g"), "").trim();
-  scene.notes = `${oldNotes}\n\n${tag}\n${directives}`.trim();
+  // 修稿指令存专用字段（buildSceneScriptPrompt 单独消费），不污染用户可见的创作笔记
+  scene.rater_directives = directives;
   markDirty();
   appState.raterResult = null;
   render();
@@ -3190,6 +3198,8 @@ async function aiWriteSceneScript(sceneId, { silent = false } = {}) {
     const liveScene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === sceneId);
     if (!liveScene) throw new Error("场景在生成期间被移除");
     liveScene.script_full = script;
+    // 幕评师修稿指令是一次性的：本轮重写已消费，清空避免影响后续无关生成
+    if (liveScene.rater_directives) liveScene.rater_directives = "";
     if (data.end_hook || data.emotion_arc) {
       const notesParts = [
         liveScene.screenplay_notes,
