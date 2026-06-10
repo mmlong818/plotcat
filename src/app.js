@@ -3027,6 +3027,8 @@ async function aiReviseSceneWithRater(sceneId) {
 }
 
 // 通用称谓（路人/职务），不算「名单外人名」
+// 设备音/画外音类 cue：以这些词结尾的说话人不算「名单外人名」（科幻/现代题材常见）
+const GENERIC_SUFFIX_RE = /(的?声音|提示音|广播|系统|电台|喇叭|控制台|对讲机?|铃声|录音|男声|女声)$/;
 const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士长?|医生|主治医生|警察|警员|司机|保安|旁白|画外音|众人|群众|记者|主持人|播音员|法医|助理|秘书|售货员|收银员|清洁工|门卫|邻居|乘客|售票员|司仪|副手|登记员|值班同事|取信员|工作人员|男声|女声|童声|电视新闻|电视(里|机)?|广播|出租车广播|电话(里|那头)?|对讲机)[甲乙丙丁ABC]?$/;
 
 // 从剧本文本中找出不在项目人物名单里的对白说话人
@@ -3046,7 +3048,7 @@ function findUnknownSpeakers(script) {
     // 下一行必须像对白（有内容且本身不是另一个独立人名行），否则当作短动作行跳过
     if (!next || /^([一-龥]{2,6})(（[^）]*）)?$/.test(next)) continue;
     const name = m[1];
-    if (roster.has(name) || GENERIC_SPEAKER_RE.test(name)) continue;
+    if (roster.has(name) || GENERIC_SPEAKER_RE.test(name) || GENERIC_SUFFIX_RE.test(name)) continue;
     if (/^(清晨|上午|正午|午后|黄昏|夜晚|深夜|黎明|同时|稍后|片刻|内景|外景)$/.test(name)) continue;
     unknown.add(name);
   }
@@ -3305,8 +3307,29 @@ async function aiExtractContinuity() {
       proj.story_bible.timeline_events.push(event);
       addedEvents++;
     }
+    // 专名连戏表 → 硬性世界规则（scope=专名连戏）。
+    // buildSceneScriptPrompt 注入「已锁定世界规则」，后续所有写本自动遵守，闭合编号漂移
+    const existingRules = new Set(list(proj.lock_layer?.projections?.world_rules).map((r) => r.rule_statement));
+    let addedNouns = 0;
+    for (const item of list(data.proper_nouns)) {
+      if (!item.term) continue;
+      const statement = `专名一律写作「${item.term}」（${item.kind ?? "专名"}）${item.note ? `——${item.note}` : ""}`;
+      if (existingRules.has(statement)) continue;
+      const rule = {
+        id: createId("rule"),
+        rule_statement: statement,
+        rule_level: "hard",
+        scope: "专名连戏",
+        exceptions: [],
+        evidence: []
+      };
+      proj.lock_layer.projections.world_rules.push(rule);
+      proj.story_bible.world_rules = list(proj.story_bible.world_rules);
+      proj.story_bible.world_rules.push(rule);
+      addedNouns++;
+    }
     markDirty();
-    alert(`提炼完成：新增 ${addedSetups} 组伏笔、${addedEvents} 条时间线事件。`);
+    alert(`提炼完成：新增 ${addedSetups} 组伏笔、${addedEvents} 条时间线事件、${addedNouns} 条专名连戏规则。`);
   } catch (error) {
     alert(`提炼失败：${error.message}`);
   } finally {
