@@ -205,6 +205,8 @@ ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
 ${blendContract ? `\n${blendContract}\n（人物设计必须服务主导类型的观众承诺；若有调味类型，至少一个主要角色要成为它的载体）\n` : ""}
+【独立命题纪律】每个主要角色（尤其主角与情感对象）的 external_want 必须包含一个与对方无关的人生命题——事业、信念、未竟之事、自我证明。两个人除了彼此没有别的人生，是审片人一票否决的角色空心化；关系是两条完整人生的相交，不是两个半人的拼合。
+
 Treatment摘要：${treatment || "参见项目概念"}
 已有角色：
 ${existingChars}
@@ -751,7 +753,8 @@ JSON 输出：
       "beat_summary": "本场转折点（≤40 字）",
       "location": "具体地点",
       "time_of_day": "黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜 之一",
-      "pov_name": "本场视点人物名（必须在主要角色名单内）"
+      "pov_name": "本场视点人物名（必须在主要角色名单内）",
+      "fulfills_setup": "若本场承担某条伏笔的埋设或回收，照抄该伏笔摘要并以 plant:/pay: 前缀标明（如 pay:校服第三颗纽扣…）；否则省略此字段"
     }
   ],
   "overlap_warnings": ["与新规划撞车、建议废弃或重写的已有场景：场次 id + 一句话原因"],
