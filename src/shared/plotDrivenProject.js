@@ -585,10 +585,18 @@ function syncLegacyStoryBible(project) {
   };
 
   project.story_bible = storyBible;
-  project.project.genre = unique([
+  // genre 双向同步：genre_profile 有内容时它是真源；为空时绝不能反向把
+  // project.genre 核成空数组（创建流程刚选的类型曾被这里清掉），反而要正向回填
+  const profileGenres = unique([
     project.genre_profile?.primary_genre,
     ...list(project.genre_profile?.secondary_genres)
   ]);
+  if (profileGenres.length > 0) {
+    project.project.genre = profileGenres;
+  } else if (list(project.project.genre).length > 0 && project.genre_profile) {
+    project.genre_profile.primary_genre = project.project.genre[0] ?? "";
+    project.genre_profile.secondary_genres = project.project.genre.slice(1);
+  }
   project.project.theme_question = project.story_core?.central_question ?? project.project.theme_question ?? "";
   project.project.tone = unique(project.genre_profile?.tone_words).join("、") || project.project.tone || "";
   project.intent_anchor.genre = clone(project.project.genre, []);
