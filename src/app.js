@@ -1618,6 +1618,10 @@ function handleClick(event) {
     aiExpandScenes();
     return;
   }
+  if (action === "ai-extract-continuity") {
+    aiExtractContinuity();
+    return;
+  }
   if (action === "library-back") {
     setCurrentPage(appState.libraryReturnPage ?? "project");
     return;
@@ -2991,6 +2995,74 @@ function findUnknownSpeakers(script) {
     unknown.add(name);
   }
   return Array.from(unknown);
+}
+
+// ── 连续性提炼：AI 通读剧情卡+场景表，回填伏笔追踪与时间线到资料库 ────────────
+async function aiExtractContinuity() {
+  const scenes = list(appState.project.scene_workbench?.scenes);
+  if (scenes.length === 0) {
+    alert("还没有场景。请先完成场景拆解，再提炼连续性资料。");
+    return;
+  }
+  appState.continuityExtractLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("continuity_extraction", appState.project, {});
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    const sceneByOrder = new Map(scenes.map((s) => [Number(s.order_index), s]));
+    const charByName = new Map(list(appState.project.character_hub?.characters).map((c) => [c.name, c.id]));
+    const proj = appState.project;
+    proj.story_bible = proj.story_bible || {};
+
+    // 伏笔：按 setup_summary 去重合并
+    const existingSetups = new Set(list(proj.lock_layer?.projections?.setup_payoffs).map((s) => s.setup_summary));
+    let addedSetups = 0;
+    for (const item of list(data.setup_payoffs)) {
+      if (!item.setup_summary || existingSetups.has(item.setup_summary)) continue;
+      const setup = {
+        id: createId("setup"),
+        setup_summary: item.setup_summary,
+        setup_scene_id: sceneByOrder.get(Number(item.setup_scene_order))?.id ?? "",
+        expected_payoff_window: item.expected_payoff_window ?? "",
+        status: Number(item.payoff_scene_order) > 0 ? "resolved" : "open",
+        payoff_scene_id: sceneByOrder.get(Number(item.payoff_scene_order))?.id ?? "",
+        payoff_summary: item.payoff_summary ?? ""
+      };
+      proj.lock_layer.projections.setup_payoffs.push(setup);
+      proj.story_bible.setup_payoffs = list(proj.story_bible.setup_payoffs);
+      proj.story_bible.setup_payoffs.push(setup);
+      addedSetups++;
+    }
+    // 时间线：按 summary 去重合并
+    const existingEvents = new Set(list(proj.lock_layer?.projections?.timeline_events).map((e) => e.summary));
+    let addedEvents = 0;
+    for (const item of list(data.timeline_events)) {
+      if (!item.summary || existingEvents.has(item.summary)) continue;
+      const event = {
+        id: createId("event"),
+        story_day: Number(item.story_day) || 1,
+        sequence_index: 1,
+        summary: item.summary,
+        participants: list(item.participants_names).map((n) => charByName.get(String(n).trim())).filter(Boolean),
+        location: item.location ?? "",
+        trigger: "",
+        consequence: ""
+      };
+      proj.lock_layer.projections.timeline_events.push(event);
+      proj.story_bible.timeline_events = list(proj.story_bible.timeline_events);
+      proj.story_bible.timeline_events.push(event);
+      addedEvents++;
+    }
+    markDirty();
+    alert(`提炼完成：新增 ${addedSetups} 组伏笔、${addedEvents} 条时间线事件。`);
+  } catch (error) {
+    alert(`提炼失败：${error.message}`);
+  } finally {
+    appState.continuityExtractLoading = false;
+    normalizeProject();
+    render();
+  }
 }
 
 // ── AI 全片场景表规划：剧情卡 1:N 拆场，凑齐作品形态的标准场数 ────────────────

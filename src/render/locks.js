@@ -183,7 +183,10 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
       <div class="summary-card">
         <div class="list-card__head">
           <h3>时间线</h3>
-          <button class="button button--ghost button--tiny" type="button" data-action="add-timeline">新增节点</button>
+          <div style="display:flex; gap:6px">
+            <button class="button button--ghost button--tiny" type="button" data-action="ai-extract-continuity" ${appState.continuityExtractLoading ? "disabled" : ""} title="AI 通读剧情卡与场景表，自动提炼伏笔追踪与故事内时间线">${appState.continuityExtractLoading ? "提炼中…" : "✦ 从剧本提炼"}</button>
+            <button class="button button--ghost button--tiny" type="button" data-action="add-timeline">新增节点</button>
+          </div>
         </div>
         <div class="stack">
           ${timeline.map((item) => `
@@ -240,7 +243,10 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
       <div class="summary-card">
         <div class="list-card__head">
           <h3>伏笔追踪</h3>
-          <button class="button button--ghost button--tiny" type="button" data-action="add-setup">新增伏笔</button>
+          <div style="display:flex; gap:6px">
+            <button class="button button--ghost button--tiny" type="button" data-action="ai-extract-continuity" ${appState.continuityExtractLoading ? "disabled" : ""} title="AI 通读剧情卡与场景表，自动提炼伏笔追踪与故事内时间线">${appState.continuityExtractLoading ? "提炼中…" : "✦ 从剧本提炼"}</button>
+            <button class="button button--ghost button--tiny" type="button" data-action="add-setup">新增伏笔</button>
+          </div>
         </div>
         <div class="stack">
           ${setups.map((item) => `
