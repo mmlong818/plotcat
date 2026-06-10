@@ -1045,6 +1045,11 @@ function updateProjectField(action, fieldName, value) {
     if (fieldName === "secondary_genres_text") appState.project.genre_profile.secondary_genres = splitTags(value);
     else if (fieldName === "tone_words_text") appState.project.genre_profile.tone_words = splitTags(value);
     else appState.project.genre_profile[fieldName] = value;
+    // 类型契约引擎以 project.genre 为真源：主/副类型编辑后同步回写
+    if (fieldName === "primary_genre" || fieldName === "secondary_genres_text") {
+      const gp = appState.project.genre_profile;
+      appState.project.project.genre = [gp.primary_genre, ...list(gp.secondary_genres)].filter(Boolean);
+    }
   }
   if (action === "timeline-field" && selectedTimeline) {
     const v = fieldName === "story_day" ? Number(value) || 1 : value;
@@ -1624,6 +1629,25 @@ function handleClick(event) {
   }
   if (action === "global-find-replace") {
     globalFindReplace();
+    return;
+  }
+  if (action === "ai-genre-audit") {
+    aiGenreAudit();
+    return;
+  }
+  if (action === "cf-toggle-genre") {
+    const c = appState.creation;
+    if (!c) return;
+    c.genres = Array.isArray(c.genres) ? c.genres : [];
+    if (c.genres.includes(id)) {
+      c.genres = c.genres.filter((g) => g !== id);
+    } else if (c.genres.length < 3) {
+      c.genres = [...c.genres, id];
+    } else {
+      alert("最多选 1 个主导 + 2 个调味类型。先取消一个再选。");
+      return;
+    }
+    renderCreationPage();
     return;
   }
   if (action === "audit-speakers") {
@@ -3005,6 +3029,35 @@ function findUnknownSpeakers(script) {
   return Array.from(unknown);
 }
 
+// ── 类型契约审计：AI 逐条核验必备场景兑现 + 禁忌检查，结果存 genre_profile ────
+async function aiGenreAudit() {
+  const scenes = list(appState.project.scene_workbench?.scenes);
+  if (scenes.length === 0) {
+    alert("还没有场景，无法检查契约兑现。");
+    return;
+  }
+  appState.genreAuditLoading = true;
+  render();
+  try {
+    const result = await callGenerateAPI("genre_audit", appState.project, {});
+    if (result.error) throw new Error(result.error);
+    const data = result.choices?.[0]?.data ?? {};
+    if (!Array.isArray(data.fulfillment)) throw new Error("AI 未返回审计结果");
+    appState.project.genre_profile.fulfillment_audit = {
+      fulfillment: data.fulfillment,
+      taboo_violations: list(data.taboo_violations),
+      blend_balance: data.blend_balance ?? "",
+      audited_at: new Date().toISOString()
+    };
+    markDirty();
+  } catch (error) {
+    alert(`契约审计失败：${error.message}`);
+  } finally {
+    appState.genreAuditLoading = false;
+    render();
+  }
+}
+
 // ── 全局查找替换：跨所有场次的剧本与字段（人名统一等批量修订）────────────────
 const SCENE_TEXT_FIELDS = ["title", "purpose", "obstacle", "beat_summary", "entry_state", "exit_state", "notes", "script_full", "screenplay_notes", "location"];
 
@@ -4087,7 +4140,7 @@ async function handleGenerateAct(actKey) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         projectCtx: {
-          project: { project: c.draft, logline: c.draft?.logline },
+          project: { project: { ...c.draft, genre: c.genres ?? [] }, logline: c.draft?.logline },
           story_core: { premise: c.draft?.logline, core_conflict: c.draft?.core_conflict },
           intent_anchor: { protagonist: c.draft?.protagonist },
           // 把已确认的人物提案传给故事点生成，否则 AI 会为同一个故事另造一套人名，
@@ -4233,6 +4286,8 @@ async function handleFinalizeNewCreation() {
   const proj = createEmptyProject();
   proj.project.title = draft.title?.trim() || deriveWorkingTitle(c.selectedConcept, draft.logline);
   proj.project.format = draft.format ?? "feature";
+  // 类型标签必须落到项目上，否则类型契约引擎（genreContract）全程拿不到类型
+  proj.project.genre = Array.isArray(c.genres) ? [...c.genres] : [];
   proj.project.logline = draft.logline ?? "";
   proj.story_core.premise = draft.logline ?? "";
   proj.story_core.core_conflict = draft.core_conflict ?? "";
