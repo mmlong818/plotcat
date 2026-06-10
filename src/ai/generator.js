@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawnClaude } from '../server/spawnClaude.js';
 import {
   buildLoglinePrompt,
   buildTreatmentPrompt,
@@ -8,6 +8,7 @@ import {
   buildSceneWeavePrompt,
   buildSceneScriptPrompt,
   buildSceneBreakdownPrompt,
+  buildSceneExpansionPrompt,
   buildActRaterPrompt,
   buildDiagnosisPrompt,
   buildPulsePrompt,
@@ -66,9 +67,7 @@ function callClaude(system, user) {
   return new Promise((resolve, reject) => {
     const fullPrompt = `${system}\n\n---\n\n${user}`;
 
-    const proc = spawn('claude', ['-p', '--output-format', 'text'], {
-      stdio: ['pipe', 'pipe', 'pipe']
-    });
+    const proc = spawnClaude(['-p', '--output-format', 'text']);
     proc.stdout.setEncoding('utf8');
     proc.stderr.setEncoding('utf8');
     proc.stdin.setDefaultEncoding('utf8');
@@ -345,6 +344,7 @@ const FORMATTERS = {
     data: parsed
   }],
   scene_breakdown: (parsed) => [{ id: makeId(), label: '场景拆解', content: parsed.entry_state ?? '', data: parsed }],
+  scene_expansion: (parsed) => [{ id: makeId(), label: '全片场景表', content: `${(parsed.scenes ?? []).length} 场`, data: parsed }],
   act_rater: (parsed) => [{ id: makeId(), label: '幕评师', content: `${parsed.overall?.score ?? '?'}/10`, data: parsed }],
   diagnosis: formatDiagnosisChoices,
   concept: formatConceptChoices,
@@ -369,6 +369,7 @@ const PROMPT_BUILDERS = {
   scene_weave: (ctx, opts) => buildSceneWeavePrompt(ctx, opts),
   scene_script: (ctx, opts) => buildSceneScriptPrompt(ctx, opts),
   scene_breakdown: (ctx, opts) => buildSceneBreakdownPrompt(ctx, opts),
+  scene_expansion: (ctx, opts) => buildSceneExpansionPrompt(ctx, opts),
   act_rater: (ctx, opts) => buildActRaterPrompt(ctx, opts),
   diagnosis: (ctx) => buildDiagnosisPrompt(ctx),
   concept: (_ctx, opts) => buildConceptPrompt(opts),
