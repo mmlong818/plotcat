@@ -530,7 +530,7 @@ export function buildSceneExpansionPrompt(projectContext, options) {
   }).join("\n");
   const charLines = characters.slice(0, 8).map((c) => `- ${c.name}（${c.story_role ?? ""}）`).join("\n");
   const existingLines = existingScenes.map((s, i) =>
-    `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${(s.script_full || "").trim().length > 50 ? "已有成稿，不可删改" : "未写稿"}`
+    `[场 ${i + 1}] id=${s.id}｜${s.title || "未命名"}｜挂卡=${(s.linked_plot_card_ids ?? []).join(",") || "无"}｜${s.purpose || ""}${(s.script_full || "").trim().length > 50 ? "｜已有成稿，不可删改" : "｜未写稿"}`
   ).join("\n") || "（还没有场景）";
 
   const system = `你是一位好莱坞资深剧本统筹，擅长把结构节拍拆解成完整的拍摄场景序列。
@@ -556,6 +556,9 @@ ${existingLines}
 请输出全片完整场景表（含已有场景的位置 + 新增场景），按最终放映顺序排列：
 - 每张剧情卡拆成 2-4 场（按其戏剧重量决定），整体凑到目标场数 ±4
 - 已有场景用 existing_scene_id 引用并安排进顺序；新场景给 card_id + 完整字段
+- 反重复硬约束：新场景的事件**禁止复述任何已有场景已经演过的内容**（看上面每场的目的描述）。
+  同一节拍的多场必须是「铺垫→执行→余波」的不同阶段，不是同一事件换个地点再来一遍。
+  若你判断某个已有场景与规划的新场在事件上撞车、应当废弃或重写，把它列进 overlap_warnings，不要静默并存
 
 JSON 输出：
 {
@@ -572,6 +575,7 @@ JSON 输出：
       "pov_name": "本场视点人物名（必须在主要角色名单内）"
     }
   ],
+  "overlap_warnings": ["与新规划撞车、建议废弃或重写的已有场景：场次 id + 一句话原因"],
   "reasoning": "拆场思路（简短）"
 }
 严格按 JSON 输出，不要其他内容。`;

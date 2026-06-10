@@ -1622,6 +1622,14 @@ function handleClick(event) {
     aiExtractContinuity();
     return;
   }
+  if (action === "global-find-replace") {
+    globalFindReplace();
+    return;
+  }
+  if (action === "audit-speakers") {
+    auditScriptSpeakers();
+    return;
+  }
   if (action === "library-back") {
     setCurrentPage(appState.libraryReturnPage ?? "project");
     return;
@@ -2971,7 +2979,7 @@ async function aiReviseSceneWithRater(sceneId) {
 }
 
 // 通用称谓（路人/职务），不算「名单外人名」
-const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士|医生|警察|警员|司机|保安|旁白|画外音|众人|群众|记者|主持人|播音员|法医|助理|秘书|售货员|收银员|清洁工|门卫|邻居|乘客|售票员)[甲乙丙丁ABC]?$/;
+const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士长?|医生|主治医生|警察|警员|司机|保安|旁白|画外音|众人|群众|记者|主持人|播音员|法医|助理|秘书|售货员|收银员|清洁工|门卫|邻居|乘客|售票员|司仪|副手|登记员|值班同事|取信员|工作人员|男声|女声|童声|电视新闻|电视(里|机)?|广播|出租车广播|电话(里|那头)?|对讲机)[甲乙丙丁ABC]?$/;
 
 // 从剧本文本中找出不在项目人物名单里的对白说话人
 function findUnknownSpeakers(script) {
@@ -2997,6 +3005,61 @@ function findUnknownSpeakers(script) {
   return Array.from(unknown);
 }
 
+// ── 全局查找替换：跨所有场次的剧本与字段（人名统一等批量修订）────────────────
+const SCENE_TEXT_FIELDS = ["title", "purpose", "obstacle", "beat_summary", "entry_state", "exit_state", "notes", "script_full", "screenplay_notes", "location"];
+
+function globalFindReplace() {
+  const find = window.prompt("全局查找（将扫描所有场次的剧本正文与字段）：")?.trim();
+  if (!find) return;
+  const scenes = list(appState.project.scene_workbench?.scenes);
+  let hits = 0;
+  const hitScenes = [];
+  for (const scene of scenes) {
+    let sceneHits = 0;
+    for (const field of SCENE_TEXT_FIELDS) {
+      const value = scene[field];
+      if (typeof value === "string" && value.includes(find)) {
+        sceneHits += value.split(find).length - 1;
+      }
+    }
+    if (sceneHits > 0) { hits += sceneHits; hitScenes.push(`第 ${scene.order_index} 场（${sceneHits} 处）`); }
+  }
+  if (hits === 0) {
+    alert(`没有找到「${find}」。`);
+    return;
+  }
+  const replace = window.prompt(`「${find}」共 ${hits} 处，分布：${hitScenes.slice(0, 8).join("、")}${hitScenes.length > 8 ? " …" : ""}\n\n替换为（留空=取消）：`)?.trim();
+  if (!replace) return;
+  if (!confirm(`确认把全部 ${hits} 处「${find}」替换为「${replace}」？此操作影响所有场次。`)) return;
+  for (const scene of scenes) {
+    for (const field of SCENE_TEXT_FIELDS) {
+      if (typeof scene[field] === "string" && scene[field].includes(find)) {
+        scene[field] = scene[field].split(find).join(replace);
+      }
+    }
+  }
+  markDirty();
+  render();
+  alert(`已替换 ${hits} 处。`);
+}
+
+// ── 人名巡检：全量回扫所有已写场次，列出名单外说话人 ─────────────────────────
+function auditScriptSpeakers() {
+  const scenes = list(appState.project.scene_workbench?.scenes)
+    .filter((s) => (s.script_full || "").trim().length > 50)
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const findings = [];
+  for (const scene of scenes) {
+    const unknown = findUnknownSpeakers(scene.script_full);
+    if (unknown.length > 0) findings.push(`第 ${scene.order_index} 场《${scene.title}》：${unknown.join("、")}`);
+  }
+  if (findings.length === 0) {
+    alert(`人名巡检通过：${scenes.length} 个已写场次的说话人全部在人物名单内。`);
+    return;
+  }
+  alert(`人名巡检发现 ${findings.length} 个场次存在名单外说话人：\n\n${findings.join("\n")}\n\n可用「查找替换」统一改名，或重新生成这些场次。`);
+}
+
 // ── 连续性提炼：AI 通读剧情卡+场景表，回填伏笔追踪与时间线到资料库 ────────────
 async function aiExtractContinuity() {
   const scenes = list(appState.project.scene_workbench?.scenes);
@@ -3020,14 +3083,25 @@ async function aiExtractContinuity() {
     let addedSetups = 0;
     for (const item of list(data.setup_payoffs)) {
       if (!item.setup_summary || existingSetups.has(item.setup_summary)) continue;
+      // 防假 resolved：AI 声称的回收必须在该场正文里有实际痕迹
+      // （payoff_summary 的关键词片段能在 script_full 中找到），否则降级为 open
+      const payoffScene = sceneByOrder.get(Number(item.payoff_scene_order));
+      const payoffVerified = (() => {
+        if (!payoffScene || !item.payoff_summary) return false;
+        const script = payoffScene.script_full || "";
+        if (script.trim().length < 50) return false;
+        // 取 payoff 摘要里的 2-6 字中文词组做存在性抽查，命中任意一个即认可
+        const tokens = String(item.payoff_summary).match(/[一-龥]{2,6}/g) ?? [];
+        return tokens.some((t) => script.includes(t));
+      })();
       const setup = {
         id: createId("setup"),
         setup_summary: item.setup_summary,
         setup_scene_id: sceneByOrder.get(Number(item.setup_scene_order))?.id ?? "",
         expected_payoff_window: item.expected_payoff_window ?? "",
-        status: Number(item.payoff_scene_order) > 0 ? "resolved" : "open",
-        payoff_scene_id: sceneByOrder.get(Number(item.payoff_scene_order))?.id ?? "",
-        payoff_summary: item.payoff_summary ?? ""
+        status: payoffVerified ? "resolved" : "open",
+        payoff_scene_id: payoffVerified ? payoffScene.id : "",
+        payoff_summary: payoffVerified ? (item.payoff_summary ?? "") : ""
       };
       proj.lock_layer.projections.setup_payoffs.push(setup);
       proj.story_bible.setup_payoffs = list(proj.story_bible.setup_payoffs);
@@ -3134,6 +3208,10 @@ async function aiExpandScenes() {
     if (planned.length === 0) throw new Error("AI 未返回场景表");
     applySceneExpansion(planned);
     markDirty();
+    const overlaps = list(result.choices?.[0]?.data?.overlap_warnings);
+    if (overlaps.length > 0) {
+      alert(`扩场完成，但 AI 提示以下已有场景与新规划撞车，建议重写或删除：\n\n${overlaps.join("\n")}`);
+    }
   } catch (error) {
     alert(`扩场失败：${error.message}`);
   } finally {

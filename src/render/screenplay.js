@@ -315,6 +315,8 @@ export function renderScreenplayPage(dom, appState) {
           <button class="button button--ghost button--small" type="button" data-action="ai-write-screenplay-bulk" ${ai.bulkRunning ? "disabled" : ""}>${escapeHtml(bulkLabel)}</button>
           <button class="button button--ghost button--small" type="button" data-action="ai-rewrite-all-screenplay" ${ai.bulkRunning ? "disabled" : ""} title="清空所有已写剧本并重新生成，应用最新反同质化规则">↻ 全片重写</button>
           <button class="button button--ghost button--small" type="button" data-action="ai-rate-screenplay-full" ${appState.raterFullLoading ? "disabled" : ""} title="对所有已写场进行整片评分，跨场问题诊断">${appState.raterFullLoading ? "全片评分中…" : "✦ 幕评师全片"}</button>
+          <button class="button button--ghost button--small" type="button" data-action="audit-speakers" title="全量回扫所有已写场次，列出不在人物名单内的说话人">人名巡检</button>
+          <button class="button button--ghost button--small" type="button" data-action="global-find-replace" title="跨所有场次的剧本正文与字段做查找替换（人名统一等）">查找替换</button>
           <button class="button button--ghost button--small" type="button" data-action="export-screenplay-fountain">导出 .fountain</button>
           <button class="button button--primary button--small" type="button" data-action="preview-screenplay-full">全本预览</button>
         </div>
@@ -332,6 +334,33 @@ export function renderScreenplayPage(dom, appState) {
     </section>
   `;
   restoreFocusState(dom.screenplayContent, focusState);
+}
+
+// Fountain 规范化：中文角色 cue 加 @ 强制标记（标准解析器对非全大写 cue 一律按 action 处理）、
+// 去掉旧代生成器的缩进排版、保证 cue 前有空行。结构启发式与人名巡检一致：
+// 2-6 个汉字独立成行（可带括注）且下一行是对白文本。
+function normalizeFountainScript(script) {
+  const lines = String(script).split(/\r?\n/);
+  const isNameLine = (s) => /^([一-龥]{2,6})(（[^）]*）)?$/.test(s);
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    const m = trimmed.match(/^([一-龥]{2,6})(（[^）]*）)?$/);
+    if (m) {
+      let j = i + 1;
+      while (j < lines.length && !lines[j].trim()) j++;
+      const next = (lines[j] ?? "").trim();
+      if (next && !isNameLine(next) && !/^(INT\.|EXT\.|内景|外景)/i.test(next)) {
+        if (out.length && out[out.length - 1].trim() !== "") out.push("");
+        out.push(`@${m[1]}`);
+        if (m[2]) out.push(m[2]);
+        continue;
+      }
+    }
+    // 非 cue 行：去掉旧代生成器的行首缩进（对白/动作在 fountain 中都应顶格）
+    out.push(lines[i].replace(/^\s+/, ""));
+  }
+  return out.join("\n");
 }
 
 export function buildFountainText(appState) {
@@ -353,7 +382,7 @@ export function buildFountainText(appState) {
   };
   const body = scenes.map((scene) => {
     const slug = fountainHeader(scene, appState);
-    const script = (scene.script_full || "").trim();
+    const script = normalizeFountainScript((scene.script_full || "").trim());
     const lines = [];
     if (script) {
       // 若 AI 已写出 slug 行（INT./EXT. 或 内景/外景 开头）：
