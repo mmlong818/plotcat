@@ -32,7 +32,7 @@ import { structurePresets } from "./src/state.js";
 import { generateContent, buildPromptForStep, formatStepResult, parseJsonFromText, buildEvaluatePromptForStep } from "./src/ai/generator.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "./src/ai/proPrompts.js";
 import { listSources, getProvider } from "./src/knowledge/registry.js";
-import { completeText, completeTextStream, getLlmConfig, setLlmConfig } from "./src/server/llm.js";
+import { completeText, completeTextStream, getLlmConfig, setLlmConfig, listLlmProfiles, upsertLlmProfile, activateLlmProfile, deleteLlmProfile } from "./src/server/llm.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const port = 4173;
@@ -356,10 +356,35 @@ async function handleApi(request, response, pathname) {
           return true;
         }
       }
-      json(response, 200, { ai });
+      // 验证通过的连接自动存为档案，支持多套配置（智谱/DeepSeek/Claude API…）一键切换
+      const cfg = getLlmConfig();
+      upsertLlmProfile({ name: body.name, provider: cfg.provider, apiKey: cfg.apiKey, model: cfg.model, baseUrl: cfg.baseUrl });
+      json(response, 200, { ai, profiles: listLlmProfiles() });
     } catch (error) {
       json(response, 400, { error: error.message });
     }
+    return true;
+  }
+
+  if (pathname === "/api/ai/profiles" && request.method === "GET") {
+    json(response, 200, { profiles: listLlmProfiles() });
+    return true;
+  }
+
+  const profileActivateMatch = pathname.match(/^\/api\/ai\/profiles\/([^/]+)\/activate$/);
+  if (profileActivateMatch && request.method === "POST") {
+    try {
+      const ai = activateLlmProfile(decodeSegment(profileActivateMatch[1]));
+      json(response, 200, { ai, profiles: listLlmProfiles() });
+    } catch (error) {
+      json(response, 400, { error: error.message });
+    }
+    return true;
+  }
+
+  const profileDeleteMatch = pathname.match(/^\/api\/ai\/profiles\/([^/]+)$/);
+  if (profileDeleteMatch && request.method === "DELETE") {
+    json(response, 200, { profiles: deleteLlmProfile(decodeSegment(profileDeleteMatch[1])) });
     return true;
   }
 

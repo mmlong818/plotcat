@@ -41,6 +41,8 @@ const ENV_KEYS = {
 
 const DEFAULT_BASE_URLS = {
   openai: "https://api.openai.com/v1",
+  anthropic: "https://api.anthropic.com",
+  gemini: "https://generativelanguage.googleapis.com",
   custom: process.env.LLM_BASE_URL || "https://api.deepseek.com/v1"
 };
 
@@ -119,6 +121,81 @@ export function setLlmConfig({ provider, apiKey, model, baseUrl } = {}) {
   return getLlmConfig();
 }
 
+// ── 连接档案：保存多套 provider 配置，支持智谱/DeepSeek/Claude API 等并存切换 ──
+const PROFILES_META_KEY = "llm_profiles";
+let llmProfiles = [];
+
+function persistProfiles() {
+  try {
+    getDb().prepare("INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)")
+      .run(PROFILES_META_KEY, JSON.stringify(llmProfiles));
+  } catch (err) {
+    console.warn("[llm] 档案持久化失败：", err.message);
+  }
+}
+
+function restoreProfiles() {
+  try {
+    const row = getDb().prepare("SELECT value FROM app_meta WHERE key = ?").get(PROFILES_META_KEY);
+    if (row?.value) llmProfiles = JSON.parse(row.value).filter((p) => LLM_PROVIDERS.includes(p.provider));
+  } catch (err) {
+    console.warn("[llm] 档案恢复失败：", err.message);
+  }
+}
+restoreProfiles();
+
+function profileFingerprint(p) {
+  return `${p.provider}|${p.model}|${p.baseUrl ?? ""}`;
+}
+
+// 列表返回时 key 打码，前端永远拿不到完整 key
+export function listLlmProfiles() {
+  const activeFp = profileFingerprint(llmConfig);
+  return llmProfiles.map((p) => ({
+    id: p.id,
+    name: p.name,
+    provider: p.provider,
+    model: p.model,
+    baseUrl: p.baseUrl ?? "",
+    hasKey: Boolean(p.apiKey),
+    active: profileFingerprint(p) === activeFp
+  }));
+}
+
+export function upsertLlmProfile({ name, provider, apiKey, model, baseUrl } = {}) {
+  if (!LLM_PROVIDERS.includes(provider)) return listLlmProfiles();
+  const fp = profileFingerprint({ provider, model, baseUrl });
+  const existing = llmProfiles.find((p) => profileFingerprint(p) === fp);
+  if (existing) {
+    if (apiKey) existing.apiKey = apiKey;
+    if (name) existing.name = name;
+  } else {
+    llmProfiles.push({
+      id: `prof_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
+      name: name || (provider === "claude_cli" ? "Claude CLI" : `${provider === "custom" ? new URL(baseUrl || "https://x").hostname.split(".").slice(-2, -1)[0] : provider} · ${model}`),
+      provider,
+      apiKey: apiKey ?? "",
+      model: model ?? "",
+      baseUrl: baseUrl ?? ""
+    });
+  }
+  persistProfiles();
+  return listLlmProfiles();
+}
+
+export function activateLlmProfile(id) {
+  const p = llmProfiles.find((x) => x.id === id);
+  if (!p) throw new Error("连接档案不存在");
+  setLlmConfig({ provider: p.provider, apiKey: p.apiKey || ENV_KEYS[p.provider] || "", model: p.model, baseUrl: p.baseUrl });
+  return getLlmStatus();
+}
+
+export function deleteLlmProfile(id) {
+  llmProfiles = llmProfiles.filter((x) => x.id !== id);
+  persistProfiles();
+  return listLlmProfiles();
+}
+
 export function getLlmStatus() {
   const c = llmConfig;
   if (c.provider === "claude_cli") {
@@ -155,7 +232,8 @@ function claudeCliOnce(prompt, { effort = "", onChunk = null } = {}) {
 // ── Anthropic API ─────────────────────────────────────────────────────────────
 async function anthropicComplete(prompt, { onChunk = null } = {}) {
   const stream = Boolean(onChunk);
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
+  const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.anthropic).replace(/\/+$/, "");
+  const response = await fetch(`${base}/v1/messages`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -222,7 +300,8 @@ async function openAiCompatComplete(prompt, { onChunk = null } = {}) {
 
 // ── Gemini API ────────────────────────────────────────────────────────────────
 async function geminiComplete(prompt, { onChunk = null } = {}) {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(llmConfig.model)}:generateContent?key=${encodeURIComponent(llmConfig.apiKey)}`;
+  const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.gemini).replace(/\/+$/, "");
+  const endpoint = `${base}/v1beta/models/${encodeURIComponent(llmConfig.model)}:generateContent?key=${encodeURIComponent(llmConfig.apiKey)}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },

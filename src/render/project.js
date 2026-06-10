@@ -561,8 +561,28 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
   const canConnect = provider === "claude_cli"
     || Boolean((appState.aiConfigDraft.apiKey.trim() || hasStoredConnection) && appState.aiConfigDraft.model.trim());
 
+  const profiles = appState.llmProfiles ?? [];
+  const profilesBlock = profiles.length ? `
+    <div class="field field--full" style="margin-bottom: 10px">
+      <label>已保存连接（点击切换）</label>
+      <div class="tag-row">
+        ${profiles.map((p) => `
+          <span class="chip ${p.active ? "chip--save chip--save-synced" : "chip--soft"}" style="display:inline-flex;align-items:center;gap:6px">
+            <button type="button" data-action="activate-llm-profile" data-id="${escapeHtml(p.id)}"
+              style="all:unset;cursor:pointer" title="${escapeHtml(p.provider)}${p.baseUrl ? " · " + escapeHtml(p.baseUrl) : ""}">
+              ${p.active ? "● " : ""}${escapeHtml(p.name)}
+            </button>
+            <button type="button" data-action="delete-llm-profile" data-id="${escapeHtml(p.id)}"
+              style="all:unset;cursor:pointer;opacity:.55" title="删除此连接">×</button>
+          </span>
+        `).join("")}
+      </div>
+    </div>
+  ` : "";
+
   dom.settingsForm.innerHTML = `
     <div class="create-ai-config create-ai-config--settings">
+      ${profilesBlock}
       <div class="create-wizard__choices create-wizard__choices--providers">
         ${["claude_cli", "anthropic", "openai", "gemini", "custom"]
           .map(
