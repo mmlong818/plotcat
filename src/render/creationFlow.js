@@ -136,6 +136,52 @@ function renderReasoningPanel(creation) {
   `;
 }
 
+
+// 形态/题材两个字段的内部渲染——点选时局部更新这两个容器，避免整页重绘闪烁
+export function renderFormatFieldInner(creation) {
+  const fmt = creation.draft?.format ?? "feature";
+  return `
+          <label class="cf-label">这是什么类型的作品？ <span class="cf-label-opt">（决定篇幅与节奏）</span></label>
+          <div class="cf-genre-cards cf-format-cards">
+            ${FORMAT_OPTIONS.map(([val, label]) => `
+              <button class="cf-genre-card ${fmt === val ? "is-active" : ""}" type="button"
+                data-action="cf-set-format" data-id="${val}">
+                <span class="cf-genre-card__name">${escapeHtml(label)}</span>
+                ${val === "feature" ? `<span class="cf-genre-card__badge">最常用</span>` : ""}
+                ${val === "micro_drama" && fmt === val ? `<span class="cf-genre-card__badge">形态契约</span>` : ""}
+              </button>
+            `).join("")}
+          </div>
+          ${fmt === "micro_drama" ? `<p class="cf-step-sub" style="margin-top:6px">📜 微短剧形态纪律（黄金三秒钩子 / 每集结尾钩子 / 爽点按集兑付）将与所选题材契约叠加注入。</p>` : ""}
+  `;
+}
+
+export function renderGenreFieldInner(creation) {
+  return `
+          <label class="cf-label">题材类型 <span class="cf-label-opt">（第一个选中的是主导类型，再选最多 2 个做调味——主导给骨架，调味给肌理）</span></label>
+          <div class="cf-genre-cards">
+            ${GENRE_LIBRARY.filter((g) => g.kind !== "format").map((g) => {
+              const selected = (creation.genres ?? []).includes(g.label);
+              const idx = (creation.genres ?? []).indexOf(g.label);
+              const badge = idx === 0 ? "主导" : idx > 0 ? "调味" : "";
+              return `
+                <button class="cf-genre-card ${selected ? "is-active" : ""}" type="button"
+                  data-action="cf-toggle-genre" data-id="${escapeHtml(g.label)}"
+                  title="${escapeHtml(g.audience_promise)}">
+                  <span class="cf-genre-card__name">${escapeHtml(g.label)}</span>
+                  ${badge ? `<span class="cf-genre-card__badge">${badge}</span>` : ""}
+                </button>
+              `;
+            }).join("")}
+          </div>
+          ${(() => {
+            const blend = resolveGenreBlend(creation.genres ?? []);
+            if (!blend.primary) return `<p class="cf-step-sub" style="margin-top:6px">选定后，该类型的观众承诺 / 必备场景 / 禁忌将作为契约注入后续所有 AI 生成。</p>`;
+            return `<p class="cf-step-sub" style="margin-top:6px">📜 ${escapeHtml(blend.primary.audience_promise)}${blend.secondaries.length ? `<br/>调味：${blend.secondaries.map((g) => escapeHtml(g.label)).join("、")}——只加肌理，不抢骨架。` : ""}</p>`;
+          })()}
+  `;
+}
+
 // ── Step 1: 故事核心 ──────────────────────────────────────────────────────
 
 function renderStep1(creation) {
@@ -160,44 +206,9 @@ function renderStep1(creation) {
       </div>
 
       <div class="cf-form-stack">
-        <div class="cf-field">
-          <label class="cf-label">这是什么类型的作品？ <span class="cf-label-opt">（决定篇幅与节奏）</span></label>
-          <div class="cf-genre-cards cf-format-cards">
-            ${FORMAT_OPTIONS.map(([val, label]) => `
-              <button class="cf-genre-card ${fmt === val ? "is-active" : ""}" type="button"
-                data-action="cf-set-format" data-id="${val}">
-                <span class="cf-genre-card__name">${escapeHtml(label)}</span>
-                ${val === "feature" ? `<span class="cf-genre-card__badge">最常用</span>` : ""}
-                ${val === "micro_drama" && fmt === val ? `<span class="cf-genre-card__badge">形态契约</span>` : ""}
-              </button>
-            `).join("")}
-          </div>
-          ${fmt === "micro_drama" ? `<p class="cf-step-sub" style="margin-top:6px">📜 微短剧形态纪律（黄金三秒钩子 / 每集结尾钩子 / 爽点按集兑付）将与所选题材契约叠加注入。</p>` : ""}
-        </div>
+        <div class="cf-field" id="cf-format-field">${renderFormatFieldInner(creation)}</div>
 
-        <div class="cf-field">
-          <label class="cf-label">题材类型 <span class="cf-label-opt">（第一个选中的是主导类型，再选最多 2 个做调味——主导给骨架，调味给肌理）</span></label>
-          <div class="cf-genre-cards">
-            ${GENRE_LIBRARY.filter((g) => g.kind !== "format").map((g) => {
-              const selected = (creation.genres ?? []).includes(g.label);
-              const idx = (creation.genres ?? []).indexOf(g.label);
-              const badge = idx === 0 ? "主导" : idx > 0 ? "调味" : "";
-              return `
-                <button class="cf-genre-card ${selected ? "is-active" : ""}" type="button"
-                  data-action="cf-toggle-genre" data-id="${escapeHtml(g.label)}"
-                  title="${escapeHtml(g.audience_promise)}">
-                  <span class="cf-genre-card__name">${escapeHtml(g.label)}</span>
-                  ${badge ? `<span class="cf-genre-card__badge">${badge}</span>` : ""}
-                </button>
-              `;
-            }).join("")}
-          </div>
-          ${(() => {
-            const blend = resolveGenreBlend(creation.genres ?? []);
-            if (!blend.primary) return `<p class="cf-step-sub" style="margin-top:6px">选定后，该类型的观众承诺 / 必备场景 / 禁忌将作为契约注入后续所有 AI 生成。</p>`;
-            return `<p class="cf-step-sub" style="margin-top:6px">📜 ${escapeHtml(blend.primary.audience_promise)}${blend.secondaries.length ? `<br/>调味：${blend.secondaries.map((g) => escapeHtml(g.label)).join("、")}——只加肌理，不抢骨架。` : ""}</p>`;
-          })()}
-        </div>
+        <div class="cf-field" id="cf-genre-field">${renderGenreFieldInner(creation)}</div>
 
         <div class="cf-field cf-field--collapsible">
           <details>

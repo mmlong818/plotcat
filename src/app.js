@@ -33,7 +33,7 @@ import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
 import { renderStructureLibraryDialog } from "./render/structureLibrary.js";
 import { STORY_STRUCTURE_LIBRARY } from "./data/storyStructureLibrary.js";
-import { renderCreationFlowPage } from "./render/creationFlow.js";
+import { renderCreationFlowPage, renderFormatFieldInner, renderGenreFieldInner } from "./render/creationFlow.js";
 import { renderProCreationPage } from "./render/proCreationFlow.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
@@ -1595,7 +1595,9 @@ function handleClick(event) {
     if (!c) return;
     c.draft = c.draft ?? {};
     c.draft.format = id || "feature";
-    renderCreationPage();
+    // 形态联动结构模板推荐（原下拉分支的职责）
+    c.draft.structure_template = "three_act";
+    patchCreationCardFields();
     return;
   }
   if (action === "cf-toggle-genre") {
@@ -1610,7 +1612,7 @@ function handleClick(event) {
       alert("最多选 1 个主导 + 2 个调味类型。先取消一个再选。");
       return;
     }
-    renderCreationPage();
+    patchCreationCardFields();
     return;
   }
   if (action === "audit-speakers") {
@@ -3153,6 +3155,20 @@ async function saveSelectedSeries() {
   }
 }
 
+// 创作页第 1 步的点选卡局部更新：只换两个容器的 innerHTML，
+// 不整页重绘（整页 innerHTML 替换会让装饰字体/边框重排，视觉上闪一下，
+// 且会丢失正在输入的文本框焦点与页面滚动位置）
+function patchCreationCardFields() {
+  const c = appState.creation;
+  if (!c) return;
+  const fmtEl = document.querySelector("#cf-format-field");
+  const genreEl = document.querySelector("#cf-genre-field");
+  if (!fmtEl || !genreEl) { renderCreationPage(); return; }
+  fmtEl.innerHTML = renderFormatFieldInner(c);
+  genreEl.innerHTML = renderGenreFieldInner(c);
+  saveLocalSnapshot();
+}
+
 function handleSeriesAction(action, id, target) {
   const s = appState.seriesLibrary = appState.seriesLibrary ?? { list: [], selected: null, loading: false };
   const sel = s.selected;
@@ -3833,17 +3849,15 @@ function handleCreationClick(action, target) {
     if (!c.draft) c.draft = {};
     const prev = c.draft[field] ?? "";
     c.draft[field] = value;
-    if (field === "format") {
-      const recs = { feature: "three_act", pilot: "three_act", series: "three_act", short: "three_act", micro_drama: "three_act" };
-      c.draft.structure_template = recs[value] ?? "feature_film";
-      renderCreationPage();
-      return true;
-    }
-    // logline：仅在「能否进入下一步」临界点切换时重渲，其他 keystroke 不重建 DOM（避免光标闪烁）
+    // logline 临界点（≥10 字）只局部更新「下一步」按钮禁用态——
+    // 整页重绘会在打字中途重建 DOM：丢焦点、吞后续字符、视觉闪烁
     if (field === "logline") {
       const wasValid = prev.trim().length >= 10;
       const nowValid = value.trim().length >= 10;
-      if (wasValid !== nowValid) renderCreationPage();
+      if (wasValid !== nowValid) {
+        const nextBtn = document.querySelector('[data-action="cf-step1-next"]');
+        if (nextBtn) nextBtn.disabled = !nowValid;
+      }
     }
     return true;
   }
@@ -4456,17 +4470,14 @@ function handleCreationInput(action, target) {
     if (!c.draft) c.draft = {};
     const prev = c.draft[field] ?? "";
     c.draft[field] = value;
-    if (field === "format") {
-      const recs = { feature: "three_act", pilot: "three_act", series: "three_act", short: "three_act", micro_drama: "three_act" };
-      c.draft.structure_template = recs[value] ?? "feature_film";
-      renderCreationPage();
-      return true;
-    }
-    // logline：仅在「能否进入下一步」临界点切换时重渲，避免每键重建 DOM 丢焦点/丢字符
+    // 同上：临界点只动按钮，不整页重绘
     if (field === "logline") {
       const wasValid = prev.trim().length >= 10;
       const nowValid = value.trim().length >= 10;
-      if (wasValid !== nowValid) renderCreationPage();
+      if (wasValid !== nowValid) {
+        const nextBtn = document.querySelector('[data-action="cf-step1-next"]');
+        if (nextBtn) nextBtn.disabled = !nowValid;
+      }
     }
     return true;
   }
