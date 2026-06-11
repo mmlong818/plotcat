@@ -127,16 +127,17 @@ function renderGrid(appState, lanes, acts, allCards, { getOrderedNodes, getPlotL
 }
 
 function renderLibraryPanel(appState, allCards, trashedCards, lanes, { getPlotLane, getActTitle, getNode }) {
-  const sorted = allCards.slice().sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+  // 卡片库只放「未归位」的卡——已挂上节点/幕的卡在上方板子里有完整呈现，
+  // 重复列出只会占半屏制造困惑
   const unplaced = allCards.filter((c) => !c.node_id || !c.act_id);
+  const sorted = unplaced.slice().sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
   const laneById = new Map(lanes.map((l) => [l.id, l]));
   const trashOpen = !!appState.plotTrashOpen;
 
   return `
     <aside class="pgrid-library pgrid-library--bottom">
       <div class="pgrid-lib-head">
-        <span class="pgrid-lib-title">卡片库 <span class="pgrid-lib-ct">${allCards.length}</span></span>
-        ${unplaced.length > 0 ? `<span class="pgrid-lib-unplaced-hint">未归位 ${unplaced.length}</span>` : ""}
+        <span class="pgrid-lib-title">卡片库（未归位）<span class="pgrid-lib-ct">${unplaced.length}</span></span>
         <button class="pgrid-lib-trash-toggle ${trashOpen ? "is-active" : ""}" type="button" data-action="toggle-plot-trash-view" title="废纸篓">
           🗑 废纸篓 ${trashedCards.length > 0 ? `<span class="pgrid-lib-trash-count">${trashedCards.length}</span>` : ""}
         </button>
@@ -162,10 +163,12 @@ function renderLibraryPanel(appState, allCards, trashedCards, lanes, { getPlotLa
                       </div>
                     </div>`;
                 }).join(""))
-          : sorted.map((c) => {
-              const lane = laneById.get(c.lane_id);
-              return renderPCard(appState, c, lane);
-            }).join("")
+          : (sorted.length === 0
+              ? `<div class="pgrid-trash-empty">所有卡片都已归位到上方板子。新建的卡片会先出现在这里。</div>`
+              : sorted.map((c) => {
+                  const lane = laneById.get(c.lane_id);
+                  return renderPCard(appState, c, lane);
+                }).join(""))
         }
       </div>
     </aside>`;
