@@ -1590,6 +1590,14 @@ function handleClick(event) {
     aiCharacterAudit();
     return;
   }
+  if (action === "cf-set-format") {
+    const c = appState.creation;
+    if (!c) return;
+    c.draft = c.draft ?? {};
+    c.draft.format = id || "feature";
+    renderCreationPage();
+    return;
+  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
