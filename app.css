@@ -423,6 +423,17 @@ a { color: var(--accent); text-decoration: none; }
 
 .step-button__hint { display: none; }
 
+/* 窄屏顶栏防挤爆：1500px 以下非当前步骤只留数字圆点，1280px 以下隐藏运行状态 chips。
+   否则步骤导航(704px)+CTA(151px)+右侧操作区(512px)在笔记本宽度下互相重叠 */
+@media (max-width: 1500px) {
+  .step-button:not(.is-active) .step-button__label { display: none; }
+  .step-button { padding: 6px 8px; }
+}
+@media (max-width: 1280px) {
+  .runtime-status { display: none; }
+  #hero-eyebrow.eyebrow { font-size: 1.2rem; max-width: 12ch; }
+}
+
 .wizard-shell.is-compact .step-button__hint {
   display: block;
   position: absolute;
