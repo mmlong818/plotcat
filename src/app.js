@@ -3432,7 +3432,7 @@ function applySceneExpansion(planned) {
         s.title === "开场场景" &&
         !(s.script_full || s.script_excerpt || "").trim() &&
         list(s.linked_plot_card_ids).length === 0 &&
-        !(s.location || "").trim()
+        ["", "待定地点"].includes((s.location || "").trim())
       ))
     : nextScenes;
   cleaned.forEach((scene, index) => { scene.order_index = index + 1; });
