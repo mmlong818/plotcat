@@ -3885,6 +3885,8 @@ function handleCreationClick(action, target) {
     if (!c.draft) c.draft = {};
     if (d.title && !c.draft.title) c.draft.title = d.title;
     if (d.hook) c.draft.logline = d.hook;
+    // 核心冲突跟着方向一起带走，否则 finalize 后故事核心的「核心冲突」恒空
+    if (d.core_conflict) c.draft.core_conflict = d.core_conflict;
     c.selectedConceptIdx = idx;
     c.aiError = "";
     renderCreationPage();
@@ -4313,6 +4315,12 @@ async function handleFinalizeNewCreation() {
         status: "draft"
       });
       node.card_ids = [cardId];
+      // 结构骨架页的节点「待填写」判定看 node.note——不回填的话，
+      // 生成内容只在剧情卡里，结构页永远显示待填写
+      node.note = [
+        nodeData.summary ?? nodeData.key_event ?? "",
+        nodeData.value_shift ? `价值转变：${nodeData.value_shift}` : ""
+      ].filter(Boolean).join("\n");
     }
   }
   proj.plot_board = { cards };
@@ -4341,6 +4349,36 @@ async function handleFinalizeNewCreation() {
   if (chars.length > 0) {
     proj.story_bible.characters = chars;
     proj.character_hub = { characters: [], relationship_map: [] };
+  }
+
+  // 人物确认后自动生成关系网（≥2 人才有关系可言）；失败不阻塞创建
+  if (chars.length >= 2) {
+    c.loadingStep = 5;
+    c.streamPreview = "";
+    renderCreationPage();
+    const relResult = await callGenerateAPIStream("relationships", {
+      characters: chars,
+      concept: { title: proj.project.title, hook: draft.logline ?? "" },
+      synopsis: { summary: draft.logline ?? "" }
+    }, {}, (text) => streamingOnChunk(c, text));
+    c.loadingStep = -1;
+    c.streamPreview = "";
+    if (!relResult.cancelled && !relResult.error) {
+      const nameToId = new Map(chars.map(ch => [ch.name, ch.id]));
+      const rels = (relResult.choices?.[0]?.data?.relationships ?? [])
+        .map(rel => ({
+          id: createId("rel"),
+          source_character_id: nameToId.get(rel.source_character_name) ?? "",
+          target_character_id: nameToId.get(rel.target_character_name) ?? "",
+          relationship_type: rel.relationship_type ?? "",
+          tension: rel.tension ?? "",
+          power_balance: rel.power_balance ?? "",
+          shared_history: rel.shared_history ?? "",
+          hidden_information: rel.hidden_information ?? ""
+        }))
+        .filter(rel => rel.source_character_id && rel.target_character_id);
+      if (rels.length > 0) proj.story_bible.relationships = rels;
+    }
   }
 
   // Set as current project and save to server
