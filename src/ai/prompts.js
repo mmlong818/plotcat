@@ -1909,6 +1909,22 @@ ${charList}
   return { system, user };
 }
 
+// ── 片名（手写 logline 未起名时用） ─────────────────────────────
+export function buildTitlePrompt(context) {
+  const { genres = [], logline = "", format = "feature" } = context ?? {};
+  const formatNames = { feature: "电影长片", series: "连续剧", micro_drama: "微短剧", pilot: "试播集", short: "短片" };
+  const system = `你是资深剧名策划，擅长为影视项目起有市场辨识度的片名。只输出JSON。`;
+  const user = `作品形态：${formatNames[format] ?? format}
+题材：${genres.join("、") || "不限"}
+一句话概念：${logline}
+
+请起 1 个最贴切的中文片名：2-8 字，有类型感和悬念，不剧透结局，禁止使用书名号和引号。
+
+输出JSON格式：
+{ "title": "片名" }`;
+  return { system, user };
+}
+
 // ── 世界规则（5-8 条） ────────────────────────────────────────────
 export function buildWorldRulesPrompt(context) {
   const { genres = [], concept = {}, synopsis = {} } = context ?? {};
