@@ -633,6 +633,7 @@ async function handleApi(request, response, pathname) {
     try {
       const body = await readJsonBody(request);
       const { genres, concept, synopsis, characters, scenes, structure,
+              format = "feature",
               relationships: relList, world_rules: worldRules,
               timeline_events: timelineEvents, setup_payoffs: setupPayoffs } = body;
       const title = concept?.title ?? synopsis?.version_label ?? "新长片项目";
@@ -645,7 +646,7 @@ async function handleApi(request, response, pathname) {
         ?? (actCount === 4 ? "four_act" : actCount === 5 ? "feature_film" : "three_act");
 
       // 1. 创建基础项目
-      const projectData = createProject({ title, format: "feature_film", genre: genreList, logline });
+      const projectData = createProject({ title, format, genre: genreList, logline });
 
       // 2. 填充故事核心（central_question / emotional_promise 不复用 hook）
       projectData.story_core = {
@@ -871,7 +872,7 @@ async function handleApi(request, response, pathname) {
   if (pathname === "/api/pro/assemble" && request.method === "POST") {
     let body;
     try { body = await readJsonBody(request); } catch { body = {}; }
-    const { anchor = "", genres = [], theme = {}, character = {}, scene = {} } = body;
+    const { anchor = "", genres = [], format = "feature", theme = {}, character = {}, scene = {} } = body;
 
     try {
       const { system, user } = buildAssemblePrompt(
@@ -892,7 +893,7 @@ async function handleApi(request, response, pathname) {
       const title = aiTitle || `未命名项目（${stamp}）`;
       const genreList = Array.isArray(genres) ? genres : [];
 
-      const projectData = createProject({ title, format: "feature_film", genre: genreList, logline });
+      const projectData = createProject({ title, format, genre: genreList, logline });
       projectData.story_core = { ...assembled.story_core };
       projectData.intent_anchor = {
         ...projectData.intent_anchor,
