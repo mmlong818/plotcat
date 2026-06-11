@@ -7734,7 +7734,8 @@ body[data-mode="creation"] {
   background: rgba(76,175,80,0.07);
 }
 .cf-act-node-name    { font-weight: 600; font-size: 14px; display: block; margin-bottom: 4px; color: var(--cf-text-1, var(--ink-1)); }
-.cf-act-node-summary { font-size: 13px; color: var(--cf-text-2, var(--ink-2)); margin: 0; }
+.cf-act-node-summary { font-size: 13px; color: var(--cf-text-2, var(--ink-2)); margin: 0; line-height: 1.55; }
+.cf-act-node-shift { font-style: normal; font-size: 12px; color: var(--cf-gold, var(--accent)); }
 .cf-act-node-pending { font-size: 12px; color: var(--cf-text-3, var(--ink-3)); }
 
 .cf-confirm-acts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }

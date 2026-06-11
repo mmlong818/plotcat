@@ -521,7 +521,7 @@ function renderStep4New(creation) {
     return `
       <div class="cf-act-node ${generated ? "is-generated" : ""}">
         <span class="cf-act-node-name">${escapeHtml(nodeTitle)}</span>
-        ${generated ? `<p class="cf-act-node-summary">${escapeHtml((generated.summary ?? "").slice(0, 120))}</p>` : `<span class="cf-act-node-pending">待生成</span>`}
+        ${generated ? `<p class="cf-act-node-summary">${escapeHtml(generated.summary ?? "")}${generated.value_shift ? `<br/><em class="cf-act-node-shift">${escapeHtml(generated.value_shift)}</em>` : ""}</p>` : `<span class="cf-act-node-pending">待生成</span>`}
       </div>`;
   }).join("");
 
