@@ -1,8 +1,9 @@
 import { escapeHtml } from "../utils.js";
+import { GENRE_LIBRARY } from "../data/genreLibrary.js";
 
-const GENRE_OPTIONS = [
-  "剧情", "喜剧", "悬疑", "惊悚", "爱情", "动作", "科幻", "奇幻", "历史", "犯罪", "家庭", "青春"
-];
+// 与快速创建共用同一套类型知识库标签，否则精品创作选的类型
+// 进不了类型契约引擎（resolveGenre 解析不出「剧情」「惊悚」这类旧标签）
+const GENRE_OPTIONS = GENRE_LIBRARY.filter((g) => g.kind !== "format").map((g) => g.label);
 
 function renderActiveWorkbench(appState) {
   const activeWb = appState.proCreation.activeWb;
@@ -107,10 +108,11 @@ function renderAnchorStep(appState) {
 function renderWorkbenchesStep(appState) {
   const { anchor, activeWb, workbenches, loading } = appState.proCreation;
   const wbLabels = { theme: "主题台", character: "人物台", scene: "场景台" };
-  const allDone = ["theme", "character", "scene"].every((k) => workbenches[k].done);
+  // 文案承诺「至少标记一个」，此前代码却要求三个台全部完成才解锁——按文案意图放行
+  const anyDone = ["theme", "character", "scene"].some((k) => workbenches[k].done);
   const assembleBtnLabel = loading
     ? "AI 正在整合（约 30-60 秒）…"
-    : allDone ? "组装并进入创作 →" : "至少标记一个工作台完成";
+    : anyDone ? "组装并进入创作 →" : "至少标记一个工作台完成";
   return `
     <section class="pro-creation pro-creation--workbenches">
       <div class="pro-creation__header">
@@ -118,7 +120,7 @@ function renderWorkbenchesStep(appState) {
         <h2 class="pro-creation__title">精品创作 · 深度开发</h2>
         <div class="pro-header-actions">
           <button class="button button--primary" type="button" data-action="pro-assemble"
-            ${loading || !allDone ? "disabled" : ""}>
+            ${loading || !anyDone ? "disabled" : ""}>
             ${escapeHtml(assembleBtnLabel)}
           </button>
         </div>
