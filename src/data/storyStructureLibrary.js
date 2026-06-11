@@ -1,9 +1,31 @@
 // src/data/storyStructureLibrary.js
 // 29 类通用剧本结构参考库
 
-export const STRUCTURE_LIBRARY_TAGS = ["通用", "电影", "剧集", "短片", "角色驱动", "多线", "非线性", "悬疑侦探", "冒险奇幻", "科幻", "音乐", "实验文艺", "方法论"];
+export const STRUCTURE_LIBRARY_TAGS = ["通用", "电影", "剧集", "短片", "微短剧", "角色驱动", "多线", "非线性", "悬疑侦探", "冒险奇幻", "科幻", "音乐", "实验文艺", "方法论"];
 
 export const STORY_STRUCTURE_LIBRARY = [
+  // ─── 0. 微短剧连载结构 ────────────────────────────────────────────
+  {
+    id: "micro_drama_serial",
+    name: "微短剧连载结构",
+    englishName: "Micro-Drama Serial",
+    description: "竖屏微短剧（60-100 集、每集 1-3 分钟）的连载骨架。前几集快速起钩锁定爽点，中段用身份反转与每集结尾钩子维持追更，后段以阶段性爆点重置站位，结局完成总回收。",
+    tags: ["微短剧", "剧集"],
+    builtInKey: "micro_drama_serial",
+    acts: [
+      { key: "act_1", title: "起钩集群", purpose: "用前几集快速起钩并锁定爽点", range_label: "0% - 20%" },
+      { key: "act_2", title: "连续反转", purpose: "保持每集结尾的追更钩子", range_label: "20% - 55%" },
+      { key: "act_3", title: "阶段爆点", purpose: "用几次大爆点重置关系和站位", range_label: "55% - 85%" },
+      { key: "act_4", title: "大结局", purpose: "完成总回收并给终极爽点", range_label: "85% - 100%" }
+    ],
+    nodes: [
+      ["episode_hook", "act_1", "前几集起钩", true, { dramatic_function: "黄金三秒抓人 + 前三集内完成核心爽点承诺的首次兑付，让观众明确「追这部剧能爽到什么」", failure_modes: ["开篇铺垫世界观超过一集，观众划走", "爽点承诺模糊，前三集没有一次完整兑付"] }],
+      ["identity_flip", "act_2", "身份/关系反转", true, { dramatic_function: "主角隐藏身份或核心关系发生第一次公开反转，重置所有人对主角的态度，制造第一波大爽点", failure_modes: ["反转太晚，中段全靠拖延误会维持", "反转只对观众揭示而剧中人无反应，爽感落空"] }],
+      ["cliff_loop", "act_2", "追更钩子循环", true, { dramatic_function: "每集结尾必须落在钩子上（新威胁/新揭露/打脸前奏），维持「再看一集」的循环冲动", failure_modes: ["连续多集结尾平收，弃剧率陡增", "钩子全靠同一招（反复被打断的揭露），观众疲劳"] }],
+      ["stage_peak", "act_3", "阶段爆点", true, { dramatic_function: "用一次大爆点（灭门真相/大反派现身/底牌尽出）把冲突提升一个量级，旧的对抗格局作废", failure_modes: ["爆点量级不足，只是更大的误会", "爆点后站位不变，剧情原地打转"] }],
+      ["final_payoff", "act_4", "大结局回收", true, { dramatic_function: "所有埋设一次性总回收：恶人尽数打脸、身份全面公开、情感关系落定，终极爽点必须超过此前所有爆点", failure_modes: ["留太多线头不回收，差评集中爆发", "结局爽点弱于中段爆点，高开低走"] }]
+    ]
+  },
   // ─── 1. 三幕式结构 ──────────────────────────────────────────────────
   {
     id: "three_act",
