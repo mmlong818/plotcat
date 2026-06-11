@@ -3909,7 +3909,7 @@ function handleCreationClick(action, target) {
     if (!choice) return true;
     const d = choice.data ?? {};
     if (!c.draft) c.draft = {};
-    if (d.title && !c.draft.title) c.draft.title = d.title;
+    if (d.title && !c.draft.title) c.draft.title = String(d.title).replace(/^[《「]|[》」]$/g, "");
     if (d.hook) c.draft.logline = d.hook;
     // 核心冲突跟着方向一起带走，否则 finalize 后故事核心的「核心冲突」恒空
     if (d.core_conflict) c.draft.core_conflict = d.core_conflict;
@@ -4281,7 +4281,7 @@ async function handleGenNodeNote(nodeId) {
 
 // 标题派生：优先用所选 AI 概念的标题，否则从 logline 截取首个分句作为可编辑工作标题
 function deriveWorkingTitle(selectedConcept, logline) {
-  const conceptTitle = (selectedConcept?.data?.title ?? selectedConcept?.title ?? "").trim();
+  const conceptTitle = (selectedConcept?.data?.title ?? selectedConcept?.title ?? "").trim().replace(/^[《「]|[》」]$/g, "");
   if (conceptTitle) return conceptTitle;
   const line = String(logline ?? "").trim();
   if (!line) return "未命名项目";
@@ -4305,7 +4305,7 @@ async function handleFinalizeNewCreation() {
     const tRes = await callGenerateAPI("title", {
       genres: c.genres ?? [], logline: draft.logline, format: draft.format ?? "feature"
     }, {});
-    const aiTitle = (tRes.choices?.[0]?.data?.title ?? "").trim();
+    const aiTitle = (tRes.choices?.[0]?.data?.title ?? "").trim().replace(/^[《「]|[》」]$/g, "");
     if (!tRes.error && aiTitle && aiTitle.length <= 12) proj.project.title = aiTitle;
   }
   proj.project.format = draft.format ?? "feature";
