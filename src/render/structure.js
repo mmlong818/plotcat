@@ -11,7 +11,21 @@ const NODE_TYPE_LABELS = {
   break_into_three: "进入第三幕", finale: "终局对决", final_image: "结尾画面",
   // 5 幕 / feature_film 模板的节点
   lock_in: "主线锁定", promise: "承诺兑现", reversal: "局势反扑",
-  collapse: "崩塌时刻", final_choice: "最终选择", aftershock: "余波落点"
+  collapse: "崩塌时刻", final_choice: "最终选择", aftershock: "余波落点",
+  // 微短剧模板
+  episode_hook: "前几集起钩", identity_flip: "身份/关系反转",
+  cliff_loop: "追更钩子循环", stage_peak: "阶段爆点", final_payoff: "大结局回收",
+  // 试播集模板
+  series_premise: "剧集前提建立", protagonist_problem: "主角问题抛出",
+  world_expansion: "世界扩张", midpoint_hook: "中段钩子",
+  escalation: "关系与危机升级", episode_climax: "本集高潮",
+  // 连续剧季模板
+  season_engine: "季引擎建立", cast_network: "人物群关系网",
+  line_split: "多线展开", midseason_shift: "季中转向",
+  line_collision: "线索碰撞", endgame_push: "终局推进",
+  season_climax: "季终高潮", next_season_hook: "下一季钩子",
+  // 短片模板
+  hook: "起手钩子", core_turn: "核心转折", payoff: "落点回收"
 };
 
 const NODE_TYPE_HINTS = {
