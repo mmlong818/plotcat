@@ -214,8 +214,10 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
   const orderedActs = getOrderedActs();
   const templateOptions = getStructureOptionsForFormat(appState.project.project.format, structure.template);
   const selectedNodeId = appState.selection?.nodeId ?? null;
+  // 节点存在 structure_profile.nodes 顶层数组（act_id 关联），不是嵌在 act 里——
+  // 此前从 acts[].nodes 找永远 null，节点详情抽屉从未打开过
   const selectedNode = selectedNodeId
-    ? list(appState.project.structure_profile?.acts).flatMap((a) => list(a.nodes)).find((n) => n.id === selectedNodeId)
+    ? list(appState.project.structure_profile?.nodes).find((n) => n.id === selectedNodeId)
     : null;
 
   const templateLabel = structureTemplateLabels[structure.template] ?? structure.template ?? "未设置";
