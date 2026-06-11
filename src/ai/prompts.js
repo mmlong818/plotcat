@@ -1390,9 +1390,10 @@ export function buildSingleCharacterPrompt(context, existingChars, storyRole) {
   "character": {
     "name": "角色姓名",
     "story_role": "${storyRole}",
-    "desire": "外部欲望",
-    "need": "内在需求",
-    "wound": "创伤或缺口",
+    "archetype": "角色原型",
+    "external_want": "表层欲望（外部目标，具体可见）",
+    "internal_need": "深层需求（内在成长）",
+    "wound": "核心创伤（具体事件）",
     "arc_start": "故事开始时的状态",
     "arc_end": "故事结束时的状态"
   }
@@ -1713,7 +1714,7 @@ export function buildEvaluateCharactersPrompt(characters, context) {
   const genres = (context.genres ?? []).join('、');
   const synopsis = context.synopsis?.summary?.slice(0, 150) ?? '';
   const list = characters.map((c, i) =>
-    `[${i + 1}] ${c.name ?? ''}（${c.story_role ?? ''}）欲望：${c.desire ?? ''} | 创伤：${c.wound ?? ''} | 弧光：${c.arc_start ?? ''}→${c.arc_end ?? ''}`
+    `[${i + 1}] ${c.name ?? ''}（${c.story_role ?? ''}）欲望：${c.external_want ?? c.desire ?? ''} | 创伤：${c.wound ?? ''} | 弧光：${c.arc_start ?? ''}→${c.arc_end ?? ''}`
   ).join('\n');
 
   const system = `你是专业剧本顾问，负责评估角色设计的心理深度与戏剧功能，给出100分制客观评分。你只输出JSON，不输出任何其他内容。`;

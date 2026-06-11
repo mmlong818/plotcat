@@ -428,7 +428,7 @@ function renderStep3New(creation) {
                             </div>
                             <div class="cf-edit-row">
                               <label class="cf-edit-label">欲望</label>
-                              <input class="cf-input cf-edit-input" type="text" data-char-idx="${idx}" data-char-field="desire" value="${escapeHtml(char.desire ?? "")}" />
+                              <input class="cf-input cf-edit-input" type="text" data-char-idx="${idx}" data-char-field="external_want" value="${escapeHtml(char.external_want ?? char.desire ?? "")}" />
                             </div>
                             <div class="cf-edit-row">
                               <label class="cf-edit-label">创伤</label>
@@ -446,7 +446,7 @@ function renderStep3New(creation) {
                           </div>
                         ` : `
                           <div class="cf-char-traits">
-                            <div class="cf-trait"><span class="cf-trait-key">欲望</span><span>${escapeHtml(char.desire ?? "")}</span></div>
+                            <div class="cf-trait"><span class="cf-trait-key">欲望</span><span>${escapeHtml(char.external_want ?? char.desire ?? "")}</span></div>
                             <div class="cf-trait"><span class="cf-trait-key">创伤</span><span>${escapeHtml(char.wound ?? "")}</span></div>
                             <div class="cf-trait cf-trait--full"><span class="cf-trait-key">弧光</span><span>${escapeHtml(char.arc_start ?? "")} → ${escapeHtml(char.arc_end ?? "")}</span></div>
                           </div>
