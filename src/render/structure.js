@@ -248,7 +248,7 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
               ${appState.structureNodeGen?.loading ? "disabled" : ""}>
               ${appState.structureNodeGen?.loading
                 ? `生成中… ${appState.structureNodeGen.progress || ""}`
-                : "✦ AI 填写情节点"}
+                : "✦ AI 填写情节节点"}
             </button>
           ` : ""}
           <button class="button button--ghost button--tiny" type="button" data-action="open-structure-config" title="结构高级设置">
