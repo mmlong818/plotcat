@@ -2587,11 +2587,15 @@ dom.creationContent = document.querySelector("#creationContent");
 function renderCreationPage() {
   if (!dom.creationContent) return;
   saveLocalSnapshot();
+  // 整页 innerHTML 重绘会让长页面（人物确认/情节大纲）瞬时塌缩回顶，
+  // 用户每点一次「确认」就被甩回页首——重绘后恢复滚动位置
+  const scrollY = window.scrollY;
   if (appState.proCreation?.active) {
     renderProCreationPage(dom, appState);
   } else {
     renderCreationFlowPage(dom, appState);
   }
+  if (scrollY > 0) window.scrollTo(0, scrollY);
 }
 
 // ── 精品创作 API calls ──────────────────────────────────────────────────────
@@ -3421,8 +3425,18 @@ function applySceneExpansion(planned) {
   for (const scene of live) {
     if (!used.has(scene.id)) nextScenes.push(scene);
   }
-  nextScenes.forEach((scene, index) => { scene.order_index = index + 1; });
-  appState.project.scene_workbench.scenes = nextScenes;
+  // 新建项目的「开场场景」占位场：没写过、没挂剧情卡、没定地点，
+  // 规划出真实场景表之后它只剩一个 ⚠ 游离空壳钉在第 1 位，清掉
+  const cleaned = nextScenes.length > 1
+    ? nextScenes.filter((s) => !(
+        s.title === "开场场景" &&
+        !(s.script_full || s.script_excerpt || "").trim() &&
+        list(s.linked_plot_card_ids).length === 0 &&
+        !(s.location || "").trim()
+      ))
+    : nextScenes;
+  cleaned.forEach((scene, index) => { scene.order_index = index + 1; });
+  appState.project.scene_workbench.scenes = cleaned;
 }
 
 async function aiExpandScenes() {
