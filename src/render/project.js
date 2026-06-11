@@ -58,7 +58,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
     const writtenCount = item.scene_written_count ?? 0;
     const progress = sceneCount > 0 ? Math.round((writtenCount / sceneCount) * 100) : 0;
     return `
-      <article class="project-hero">
+      <article class="project-hero" data-action="open-project" data-id="${escapeHtml(item.id)}">
         <div class="project-hero__left">
           <p class="project-hero__eyebrow">最近打开 · ${escapeHtml(formatTime(item.last_opened_at || item.updated_at))}</p>
           <h2 class="project-hero__title">${escapeHtml(safeTitle)}</h2>
@@ -87,7 +87,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
     const safeTitle = isBrokenPlaceholderText(item.title) ? "未命名项目" : item.title;
     const confirmingDelete = appState.projectDeleteConfirmId === item.id;
     return `
-      <article class="summary-card project-card">
+      <article class="summary-card project-card" data-action="open-project" data-id="${escapeHtml(item.id)}">
         <div class="project-card__top">
           <div>
             <h3>${escapeHtml(safeTitle)}</h3>
