@@ -162,11 +162,17 @@ function renderStep1(creation) {
       <div class="cf-form-stack">
         <div class="cf-field">
           <label class="cf-label">这是什么类型的作品？ <span class="cf-label-opt">（决定篇幅与节奏）</span></label>
-          <select class="cf-input" data-action="cf-set-draft-field" data-field="format">
-            ${FORMAT_OPTIONS.map(([val, label]) =>
-              `<option value="${val}" ${fmt === val ? "selected" : ""}>${escapeHtml(label)}${val === "feature" ? "（最常用）" : ""}</option>`
-            ).join("")}
-          </select>
+          <div class="cf-genre-cards cf-format-cards">
+            ${FORMAT_OPTIONS.map(([val, label]) => `
+              <button class="cf-genre-card ${fmt === val ? "is-active" : ""}" type="button"
+                data-action="cf-set-format" data-id="${val}">
+                <span class="cf-genre-card__name">${escapeHtml(label)}</span>
+                ${val === "feature" ? `<span class="cf-genre-card__badge">最常用</span>` : ""}
+                ${val === "micro_drama" && fmt === val ? `<span class="cf-genre-card__badge">形态契约</span>` : ""}
+              </button>
+            `).join("")}
+          </div>
+          ${fmt === "micro_drama" ? `<p class="cf-step-sub" style="margin-top:6px">📜 微短剧形态纪律（黄金三秒钩子 / 每集结尾钩子 / 爽点按集兑付）将与所选题材契约叠加注入。</p>` : ""}
         </div>
 
         <div class="cf-field">

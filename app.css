@@ -9472,3 +9472,6 @@ body[data-active-step] .char-card:hover {
   flex-wrap: wrap;
 }
 .genre-contract-row p { margin: 4px 0 0; }
+
+.cf-format-cards { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
+.cf-format-cards .cf-genre-card { padding: 9px 6px; font-size: 0.84rem; }
