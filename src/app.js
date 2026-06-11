@@ -320,6 +320,8 @@ function saveLocalSnapshot() {
       project: appState.project,
       projectList: appState.projectList,
       creation: serializeCreation(appState.creation),
+      // 精品创作的问答是用户手打的——刷新丢失等于白答一轮
+      proCreation: appState.proCreation?.active ? appState.proCreation : null,
       currentPage: appState.currentPage,
     })
   );
@@ -2373,6 +2375,10 @@ async function bootstrap() {
     if (localSnapshot.currentPage === "creation") {
       appState.currentPage = "creation";
     }
+  }
+  if (localSnapshot?.proCreation?.active) {
+    appState.proCreation = { ...appState.proCreation, ...localSnapshot.proCreation, loading: false };
+    if (localSnapshot.currentPage === "creation") appState.currentPage = "creation";
   }
 
   try {
