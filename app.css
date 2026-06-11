@@ -9422,9 +9422,13 @@ body[data-active-step] .char-card:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
   gap: 8px;
+  /* 徽章上浮在卡片上沿（top:-7px），留出余量避免被容器裁切 */
+  padding-top: 7px;
 }
 .cf-genre-card {
   position: relative;
+  /* 全局 button 规则带 overflow:hidden，会把上浮徽章裁掉一半 */
+  overflow: visible;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9447,7 +9451,7 @@ body[data-active-step] .char-card:hover {
 .cf-genre-card__badge {
   position: absolute;
   top: -7px;
-  right: -4px;
+  right: 6px;
   font-size: 0.62rem;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -9473,5 +9477,52 @@ body[data-active-step] .char-card:hover {
 }
 .genre-contract-row p { margin: 4px 0 0; }
 
-.cf-format-cards { grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); }
-.cf-format-cards .cf-genre-card { padding: 9px 6px; font-size: 0.84rem; }
+/* 创作页第 1 步：形态只读展示（形态在新建入口选定） */
+.cf-format-readonly {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cf-format-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--cf-gold, var(--accent));
+  color: var(--cf-gold, var(--accent));
+  background: var(--cf-s3, var(--accent-soft));
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+/* 新建入口：形态选择段（电影长片 / 连续剧 / 微短剧） */
+.mode-picker-formats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 10px 0 4px;
+}
+.mode-format-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  background: var(--surface-3, #f6f3ec);
+  border: 1px solid var(--border, #d8d2c4);
+  border-radius: 12px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms, background 140ms;
+}
+.mode-format-card strong { font-size: 0.95rem; color: var(--ink-1, #2c2a26); }
+.mode-format-card span { font-size: 0.76rem; color: var(--ink-3, #8a8478); }
+.mode-format-card:hover { border-color: var(--border-strong, #b9b1a0); }
+.mode-format-card.is-active {
+  border-color: var(--accent, #b46e32);
+  background: var(--accent-soft, rgba(180, 110, 50, 0.08));
+}
+.mode-format-card.is-active strong { color: var(--accent, #b46e32); }

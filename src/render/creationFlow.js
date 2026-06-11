@@ -20,13 +20,15 @@ const ROLE_GROUPS = [
   { key: "supporting",    label: "配角" },
 ];
 
-const FORMAT_OPTIONS = [
-  ["feature",     "电影长片"],
-  ["pilot",       "试播集"],
-  ["series",      "连续剧季"],
-  ["short",       "短片"],
-  ["micro_drama", "微短剧"]
-];
+// 形态在新建入口（模式选择器）选定，这里只做展示。
+// pilot/short 不再提供新建入口，但旧项目可能带着这些值，标签保留兼容。
+const FORMAT_DISPLAY_LABELS = {
+  feature:     "电影长片",
+  pilot:       "试播集",
+  series:      "连续剧",
+  short:       "短片",
+  micro_drama: "微短剧"
+};
 
 const TEMPLATE_RECS = {
   feature:     { template: "three_act", reason: "好莱坞行业标准 — 建置 / 对抗 / 解决，最普适的故事结构" },
@@ -137,20 +139,16 @@ function renderReasoningPanel(creation) {
 }
 
 
-// 形态/题材两个字段的内部渲染——点选时局部更新这两个容器，避免整页重绘闪烁
+// 形态/题材字段的内部渲染——题材点选时局部更新容器，避免整页重绘闪烁。
+// 形态已在新建入口选定，此处只读展示。
 export function renderFormatFieldInner(creation) {
   const fmt = creation.draft?.format ?? "feature";
+  const label = FORMAT_DISPLAY_LABELS[fmt] ?? fmt;
   return `
-          <label class="cf-label">这是什么类型的作品？ <span class="cf-label-opt">（决定篇幅与节奏）</span></label>
-          <div class="cf-genre-cards cf-format-cards">
-            ${FORMAT_OPTIONS.map(([val, label]) => `
-              <button class="cf-genre-card ${fmt === val ? "is-active" : ""}" type="button"
-                data-action="cf-set-format" data-id="${val}">
-                <span class="cf-genre-card__name">${escapeHtml(label)}</span>
-                ${val === "feature" ? `<span class="cf-genre-card__badge">最常用</span>` : ""}
-                ${val === "micro_drama" && fmt === val ? `<span class="cf-genre-card__badge">形态契约</span>` : ""}
-              </button>
-            `).join("")}
+          <div class="cf-format-readonly">
+            <span class="cf-label" style="margin:0">作品形态</span>
+            <span class="cf-format-chip">${escapeHtml(label)}</span>
+            <span class="cf-label-opt">在新建入口已选定，决定篇幅与节奏</span>
           </div>
           ${fmt === "micro_drama" ? `<p class="cf-step-sub" style="margin-top:6px">📜 微短剧形态纪律（黄金三秒钩子 / 每集结尾钩子 / 爽点按集兑付）将与所选题材契约叠加注入。</p>` : ""}
   `;

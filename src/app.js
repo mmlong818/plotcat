@@ -1590,16 +1590,6 @@ function handleClick(event) {
     aiCharacterAudit();
     return;
   }
-  if (action === "cf-set-format") {
-    const c = appState.creation;
-    if (!c) return;
-    c.draft = c.draft ?? {};
-    c.draft.format = id || "feature";
-    // 形态联动结构模板推荐（原下拉分支的职责）
-    c.draft.structure_template = "three_act";
-    patchCreationCardFields();
-    return;
-  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
@@ -2670,6 +2660,7 @@ async function handleProAssemble() {
       body: JSON.stringify({
         anchor: pc.anchor,
         genres: pc.genres,
+        format: pc.format ?? "feature",
         theme: { questions: pc.workbenches.theme.questions },
         character: { questions: pc.workbenches.character.questions },
         scene: { questions: pc.workbenches.scene.questions }
@@ -3674,7 +3665,7 @@ async function callGenerateAPIStream(step, projectContext, options, onChunk) {
 async function handleCreateBlankProjectThenStructure() {
   const payload = {
     title: "未命名故事",
-    format: "feature_or_pilot",
+    format: appState.createModeFormat ?? "feature",
     language: "zh-CN",
     genre: [],
     logline: "",
@@ -3708,13 +3699,20 @@ function handleCreationClick(action, target) {
     render();
     return true;
   }
+  if (action === "pick-create-format") {
+    appState.createModeFormat = target?.dataset?.id || "feature";
+    render();
+    return true;
+  }
   if (action === "open-quick-creation") {
+    const pickedFormat = appState.createModeFormat ?? "feature";
     appState.createModePickerOpen = false;
     appState.proCreation.active = false;
     appState.currentPage = "creation";
     appState.createDialogOpen = false;
     if (!appState.creation) {
       appState.creation = {
+        draft: { format: pickedFormat, structure_template: "three_act" },
         currentStep: 1, genres: [], era: "", conceptHint: "",
         conceptChoices: [], selectedConceptIdx: -1, selectedConcept: null,
         conceptCustom: "", conceptCustomOpen: false,
@@ -3727,6 +3725,10 @@ function handleCreationClick(action, target) {
         loadingStep: -1, aiError: "", lastReasoning: "",
         reasoningPanelOpen: false, autoGen: null
       };
+    } else {
+      // 续用未完成草稿时，以本次入口选的形态为准
+      appState.creation.draft = appState.creation.draft ?? {};
+      appState.creation.draft.format = pickedFormat;
     }
     saveLocalSnapshot();
     render();
@@ -3737,6 +3739,7 @@ function handleCreationClick(action, target) {
     appState.createModePickerOpen = false;
     appState.proCreation = {
       active: true, step: "anchor", anchor: "",
+      format: appState.createModeFormat ?? "feature",
       anchorAnalysis: null, activeWb: "theme", genres: [],
       workbenches: {
         theme:     { questions: [], loading: false, done: false },

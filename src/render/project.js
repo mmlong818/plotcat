@@ -168,7 +168,16 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
       <div class="mode-picker-backdrop" data-action="close-create-mode-picker">
         <div class="mode-picker-panel" onclick="event.stopPropagation()">
           <button class="mode-picker-close" type="button" data-action="close-create-mode-picker" title="关闭（Esc）" aria-label="关闭">×</button>
-          <p class="mode-picker-title">你手上带着什么开始？</p>
+          <p class="mode-picker-title">做什么形态的作品？</p>
+          <div class="mode-picker-formats">
+            ${[["feature", "电影长片", "90-120 分钟 · 三幕结构"], ["series", "连续剧", "season 季播 · 多线引擎"], ["micro_drama", "微短剧", "竖屏 1-3 分钟/集 · 钩子纪律"]].map(([val, label, hint]) => `
+              <button class="mode-format-card ${(appState.createModeFormat ?? "feature") === val ? "is-active" : ""}" type="button" data-action="pick-create-format" data-id="${val}">
+                <strong>${label}</strong>
+                <span>${hint}</span>
+              </button>
+            `).join("")}
+          </div>
+          <p class="mode-picker-title" style="margin-top:14px">你手上带着什么开始？</p>
           <div class="mode-picker-cards">
             <button class="mode-card" type="button" data-action="open-quick-creation">
               <div class="mode-card__icon">⚡</div>
