@@ -340,6 +340,17 @@ async function handleApi(request, response, pathname) {
   }
 
   if (pathname === "/api/project" && request.method === "GET") {
+    // 历史坑：本端点曾忽略 projectId 参数永远返回最近项目，外部脚本以为在读指定项目。
+    // 现在显式支持 ?projectId=；不带参数才回落最近项目
+    const requestedId = new URL(request.url, "http://localhost").searchParams.get("projectId");
+    if (requestedId) {
+      try {
+        json(response, 200, { project: loadProject(requestedId) });
+      } catch (error) {
+        json(response, 404, { error: error.message });
+      }
+      return true;
+    }
     const projects = listProjects();
     const activeProjectId = projects[0]?.id ?? null;
     json(response, 200, { project: activeProjectId ? loadProject(activeProjectId) : null });
