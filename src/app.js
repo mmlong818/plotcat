@@ -1101,9 +1101,15 @@ function renderRuntimeStatus() {
   const mode = appState.runtime.serverAvailable ? "本地服务" : "本地草稿";
   const savingState = appState.runtime.saving ? "saving" : appState.runtime.dirty ? "dirty" : "synced";
   const savingLabel = { saving: "保存中", dirty: "待保存", synced: "已同步" }[savingState];
+  // 生效模型常显：避免配置静默回落（如 claude_cli）而用户毫无感知
+  const ai = appState.ai ?? {};
+  const aiLabel = !ai.configured && ai.provider !== "claude_cli"
+    ? "AI 未配置"
+    : ai.provider === "claude_cli" ? "Claude CLI" : (ai.model || ai.provider || "");
   dom.runtimeStatus.innerHTML = `
     <span class="chip chip--soft">${escapeHtml(mode)}</span>
     <span class="chip chip--save chip--save-${savingState}">${escapeHtml(savingLabel)}</span>
+    ${aiLabel ? `<span class="chip chip--soft chip--ai-model" title="当前生效的 AI 模型（点 ⚙ 可切换）">${escapeHtml(aiLabel)}</span>` : ""}
   `;
   if (dom.saveButton) {
     dom.saveButton.classList.toggle("is-dirty", savingState === "dirty");
@@ -4286,6 +4292,16 @@ async function handleFinalizeNewCreation() {
 
   const proj = createEmptyProject();
   proj.project.title = draft.title?.trim() || deriveWorkingTitle(c.selectedConcept, draft.logline);
+  // 手写 logline 没起名时，标题会是 logline 破句（「破产千金白天在前夫的公司里当保洁」）——
+  // 让 AI 起个片名，失败就保留破句兜底
+  const titleIsClause = !draft.title?.trim() && !(c.selectedConcept?.data?.title ?? c.selectedConcept?.title ?? "").trim();
+  if (titleIsClause && (draft.logline ?? "").trim()) {
+    const tRes = await callGenerateAPI("title", {
+      genres: c.genres ?? [], logline: draft.logline, format: draft.format ?? "feature"
+    }, {});
+    const aiTitle = (tRes.choices?.[0]?.data?.title ?? "").trim();
+    if (!tRes.error && aiTitle && aiTitle.length <= 12) proj.project.title = aiTitle;
+  }
   proj.project.format = draft.format ?? "feature";
   // 类型标签必须落到项目上，否则类型契约引擎（genreContract）全程拿不到类型
   proj.project.genre = Array.isArray(c.genres) ? [...c.genres] : [];
