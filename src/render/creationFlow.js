@@ -88,7 +88,8 @@ function renderStepper(creation) {
 const STEP_LOADING_LABELS = {
   2: "AI 推荐结构中…",
   3: "AI 生成角色…",
-  4: "AI 生成本幕节点…"
+  4: "AI 生成本幕节点…",
+  5: "AI 生成人物关系网…"
 };
 
 function loadingDots(prefix = "") {
