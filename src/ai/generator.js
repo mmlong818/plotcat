@@ -24,6 +24,7 @@ import {
   buildRefineCharacterPrompt,
   buildRelationshipsPrompt,
   buildTitlePrompt,
+  buildStoryCorePrompt,
   buildWorldRulesPrompt,
   buildTimelineEventsPrompt,
   buildSetupPayoffsPrompt,
@@ -321,6 +322,7 @@ const FORMATTERS = {
   refine_character: (parsed) => [{ id: makeId(), label: '修正结果', content: parsed.character?.name ?? '', data: parsed }],
   relationships: (parsed) => [{ id: makeId(), label: '关系网', content: `${(parsed.relationships ?? []).length} 条关系`, data: parsed }],
   title: (parsed) => [{ id: makeId(), label: '片名', content: parsed.title ?? '', data: parsed }],
+  story_core: (parsed) => [{ id: makeId(), label: '故事核心', content: (parsed.core_conflict ?? '').slice(0, 50), data: parsed }],
   world_rules: (parsed) => [{ id: makeId(), label: '世界规则', content: `${(parsed.world_rules ?? []).length} 条规则`, data: parsed }],
   timeline_events: (parsed) => [{ id: makeId(), label: '时间线', content: `${(parsed.timeline_events ?? []).length} 条事件`, data: parsed }],
   setup_payoffs: (parsed) => [{ id: makeId(), label: '伏笔', content: `${(parsed.setup_payoffs ?? []).length} 组伏笔`, data: parsed }]
@@ -351,6 +353,7 @@ const PROMPT_BUILDERS = {
   refine_character: (ctx, opts) => buildRefineCharacterPrompt(ctx, opts?.character ?? {}, opts?.lockedFields ?? []),
   relationships: (ctx, opts) => buildRelationshipsPrompt(ctx, opts),
   title: (ctx) => buildTitlePrompt(ctx),
+  story_core: (ctx) => buildStoryCorePrompt(ctx),
   world_rules: (ctx) => buildWorldRulesPrompt(ctx),
   timeline_events: (ctx) => buildTimelineEventsPrompt(ctx),
   setup_payoffs: (ctx) => buildSetupPayoffsPrompt(ctx)

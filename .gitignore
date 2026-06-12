@@ -43,3 +43,4 @@ tests/e2e/*-shots/
 tests/e2e/audit-*/
 tests/e2e/realcheck-10-runs/
 tests/e2e/_fullflow_verify.out
+.gstack/
