@@ -2688,6 +2688,9 @@ async function handleProAssemble() {
       await loadProjectFromServer(data.projectId);
       setCurrentPage("workflow");
       setCurrentStep("structure");
+      // 精品创作组装产出较薄（人物少/节点空/无关系/无场景表）——
+      // 进工作台后后台续跑补全链
+      autoEnrichNewProject({ withRelationships: true, withNodes: true }).catch(() => {});
     }
   } catch (err) {
     pc.step = "workbenches";
@@ -4431,6 +4434,94 @@ async function handleFinalizeNewCreation() {
 
   setCurrentPage("workflow");
   setCurrentStep("structure");
+  // 兑现 step1「一气呵成产出场景全套」的承诺：进入工作台后后台续跑
+  // 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
+  autoEnrichNewProject().catch(() => {});
+}
+
+// ── 创建后自动补全：故事核心四件套 / 关系网 / 节点填写 / 场景规划 ──────────
+// 在已进入工作台后串行后台执行；快速创建只缺 核心+场景，精品创作组装
+// 产出更薄（1 人物 / 节点全空），额外补 关系网+节点填写。
+async function autoEnrichNewProject({ withRelationships = false, withNodes = false } = {}) {
+  const projectId = appState.project?.project?.id;
+  const stillSame = () => appState.project?.project?.id === projectId;
+
+  if (withRelationships && stillSame()) {
+    const chars = list(appState.project.story_bible?.characters);
+    if (chars.length >= 2 && list(appState.project.character_hub?.relationship_map).length === 0) {
+      const res = await callGenerateAPI("relationships", {
+        characters: chars,
+        concept: { title: appState.project.project.title, hook: appState.project.project.logline ?? "" },
+        synopsis: { summary: appState.project.story_core?.premise ?? "" }
+      }, {});
+      const nameToId = new Map(chars.map((ch) => [ch.name, ch.id]));
+      const rels = list(res.choices?.[0]?.data?.relationships).map((rel) => ({
+        id: createId("rel"),
+        source_character_id: nameToId.get(rel.source_character_name) ?? "",
+        target_character_id: nameToId.get(rel.target_character_name) ?? "",
+        relationship_type: rel.relationship_type ?? "",
+        tension: rel.tension ?? "",
+        power_balance: rel.power_balance ?? "",
+        shared_history: rel.shared_history ?? "",
+        hidden_information: rel.hidden_information ?? ""
+      })).filter((rel) => rel.source_character_id && rel.target_character_id);
+      if (!res.error && rels.length > 0 && stillSame()) {
+        appState.project.story_bible.relationships = rels;
+        normalizeProject(); markDirty(); render();
+        await saveProjectToServer().catch(() => {});
+      }
+    }
+  }
+
+  if (withNodes && stillSame() && list(appState.project.structure_profile?.nodes).every((n) => !(n.note ?? "").trim())) {
+    try { await handleGenStructureNotes(); } catch { /* 节点填写失败不阻塞后续 */ }
+    if (stillSame()) await saveProjectToServer().catch(() => {});
+  }
+
+  if (stillSame()) {
+    const core = appState.project.story_core ?? {};
+    const CORE_KEYS = ["core_conflict", "central_question", "emotional_promise", "theme_statement"];
+    if (CORE_KEYS.filter((k) => !(core[k] ?? "").trim()).length >= 3) {
+      const res = await callGenerateAPI("story_core", appState.project, {});
+      const d = res.choices?.[0]?.data ?? {};
+      if (!res.error && stillSame()) {
+        let touched = false;
+        for (const k of CORE_KEYS) {
+          if (!(core[k] ?? "").trim() && (d[k] ?? "").trim()) { core[k] = String(d[k]).trim(); touched = true; }
+        }
+        if (touched) { markDirty(); render(); await saveProjectToServer().catch(() => {}); }
+      }
+    }
+  }
+
+  if (stillSame() && !appState.sceneExpandLoading) {
+    const scenes = list(appState.project.scene_workbench?.scenes);
+    const hasRealScene = scenes.some((s) => (s.script_full || s.script_excerpt || "").trim() || ((s.location || "").trim() && s.location !== "待定地点"));
+    if (!hasRealScene && getLivePlotCards().length > 0) {
+      appState.sceneExpandLoading = true;
+      render();
+      try {
+        const format = appState.project.project.format ?? "feature";
+        const target = SCENE_TARGETS_BY_FORMAT[format] ?? 28;
+        // 静默链失败用户无从知晓——网络抖动时多给一次机会
+        let planned = [];
+        for (let attempt = 0; attempt < 2 && planned.length === 0; attempt++) {
+          const result = await callGenerateAPI("scene_expansion", appState.project, { targetSceneCount: target });
+          if (!result.error) planned = list(result.choices?.[0]?.data?.scenes);
+        }
+        if (planned.length > 0 && stillSame()) {
+          applySceneExpansion(planned);
+          markDirty();
+        }
+      } finally {
+        appState.sceneExpandLoading = false;
+        if (stillSame()) {
+          normalizeProject(); render();
+          await saveProjectToServer().catch(() => {});
+        }
+      }
+    }
+  }
 }
 
 async function handleGenerateConceptCF() {

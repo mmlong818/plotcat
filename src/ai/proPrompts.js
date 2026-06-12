@@ -95,7 +95,7 @@ ${formatQA(sceneQA)}
 3. core_conflict = 核心冲突（来自主题台，必须包含两方立场）
 4. central_question = 核心困境问题（来自主题台，不能有明显正确答案）
 5. theme_statement = 主题陈述
-6. 提取至少1个核心人物（来自人物台），包含 name/story_role/desire/need/wound/arc_start/arc_end/contradiction/notes
+6. 构建3-5个人物（以人物台素材为核心，补足故事必需的叙事位置——主角/对手/盟友/配角各司其职），每人包含 name/story_role/desire/need/wound/arc_start/arc_end/contradiction/notes；用户没提到的人物由你按故事需要设计，但不得与人物台素材矛盾
 7. 提取2-4个关键场景（来自场景台），包含 title/goal/conflict/turn/act_position
 
 只输出以下JSON（必须包含所有字段）：
