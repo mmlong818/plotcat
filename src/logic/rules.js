@@ -5,10 +5,6 @@ const severityOrder = {
   low: 3
 };
 
-function countFilled(values) {
-  return values.filter(Boolean).length;
-}
-
 function findCharacter(project, characterId) {
   return project.story_bible.characters.find((item) => item.id === characterId);
 }

@@ -6,69 +6,6 @@ function findCharacter(project, characterId) {
   return project.story_bible.characters.find((item) => item.id === characterId);
 }
 
-export const experts = [
-  {
-    id: "core_idea_excavator",
-    name: "故事核挖掘者",
-    summary: "把模糊想法压成可执行锚点",
-    focus: "适合项目一开始或锚点想改的时候"
-  },
-  {
-    id: "structure_genius",
-    name: "结构天才",
-    summary: "根据主题和弧光给 2 到 3 个结构方案",
-    focus: "适合大纲阶段"
-  },
-  {
-    id: "scene_crafter",
-    name: "场景工坊",
-    summary: "把一个场景拆成动作、对白、视觉三层",
-    focus: "适合逐场推进"
-  },
-  {
-    id: "dialogue_doctor",
-    name: "对白医生",
-    summary: "给对白更尖锐、贴人设的表达",
-    focus: "适合写完一场后精修"
-  },
-  {
-    id: "subtext_specialist",
-    name: "潜台词专家",
-    summary: "把解释换成行为、间接对白和沉默",
-    focus: "适合去掉直说"
-  },
-  {
-    id: "visual_hammer",
-    name: "视觉锤",
-    summary: "把视觉母题植入场景",
-    focus: "适合场景发虚或画面感不够时"
-  },
-  {
-    id: "emotion_resonator",
-    name: "情感共鸣",
-    summary: "检查当前场景是否落在正确弧光位置",
-    focus: "适合判断感觉对不对"
-  },
-  {
-    id: "pacing_doctor",
-    name: "节奏调控师",
-    summary: "给出提速或降速建议",
-    focus: "适合拖沓或过快时"
-  },
-  {
-    id: "character_psychologist",
-    name: "角色心理学家",
-    summary: "补强行为背后的心理动因",
-    focus: "适合动机发硬时"
-  },
-  {
-    id: "continuity_editor",
-    name: "一致性监察",
-    summary: "把全局问题压成体检报告",
-    focus: "适合一轮开发结束后复盘"
-  }
-];
-
 export function buildExpertOutput(expertId, project, selectedScene, issues) {
   const motif = project.intent_anchor.motif || "未定义母题";
   const theme = project.intent_anchor.theme || "未定义主题";

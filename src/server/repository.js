@@ -1,7 +1,6 @@
 import { cloneDefaultProject } from "../data/defaultProject.js";
 import { computeIssues, summarizeIssues } from "../logic/rules.js";
 import {
-  buildProjectSummary,
   buildVersionSummary,
   createEmptyProject,
   createId,

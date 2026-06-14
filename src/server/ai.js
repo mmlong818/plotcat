@@ -1,6 +1,5 @@
 import { buildExpertOutput } from "../logic/experts.js";
 import { completeText, getLlmConfig, setLlmConfig, getLlmStatus } from "./llm.js";
-import { parseJsonFromText } from "../ai/generator.js";
 
 // 生成调用统一走 llm 层（多 provider）；保留旧函数名避免大量调用点改动
 function callClaudeSubprocess(prompt, opts = {}) {
