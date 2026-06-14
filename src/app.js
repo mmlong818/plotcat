@@ -36,6 +36,8 @@ import { STORY_STRUCTURE_LIBRARY } from "./data/storyStructureLibrary.js";
 import { renderCreationFlowPage, renderFormatFieldInner, renderGenreFieldInner } from "./render/creationFlow.js";
 import { renderProCreationPage } from "./render/proCreationFlow.js";
 import { createSeriesLibrary } from "./series/seriesLibrary.js";
+import { findUnknownSpeakers } from "./editing/speakers.js";
+import { createScriptTools } from "./editing/scriptTools.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
@@ -2939,35 +2941,6 @@ async function aiReviseSceneWithRater(sceneId) {
   await aiWriteSceneScript(sceneId, { silent: true });
 }
 
-// 通用称谓（路人/职务），不算「名单外人名」
-// 设备音/画外音类 cue：以这些词结尾的说话人不算「名单外人名」（科幻/现代题材常见）
-const GENERIC_SUFFIX_RE = /(的?声音|提示音|广播|系统|电台|喇叭|控制台|对讲机?|铃声|录音|男声|女声)$/;
-const GENERIC_SPEAKER_RE = /^(路人|店员|老板娘?|服务员|护士长?|医生|主治医生|警察|警员|司机|保安|旁白|画外音|众人|群众|记者|主持人|播音员|法医|助理|秘书|售货员|收银员|清洁工|门卫|邻居|乘客|售票员|司仪|副手|登记员|值班同事|取信员|工作人员|男声|女声|童声|电视新闻|电视(里|机)?|广播|出租车广播|电话(里|那头)?|对讲机)[甲乙丙丁ABC]?$/;
-
-// 从剧本文本中找出不在项目人物名单里的对白说话人
-function findUnknownSpeakers(script) {
-  const roster = new Set([
-    ...list(appState.project.character_hub?.characters).map((c) => (c.name || "").trim()),
-    ...list(appState.project.series_bible?.regulars).map((c) => (c.name || "").trim())
-  ].filter(Boolean));
-  const unknown = new Set();
-  const lines = String(script).split(/\r?\n/).map((l) => l.trim());
-  for (let i = 0; i < lines.length; i++) {
-    // 对白说话人行：2-6 个汉字独立成行（允许带括注），且下一行紧跟对白文本
-    const m = lines[i].match(/^([一-龥]{2,6})(（[^）]*）)?$/);
-    if (!m) continue;
-    let j = i + 1;
-    while (j < lines.length && !lines[j]) j++;
-    const next = lines[j] ?? "";
-    // 下一行必须像对白（有内容且本身不是另一个独立人名行），否则当作短动作行跳过
-    if (!next || /^([一-龥]{2,6})(（[^）]*）)?$/.test(next)) continue;
-    const name = m[1];
-    if (roster.has(name) || GENERIC_SPEAKER_RE.test(name) || GENERIC_SUFFIX_RE.test(name)) continue;
-    if (/^(清晨|上午|正午|午后|黄昏|夜晚|深夜|黎明|同时|稍后|片刻|内景|外景)$/.test(name)) continue;
-    unknown.add(name);
-  }
-  return Array.from(unknown);
-}
 
 // ── 类型契约审计：AI 逐条核验必备场景兑现 + 禁忌检查，结果存 genre_profile ────
 async function aiGenreAudit() {
@@ -3129,60 +3102,8 @@ async function aiGenreRemedy() {
 const { loadSeriesLibrary, saveSelectedSeries, patchCreationCardFields, handleSeriesAction } =
   createSeriesLibrary({ fetchJson, render, saveLocalSnapshot, renderCreationPage });
 
-// ── 全局查找替换：跨所有场次的剧本与字段（人名统一等批量修订）────────────────
-const SCENE_TEXT_FIELDS = ["title", "purpose", "obstacle", "beat_summary", "entry_state", "exit_state", "notes", "script_full", "screenplay_notes", "location"];
-
-function globalFindReplace() {
-  const find = window.prompt("全局查找（将扫描所有场次的剧本正文与字段）：")?.trim();
-  if (!find) return;
-  const scenes = list(appState.project.scene_workbench?.scenes);
-  let hits = 0;
-  const hitScenes = [];
-  for (const scene of scenes) {
-    let sceneHits = 0;
-    for (const field of SCENE_TEXT_FIELDS) {
-      const value = scene[field];
-      if (typeof value === "string" && value.includes(find)) {
-        sceneHits += value.split(find).length - 1;
-      }
-    }
-    if (sceneHits > 0) { hits += sceneHits; hitScenes.push(`第 ${scene.order_index} 场（${sceneHits} 处）`); }
-  }
-  if (hits === 0) {
-    alert(`没有找到「${find}」。`);
-    return;
-  }
-  const replace = window.prompt(`「${find}」共 ${hits} 处，分布：${hitScenes.slice(0, 8).join("、")}${hitScenes.length > 8 ? " …" : ""}\n\n替换为（留空=取消）：`)?.trim();
-  if (!replace) return;
-  if (!confirm(`确认把全部 ${hits} 处「${find}」替换为「${replace}」？此操作影响所有场次。`)) return;
-  for (const scene of scenes) {
-    for (const field of SCENE_TEXT_FIELDS) {
-      if (typeof scene[field] === "string" && scene[field].includes(find)) {
-        scene[field] = scene[field].split(find).join(replace);
-      }
-    }
-  }
-  markDirty();
-  render();
-  alert(`已替换 ${hits} 处。`);
-}
-
-// ── 人名巡检：全量回扫所有已写场次，列出名单外说话人 ─────────────────────────
-function auditScriptSpeakers() {
-  const scenes = list(appState.project.scene_workbench?.scenes)
-    .filter((s) => (s.script_full || "").trim().length > 50)
-    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-  const findings = [];
-  for (const scene of scenes) {
-    const unknown = findUnknownSpeakers(scene.script_full);
-    if (unknown.length > 0) findings.push(`第 ${scene.order_index} 场《${scene.title}》：${unknown.join("、")}`);
-  }
-  if (findings.length === 0) {
-    alert(`人名巡检通过：${scenes.length} 个已写场次的说话人全部在人物名单内。`);
-    return;
-  }
-  alert(`人名巡检发现 ${findings.length} 个场次存在名单外说话人：\n\n${findings.join("\n")}\n\n可用「查找替换」统一改名，或重新生成这些场次。`);
-}
+// ── 剧本批量编辑工具：全局查找替换、人名巡检 ──────────────────────────────────
+const { globalFindReplace, auditScriptSpeakers } = createScriptTools({ render, markDirty });
 
 // ── 连续性提炼：AI 通读剧情卡+场景表，回填伏笔追踪与时间线到资料库 ────────────
 async function aiExtractContinuity() {
