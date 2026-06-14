@@ -1,3 +1,5 @@
+import { unique } from "../utils.js";
+
 const STRUCTURES = {
   feature_film: {
     acts: [
@@ -169,10 +171,6 @@ function clone(value, fallback) {
 
 function list(value) {
   return Array.isArray(value) ? value : [];
-}
-
-function unique(values = []) {
-  return [...new Set(list(values).map((item) => String(item ?? "").trim()).filter(Boolean))];
 }
 
 function splitWords(value = "") {
