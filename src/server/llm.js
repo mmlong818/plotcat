@@ -5,7 +5,7 @@
 //   openai     — OpenAI API（OPENAI_API_KEY）
 //   gemini     — Google Gemini API（GEMINI_API_KEY）
 //   custom     — 任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/GLM/Ollama/Grok…，LLM_BASE_URL + LLM_API_KEY）
-// 模型默认值依据 E:\CC\ai-models.md（2026-05-30）。
+// 模型默认值依据 E:\CC\ai-models.md（2026-06-14）。
 import { spawnClaude } from "./spawnClaude.js";
 import { getDb } from "./db.js";
 import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
@@ -28,7 +28,7 @@ const DEFAULT_MODELS = {
   claude_cli: "",
   anthropic: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
   openai: process.env.OPENAI_MODEL || "gpt-5.4-mini",
-  gemini: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+  gemini: process.env.GEMINI_MODEL || "gemini-3.5-flash",
   custom: process.env.LLM_MODEL || "deepseek-v4-flash"
 };
 
