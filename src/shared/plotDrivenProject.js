@@ -1,4 +1,4 @@
-import { unique } from "../utils.js";
+import { list, unique } from "../utils.js";
 
 const STRUCTURES = {
   feature_film: {
@@ -167,10 +167,6 @@ function clone(value, fallback) {
     return structuredClone(fallback);
   }
   return structuredClone(value);
-}
-
-function list(value) {
-  return Array.isArray(value) ? value : [];
 }
 
 function splitWords(value = "") {
