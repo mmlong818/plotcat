@@ -104,5 +104,5 @@ export function createSeriesLibrary({ fetchJson, render, saveLocalSnapshot, rend
     }
   }
 
-  return { loadSeriesLibrary, saveSelectedSeries, patchCreationCardFields, handleSeriesAction };
+  return { loadSeriesLibrary, patchCreationCardFields, handleSeriesAction };
 }
