@@ -2706,7 +2706,7 @@ async function handleProAssemble() {
 
 
 // ── 系列库（跨项目世界观）数据流 ──────────────────────────────────────────────
-const { loadSeriesLibrary, saveSelectedSeries, patchCreationCardFields, handleSeriesAction } =
+const { loadSeriesLibrary, patchCreationCardFields, handleSeriesAction } =
   createSeriesLibrary({ fetchJson, render, saveLocalSnapshot, renderCreationPage });
 
 // ── 剧本批量编辑工具：全局查找替换、人名巡检 ──────────────────────────────────
