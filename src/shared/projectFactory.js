@@ -186,25 +186,6 @@ export function createProjectFromSample(options = {}) {
   return rekeyProject(cloneDefaultProject(), options);
 }
 
-export function buildProjectSummary(project, extras = {}) {
-  const counts = summarizeProjectCounts(project);
-  return {
-    id: project.project.id,
-    title: project.project.title,
-    format: project.project.format,
-    language: project.project.language,
-    status: project.project.status,
-    genre: Array.isArray(project.project.genre) ? project.project.genre : [],
-    logline: project.project.logline,
-    character_count: counts.character_count,
-    scene_count: counts.scene_count,
-    setup_count: counts.setup_count,
-    version_count: extras.version_count ?? extras.versionCount ?? 0,
-    updated_at: extras.updated_at ?? extras.updatedAt ?? null,
-    last_version_at: extras.last_version_at ?? extras.lastVersionAt ?? null
-  };
-}
-
 export function buildVersionSummary(project, issueSummary = null) {
   const counts = summarizeProjectCounts(project);
   return {

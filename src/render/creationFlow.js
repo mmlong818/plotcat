@@ -609,22 +609,6 @@ function renderStep5New(creation) {
   `;
 }
 
-// ── Eval Rules Modal ──────────────────────────────────────────────────────
-
-const EVAL_STEP_INFO = {
-  concept:       { label: "概念", note: "每轮生成6个，4维度各25分：独特性/冲突清晰度/主角动机/钩子力度" },
-  synopsis:      { label: "梗概", note: "每轮生成6个，4维度各25分：三幕结构/角色弧光/戏剧张力/主题深度" },
-  characters:    { label: "角色", note: "4维度各25分：欲望需求张力/创伤真实性/弧光完整性/角色间张力" },
-  key_scenes:    { label: "剧情点", note: "4维度各25分：场景结构/三幕覆盖/情感升级/转折力度" },
-  act_structure: { label: "幕结构", note: "4维度各25分：三幕比例/转折点完整性/节拍分布/主题收束" },
-};
-
-const SCORE_GUIDE = "评分参考：50=平庸 / 65=还行 / 75=不错 / 85=很好 / 90+=优秀";
-
-// ── Auto-gen progress panel ───────────────────────────────────────────────
-
-const AUTO_GEN_STEPS = ["概念", "梗概", "角色", "剧情点", "幕结构"];
-
 // ── Main render entry ─────────────────────────────────────────────────────
 
 export function renderCreationFlowPage(dom, appState) {
