@@ -584,14 +584,17 @@ async function handleApi(request, response, pathname) {
 
     // 统一走 llm 层：claude_cli / anthropic / openai / custom 真流式，gemini 整段一次
     let ended = false;
-    request.on("close", () => { ended = true; stopHeartbeat(); });
+    // 客户端断开时中止底层 LLM 请求（fetch / claude CLI 子进程），否则它会跑满 300s 超时，
+    // 高并发或频繁取消时堆积泄漏的连接 / 子进程。
+    const abortController = new AbortController();
+    request.on("close", () => { ended = true; stopHeartbeat(); abortController.abort(); });
 
     completeTextStream(prompt, (chunk) => {
       if (ended) return;
       firstChunkSeen = true;
       stopHeartbeat();
       response.write(`data: ${JSON.stringify({ type: "chunk", text: chunk })}\n\n`);
-    })
+    }, { signal: abortController.signal })
       .then((fullText) => {
         if (ended) return;
         ended = true;
