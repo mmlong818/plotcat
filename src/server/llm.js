@@ -48,6 +48,13 @@ const DEFAULT_BASE_URLS = {
 
 const TIMEOUT_MS = 300_000;
 
+// 把外部中止信号（客户端断开）与超时信号合并：任一触发即中止 fetch，
+// 避免客户端取消后底层 LLM 请求仍跑满 TIMEOUT_MS 造成连接泄漏。
+function fetchSignal(signal) {
+  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+  return signal ? AbortSignal.any([timeout, signal]) : timeout;
+}
+
 const initialProvider = LLM_PROVIDERS.includes(process.env.LLM_PROVIDER) ? process.env.LLM_PROVIDER : "claude_cli";
 
 const llmConfig = {
@@ -205,8 +212,9 @@ export function getLlmStatus() {
 }
 
 // ── claude CLI 路径 ───────────────────────────────────────────────────────────
-function claudeCliOnce(prompt, { effort = "", onChunk = null } = {}) {
+function claudeCliOnce(prompt, { effort = "", onChunk = null, signal = null } = {}) {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) { reject(new Error("请求已中止")); return; }
     const args = ["-p", "--output-format", "text"];
     if (effort) args.push("--effort", effort);
     const proc = spawnClaude(args);
@@ -216,21 +224,25 @@ function claudeCliOnce(prompt, { effort = "", onChunk = null } = {}) {
     let stdout = "";
     let stderr = "";
     const timer = setTimeout(() => { proc.kill(); reject(new Error("claude CLI 超时")); }, TIMEOUT_MS);
+    // 客户端断开时杀掉子进程，避免订阅额度被无人接收的生成白白消耗
+    const onAbort = () => { proc.kill(); reject(new Error("请求已中止")); };
+    if (signal) signal.addEventListener("abort", onAbort, { once: true });
+    const cleanup = () => { clearTimeout(timer); if (signal) signal.removeEventListener("abort", onAbort); };
     proc.stdout.on("data", (d) => { stdout += d; if (onChunk) onChunk(d); });
     proc.stderr.on("data", (d) => { stderr += d; });
     proc.stdin.write(prompt, "utf8");
     proc.stdin.end();
     proc.on("close", (code) => {
-      clearTimeout(timer);
+      cleanup();
       if (code !== 0) reject(new Error(`claude CLI 退出码 ${code}: ${stderr.slice(0, 300)}`));
       else resolve(stdout);
     });
-    proc.on("error", (err) => { clearTimeout(timer); reject(err); });
+    proc.on("error", (err) => { cleanup(); reject(err); });
   });
 }
 
 // ── Anthropic API ─────────────────────────────────────────────────────────────
-async function anthropicComplete(prompt, { onChunk = null } = {}) {
+async function anthropicComplete(prompt, { onChunk = null, signal = null } = {}) {
   const stream = Boolean(onChunk);
   const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.anthropic).replace(/\/+$/, "");
   const response = await fetch(`${base}/v1/messages`, {
@@ -246,7 +258,7 @@ async function anthropicComplete(prompt, { onChunk = null } = {}) {
       stream,
       messages: [{ role: "user", content: prompt }]
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
+    signal: fetchSignal(signal)
   });
   if (!response.ok) throw new Error(`Anthropic 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   if (!stream) {
@@ -266,7 +278,7 @@ async function anthropicComplete(prompt, { onChunk = null } = {}) {
 }
 
 // ── OpenAI 及兼容端点（openai / custom） ─────────────────────────────────────
-async function openAiCompatComplete(prompt, { onChunk = null } = {}) {
+async function openAiCompatComplete(prompt, { onChunk = null, signal = null } = {}) {
   const base = llmConfig.baseUrl || DEFAULT_BASE_URLS[llmConfig.provider] || DEFAULT_BASE_URLS.openai;
   const stream = Boolean(onChunk);
   const response = await fetch(`${base}/chat/completions`, {
@@ -280,7 +292,7 @@ async function openAiCompatComplete(prompt, { onChunk = null } = {}) {
       stream,
       messages: [{ role: "user", content: prompt }]
     }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
+    signal: fetchSignal(signal)
   });
   if (!response.ok) throw new Error(`${llmConfig.provider === "openai" ? "OpenAI" : "兼容端点"} 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   if (!stream) {
@@ -299,14 +311,14 @@ async function openAiCompatComplete(prompt, { onChunk = null } = {}) {
 }
 
 // ── Gemini API ────────────────────────────────────────────────────────────────
-async function geminiComplete(prompt, { onChunk = null } = {}) {
+async function geminiComplete(prompt, { onChunk = null, signal = null } = {}) {
   const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.gemini).replace(/\/+$/, "");
   const endpoint = `${base}/v1beta/models/${encodeURIComponent(llmConfig.model)}:generateContent?key=${encodeURIComponent(llmConfig.apiKey)}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
+    signal: fetchSignal(signal)
   });
   if (!response.ok) throw new Error(`Gemini 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   const payload = await response.json();
@@ -359,6 +371,6 @@ export async function completeText(prompt, { effort = "", retries = 2, retryDela
 }
 
 // 流式完成：onChunk 按到达顺序回调文本增量，返回完整文本。不重试（流式中断由调用方处理）。
-export async function completeTextStream(prompt, onChunk, { effort = "" } = {}) {
-  return dispatch(prompt, { effort, onChunk });
+export async function completeTextStream(prompt, onChunk, { effort = "", signal = null } = {}) {
+  return dispatch(prompt, { effort, onChunk, signal });
 }
