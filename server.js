@@ -82,6 +82,8 @@ function readJsonBody(request) {
       size += chunk.length;
       if (size > 2_000_000) {
         reject(new Error("请求体过大"));
+        request.destroy();
+        return;
       }
     });
     request.on("end", () => {
@@ -802,7 +804,7 @@ async function handleApi(request, response, pathname) {
       if (Array.isArray(timelineEvents) && timelineEvents.length > 0) {
         projectData.story_bible.timeline_events = timelineEvents.map((t, i) => ({
           id: createId("event"),
-          story_day: t.story_day ?? "",
+          story_day: Number(t.story_day) || (i + 1),
           sequence_index: t.sequence_index ?? i + 1,
           summary: t.summary ?? "",
           participants: Array.isArray(t.participants) ? t.participants : [],
