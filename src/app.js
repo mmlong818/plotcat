@@ -27,6 +27,7 @@ import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
 import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
 import { openFountainPreview } from "./render/fountainViewer.js";
+import { initContext } from "./handlers/context.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1432,6 +1433,13 @@ function render() {
   renderPageVisibility();
   schedulePlotInspectorLeadSync();
 }
+
+// 把与入口纠缠的控制器核心注入晚绑定 ctx，供外提的 handler 模块在点击时调用
+initContext({
+  render, markDirty, normalizeProject, renderCreateForm: _renderProjectCreateForm,
+  fetchJson, scheduleAutosave, saveProjectToServer, loadProjectFromServer,
+  loadProjectsFromServer, setCurrentPage, renderRuntimeStatus, saveLocalSnapshot
+});
 
 // ── Event handlers ────────────────────────────────────────────────────────────
 
