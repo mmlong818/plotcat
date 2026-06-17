@@ -32,6 +32,10 @@ import { handleCharacterClick } from "./handlers/character.js";
 import { handlePlotClick } from "./handlers/plot.js";
 import { handleSceneClick } from "./handlers/scene.js";
 import { handleStructureClick } from "./handlers/structure.js";
+import { handleRelationshipClick } from "./handlers/relationship.js";
+import { handleStoryBibleClick } from "./handlers/storyBible.js";
+import { handleKnowledgeClick } from "./handlers/knowledge.js";
+import { handleRaterClick } from "./handlers/rater.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1512,26 +1516,13 @@ function handleClick(event) {
   if (handlePlotClick(action, target, id, nodeId)) return;
   if (handleSceneClick(action, target, id, nodeId)) return;
   if (handleStructureClick(action, target, id, nodeId)) return;
+  if (handleRelationshipClick(action, target, id, nodeId)) return;
+  if (handleStoryBibleClick(action, target, id, nodeId)) return;
+  if (handleKnowledgeClick(action, target, id, nodeId)) return;
+  if (handleRaterClick(action, target, id, nodeId)) return;
   // ── 角色心理剖面事件处理 ──────────────────────────────────────
   if (action === "ai-rate-screenplay-full") {
     aiRateScreenplayFull();
-    return;
-  }
-  if (action === "close-rater") {
-    appState.raterResult = null;
-    render();
-    return;
-  }
-  if (action === "apply-rater-revision") {
-    aiReviseSceneWithRater(id);
-    return;
-  }
-  if (action === "apply-rater-revision-full") {
-    aiReviseFullScreenplayWithRater();
-    return;
-  }
-  if (action === "ai-extract-continuity") {
-    aiExtractContinuity();
     return;
   }
   if (action === "global-find-replace") {
@@ -1567,20 +1558,6 @@ function handleClick(event) {
   }
   if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
   // ── 情节元件事件处理 ──────────────────────────────────────────
-  if (action === "select-rel-type-chip") {
-    const rel = getRelationship();
-    if (rel) {
-      // 类型槽（relationship_kind）独立于自定义名（relationship_type）。
-      // 切换 chip 只影响 kind；用户填的 type 名称保留不变。
-      rel.relationship_kind = rel.relationship_kind === id ? "" : id;
-      // 若用户从未填过自定义名，把 kind 作为默认显示名以保持显示能用
-      if (!rel.relationship_type || RELATIONSHIP_TYPE_KIND_VALUES.has(rel.relationship_type)) {
-        rel.relationship_type = rel.relationship_kind;
-      }
-      markDirty(); render();
-    }
-    return;
-  }
   if (action === "toggle-draft-genre") {
     const val = target.dataset.value ?? "";
     const current = Array.isArray(appState.projectDraft.genre) ? appState.projectDraft.genre : [];
@@ -1671,87 +1648,6 @@ function handleClick(event) {
     return;
   }
   if (action === "go-step") return setCurrentStep(id);
-  if (action === "add-relationship") {
-    // 决议 4：关系 1 条对称 — (a,b) 与 (b,a) 视为同一对。
-    // 新增时自动选第一对「还没有关系」的角色组合，否则固定取前两人会静默无效
-    const characters = list(appState.project.character_hub?.characters);
-    if (characters.length < 2) {
-      alert("至少需要两个人物才能建立关系");
-      return;
-    }
-    const rels = list(appState.project.character_hub?.relationship_map);
-    const hasPair = (a, b) => rels.some((r) =>
-      (r.source_character_id === a && r.target_character_id === b) ||
-      (r.source_character_id === b && r.target_character_id === a)
-    );
-    let src = "", tgt = "";
-    outer: for (let i = 0; i < characters.length; i++) {
-      for (let j = i + 1; j < characters.length; j++) {
-        if (!hasPair(characters[i].id, characters[j].id)) {
-          src = characters[i].id; tgt = characters[j].id;
-          break outer;
-        }
-      }
-    }
-    if (!src) {
-      alert("所有角色两两之间都已有关系。可在已有关系上修改角色组合。");
-      return;
-    }
-    const relationship = {
-      id: createId("rel"),
-      source_character_id: src,
-      target_character_id: tgt,
-      relationship_type: "",
-      tension: "",
-      power_balance: "",
-      shared_history: "",
-      hidden_information: "",
-      status: "active",
-      related_plot_ids: []
-    };
-    appState.project.character_hub.relationship_map.push(relationship);
-    appState.selection.relationshipId = relationship.id;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "select-relationship") { appState.selection.relationshipId = id; render(); return; }
-  if (action === "delete-relationship") {
-    const relToDelete = getRelationship(id);
-    if (relToDelete) {
-      const relName = relToDelete.relationship_type || relToDelete.relationship_kind || "未命名关系";
-      const pair = `${getCharacterNameById(relToDelete.source_character_id)} ↔ ${getCharacterNameById(relToDelete.target_character_id)}`;
-      if (!confirm(`删除关系「${pair}（${relName}）」？此操作不可恢复。`)) return;
-    }
-    appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.id !== id);
-    if (appState.project.story_bible) {
-      appState.project.story_bible.relationships = list(appState.project.story_bible.relationships).filter((item) => item.id !== id);
-    }
-    if (appState.selection.relationshipId === id) appState.selection.relationshipId = null;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "add-convention") {
-    appState.project.genre_profile.conventions.push({ id: createId("conv"), name: "", status: "required", description: "" });
-    markDirty(); render();
-    return;
-  }
-  if (action === "add-taboo") {
-    appState.project.genre_profile.taboos.push({ id: createId("taboo"), name: "", description: "" });
-    markDirty(); render();
-    return;
-  }
-  if (action === "add-timeline") {
-    const item = { id: createId("event"), story_day: list(appState.project.lock_layer?.projections?.timeline_events).length + 1, sequence_index: 1, summary: "", participants: [], location: "", trigger: "", consequence: "" };
-    appState.project.lock_layer.projections.timeline_events.push(item);
-    // 双写 story_bible — ensurePlotDrivenProject 从 story_bible 派生 lock_layer.projections，
-    // 不写就会被擦回
-    appState.project.story_bible = appState.project.story_bible || {};
-    appState.project.story_bible.timeline_events = list(appState.project.story_bible.timeline_events);
-    appState.project.story_bible.timeline_events.push(item);
-    appState.selection.timelineId = item.id;
-    markDirty(); render();
-    return;
-  }
   if (action === "locks-tab") {
     appState.locksActiveTab = id;
     if (id === "kb" && appState.knowledge.sources.length === 0) {
@@ -1762,66 +1658,6 @@ function handleClick(event) {
     render();
     return;
   }
-  if (action === "kb-init") { kbFetchSources().then(() => kbSearch()); return; }
-  if (action === "kb-sync") { kbSync(); return; }
-  if (action === "kb-open-entry") { kbOpenEntry(id); return; }
-  if (action === "kb-import") { kbImport(target.dataset.target); return; }
-  if (action === "select-timeline") { appState.selection.timelineId = id; render(); return; }
-  if (action === "delete-timeline") {
-    const item = getTimelineEvent(id);
-    if (item?.summary && !confirm(`删除时间节点「${item.summary}」？此操作不可恢复。`)) return;
-    appState.project.lock_layer.projections.timeline_events =
-      list(appState.project.lock_layer?.projections?.timeline_events).filter((e) => e.id !== id);
-    appState.project.story_bible.timeline_events =
-      list(appState.project.story_bible?.timeline_events).filter((e) => e.id !== id);
-    appState.selection.timelineId = null;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "delete-world-rule") {
-    const item = getWorldRule(id);
-    if (item?.rule_statement && !confirm(`删除世界规则「${item.rule_statement.slice(0, 20)}」？此操作不可恢复。`)) return;
-    appState.project.lock_layer.projections.world_rules =
-      list(appState.project.lock_layer?.projections?.world_rules).filter((e) => e.id !== id);
-    appState.project.story_bible.world_rules =
-      list(appState.project.story_bible?.world_rules).filter((e) => e.id !== id);
-    appState.selection.worldRuleId = null;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "delete-setup") {
-    const item = getSetup(id);
-    if (item?.setup_summary && !confirm(`删除伏笔「${item.setup_summary.slice(0, 20)}」？此操作不可恢复。`)) return;
-    appState.project.lock_layer.projections.setup_payoffs =
-      list(appState.project.lock_layer?.projections?.setup_payoffs).filter((e) => e.id !== id);
-    appState.project.story_bible.setup_payoffs =
-      list(appState.project.story_bible?.setup_payoffs).filter((e) => e.id !== id);
-    appState.selection.setupId = null;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "add-world-rule") {
-    const item = { id: createId("rule"), rule_statement: "", rule_level: "hard", scope: "", exceptions: [], evidence: [] };
-    appState.project.lock_layer.projections.world_rules.push(item);
-    appState.project.story_bible = appState.project.story_bible || {};
-    appState.project.story_bible.world_rules = list(appState.project.story_bible.world_rules);
-    appState.project.story_bible.world_rules.push(item);
-    appState.selection.worldRuleId = item.id;
-    markDirty(); render();
-    return;
-  }
-  if (action === "select-world-rule") { appState.selection.worldRuleId = id; render(); return; }
-  if (action === "add-setup") {
-    const item = { id: createId("setup"), setup_summary: "", setup_scene_id: "", expected_payoff_window: "", status: "open", payoff_scene_id: "", payoff_summary: "" };
-    appState.project.lock_layer.projections.setup_payoffs.push(item);
-    appState.project.story_bible = appState.project.story_bible || {};
-    appState.project.story_bible.setup_payoffs = list(appState.project.story_bible.setup_payoffs);
-    appState.project.story_bible.setup_payoffs.push(item);
-    appState.selection.setupId = item.id;
-    markDirty(); render();
-    return;
-  }
-  if (action === "select-setup") { appState.selection.setupId = id; render(); return; }
   if (action === "ai-write-screenplay-bulk") {
     aiWriteScreenplayBulk();
     return;
