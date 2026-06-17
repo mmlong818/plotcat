@@ -1446,6 +1446,10 @@ initContext({
   saveLocalSnapshot, loadLocalSnapshot,
   getNode, shiftPlotCardWithinLane, insertSceneFromPlotCard, openStructureLibrary,
   applyLibraryStructure, handleGenStructureNotes, handleGenNodeNote,
+  updateDraftField, saveAiConfigDraftCurrentV2, requestCreateStepSuggestionCurrent,
+  requestCreateFieldSuggestionCurrent, fetchAiModelOptionsCurrentV2,
+  disconnectAiConfigDraftCurrentV2, defaultModelForProvider, applyConceptOptionCurrent,
+  PROVIDER_LABELS,
   dom,
   setLibraryFilterTag: (tag) => { libraryFilterTag = tag; },
   getLibraryFilterTag: () => libraryFilterTag
@@ -2345,7 +2349,7 @@ initContext({
   kbFetchSources, kbSearch, kbOpenEntry, kbSync, kbImport,
   aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity,
-  handleRefineCharacter, globalFindReplace, auditScriptSpeakers
+  handleRefineCharacter, globalFindReplace, auditScriptSpeakers, patchCreationCardFields
 });
 
 // 决议 3：直接创建空项目并跳到「结构骨架」（跳过 AI 入口）
