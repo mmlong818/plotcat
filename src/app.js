@@ -37,6 +37,8 @@ import { handleKnowledgeClick } from "./handlers/knowledge.js";
 import { handleRaterClick } from "./handlers/rater.js";
 import { handleScreenplayClick } from "./handlers/screenplay.js";
 import { handleProjectNavClick } from "./handlers/projectNav.js";
+import { handleAiConfigClick } from "./handlers/aiConfig.js";
+import { handleProjectDraftClick } from "./handlers/projectDraft.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1454,7 +1456,7 @@ initContext({
   updateDraftField, saveAiConfigDraftCurrentV2, requestCreateStepSuggestionCurrent,
   requestCreateFieldSuggestionCurrent, fetchAiModelOptionsCurrentV2,
   disconnectAiConfigDraftCurrentV2, defaultModelForProvider, applyConceptOptionCurrent,
-  PROVIDER_LABELS,
+  PROVIDER_LABELS, getProjectCreateStep,
   dom, aiGetters,
   setLibraryFilterTag: (tag) => { libraryFilterTag = tag; },
   getLibraryFilterTag: () => libraryFilterTag
@@ -1469,50 +1471,8 @@ function handleClick(event) {
   const id = target.dataset.id ?? "";
   const nodeId = target.dataset.nodeId ?? "";
 
-  if (action === "create-ai-step") { requestCreateStepSuggestionCurrent(target.dataset.step ?? getProjectCreateStep().id); return; }
-  if (action === "create-ai-field") { requestCreateFieldSuggestionCurrent(target.dataset.field ?? ""); return; }
-  if (action === "apply-concept-option") { applyConceptOptionCurrent(target.dataset.id ?? ""); return; }
-  if (action === "activate-llm-profile") {
-    fetchJson(`/api/ai/profiles/${encodeURIComponent(id)}/activate`, { method: "POST" })
-      .then((payload) => {
-        appState.ai = payload.ai ?? appState.ai;
-        appState.llmProfiles = payload.profiles ?? appState.llmProfiles;
-        appState.aiConfigDraft.provider = appState.ai.provider || appState.aiConfigDraft.provider;
-        appState.aiConfigDraft.model = appState.ai.model || "";
-        appState.createAssistant.message = `已切换到 ${appState.ai.model || appState.ai.provider}`;
-        _renderProjectCreateForm();
-      })
-      .catch((error) => { appState.createAssistant.error = error.message; _renderProjectCreateForm(); });
-    return;
-  }
-  if (action === "delete-llm-profile") {
-    fetchJson(`/api/ai/profiles/${encodeURIComponent(id)}`, { method: "DELETE" })
-      .then((payload) => { appState.llmProfiles = payload.profiles ?? []; _renderProjectCreateForm(); })
-      .catch(() => {});
-    return;
-  }
-  if (action === "ai-provider-choice") {
-    const provider = PROVIDER_LABELS[target.dataset.value] ? target.dataset.value : "openai";
-    appState.aiConfigDraft.provider = provider;
-    appState.aiConfigDraft.model = defaultModelForProvider(provider);
-    appState.aiConfigDraft.baseUrl = provider === "custom" ? (appState.aiConfigDraft.baseUrl || "https://api.deepseek.com/v1") : "";
-    appState.aiModelCatalog.provider = "";
-    appState.aiModelCatalog.options = [];
-    appState.createAssistant.error = "";
-    _renderProjectCreateForm();
-    return;
-  }
-  if (action === "fetch-ai-models") { fetchAiModelOptionsCurrentV2(); return; }
-  if (action === "save-ai-config") { saveAiConfigDraftCurrentV2(); return; }
-  if (action === "disconnect-ai-config") { disconnectAiConfigDraftCurrentV2(); return; }
-  if (action === "toggle-draft-tone") {
-    const val = target.dataset.value ?? "";
-    appState.projectDraft.tone = appState.projectDraft.tone === val ? "" : val;
-    appState.createConceptOptions = [];
-    appState.createAssistant.error = "";
-    _renderProjectCreateForm();
-    return;
-  }
+  if (handleAiConfigClick(action, target, id, nodeId)) return;
+  if (handleProjectDraftClick(action, target, id, nodeId)) return;
   if (handleCharacterClick(action, target, id, nodeId)) return;
   if (handlePlotClick(action, target, id, nodeId)) return;
   if (handleSceneClick(action, target, id, nodeId)) return;
@@ -1523,35 +1483,7 @@ function handleClick(event) {
   if (handleRaterClick(action, target, id, nodeId)) return;
   if (handleScreenplayClick(action, target, id, nodeId)) return;
   if (handleProjectNavClick(action, target, id, nodeId)) return;
-  // ── 角色心理剖面事件处理 ──────────────────────────────────────
-  if (action === "cf-toggle-genre") {
-    const c = appState.creation;
-    if (!c) return;
-    c.genres = Array.isArray(c.genres) ? c.genres : [];
-    if (c.genres.includes(id)) {
-      c.genres = c.genres.filter((g) => g !== id);
-    } else if (c.genres.length < 3) {
-      c.genres = [...c.genres, id];
-    } else {
-      alert("最多选 1 个主导 + 2 个调味类型。先取消一个再选。");
-      return;
-    }
-    patchCreationCardFields();
-    return;
-  }
   if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
-  // ── 情节元件事件处理 ──────────────────────────────────────────
-  if (action === "toggle-draft-genre") {
-    const val = target.dataset.value ?? "";
-    const current = Array.isArray(appState.projectDraft.genre) ? appState.projectDraft.genre : [];
-    appState.projectDraft.genre = current.includes(val) ? current.filter((g) => g !== val) : [...current, val];
-    appState.createConceptOptions = [];
-    appState.createAssistant.error = "";
-    _renderProjectCreateForm();
-    return;
-  }
-  if (action === "draft-choice") { updateDraftField(target.dataset.field, target.dataset.value ?? ""); return; }
-  if (action === "go-step") return setCurrentStep(id);
 }
 
 function handleInput(event) {
