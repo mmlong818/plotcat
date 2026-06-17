@@ -1438,7 +1438,8 @@ function render() {
 initContext({
   render, markDirty, normalizeProject, renderCreateForm: _renderProjectCreateForm,
   fetchJson, scheduleAutosave, saveProjectToServer, loadProjectFromServer,
-  loadProjectsFromServer, setCurrentPage, renderRuntimeStatus, saveLocalSnapshot
+  loadProjectsFromServer, setCurrentPage, setCurrentStep, renderRuntimeStatus,
+  saveLocalSnapshot, loadLocalSnapshot
 });
 
 // ── Event handlers ────────────────────────────────────────────────────────────
@@ -2739,6 +2740,17 @@ const {
   aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity
 } = createCreationWorkbench({ render, markDirty, normalizeProject, callGenerateAPI, aiWriteSceneScript });
+
+// 第二段 ctx 注入：两个工厂簇的 AI 特性函数 + 异步处理器在此处才完成定义/解构，
+// 须在其后注入，供外提的事件 handler 模块经 ctx 调用。
+initContext({
+  aiExpandScenes, aiBreakdownScene, aiWriteSceneScript, aiWriteScreenplayBulk,
+  callGenerateAPI, callGenerateAPIStream,
+  kbFetchSources, kbSearch, kbOpenEntry, kbSync, kbImport,
+  aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
+  aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity,
+  handleRefineCharacter
+});
 
 // 决议 3：直接创建空项目并跳到「结构骨架」（跳过 AI 入口）
 async function handleCreateBlankProjectThenStructure() {
