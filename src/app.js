@@ -25,8 +25,7 @@ import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
-import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
-import { openFountainPreview } from "./render/fountainViewer.js";
+import { renderScreenplayPage } from "./render/screenplay.js";
 import { initContext } from "./handlers/context.js";
 import { handleCharacterClick } from "./handlers/character.js";
 import { handlePlotClick } from "./handlers/plot.js";
@@ -36,6 +35,8 @@ import { handleRelationshipClick } from "./handlers/relationship.js";
 import { handleStoryBibleClick } from "./handlers/storyBible.js";
 import { handleKnowledgeClick } from "./handlers/knowledge.js";
 import { handleRaterClick } from "./handlers/rater.js";
+import { handleScreenplayClick } from "./handlers/screenplay.js";
+import { handleProjectNavClick } from "./handlers/projectNav.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1454,7 +1455,7 @@ initContext({
   requestCreateFieldSuggestionCurrent, fetchAiModelOptionsCurrentV2,
   disconnectAiConfigDraftCurrentV2, defaultModelForProvider, applyConceptOptionCurrent,
   PROVIDER_LABELS,
-  dom,
+  dom, aiGetters,
   setLibraryFilterTag: (tag) => { libraryFilterTag = tag; },
   getLibraryFilterTag: () => libraryFilterTag
 });
@@ -1520,23 +1521,9 @@ function handleClick(event) {
   if (handleStoryBibleClick(action, target, id, nodeId)) return;
   if (handleKnowledgeClick(action, target, id, nodeId)) return;
   if (handleRaterClick(action, target, id, nodeId)) return;
+  if (handleScreenplayClick(action, target, id, nodeId)) return;
+  if (handleProjectNavClick(action, target, id, nodeId)) return;
   // ── 角色心理剖面事件处理 ──────────────────────────────────────
-  if (action === "ai-rate-screenplay-full") {
-    aiRateScreenplayFull();
-    return;
-  }
-  if (action === "global-find-replace") {
-    globalFindReplace();
-    return;
-  }
-  if (action === "ai-genre-audit") {
-    aiGenreAudit();
-    return;
-  }
-  if (action === "ai-genre-remedy") {
-    aiGenreRemedy();
-    return;
-  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
@@ -1552,10 +1539,6 @@ function handleClick(event) {
     patchCreationCardFields();
     return;
   }
-  if (action === "audit-speakers") {
-    auditScriptSpeakers();
-    return;
-  }
   if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
   // ── 情节元件事件处理 ──────────────────────────────────────────
   if (action === "toggle-draft-genre") {
@@ -1568,153 +1551,7 @@ function handleClick(event) {
     return;
   }
   if (action === "draft-choice") { updateDraftField(target.dataset.field, target.dataset.value ?? ""); return; }
-  if (action === "open-project") {
-    loadProjectFromServer(id)
-      .then(() => { setCurrentPage("workflow"); setCurrentStep("structure"); })
-      .catch(() => {
-        const snapshot = loadLocalSnapshot();
-        if (snapshot?.project?.project?.id === id) {
-          appState.project = ensurePlotDrivenProject(snapshot.project);
-          normalizeProject();
-          setCurrentPage("workflow");
-          setCurrentStep("structure");
-        }
-      });
-    return;
-  }
-  if (action === "open-project-menu") {
-    appState.projectMenuId = id;
-    appState.projectDeleteConfirmId = null;
-    render();
-    return;
-  }
-  if (action === "close-project-menu") {
-    appState.projectMenuId = null;
-    render();
-    return;
-  }
-  if (action === "rename-project") {
-    const current = list(appState.projectList).find((p) => p.id === id);
-    const nextTitle = window.prompt("项目新名称：", current?.title ?? "")?.trim();
-    appState.projectMenuId = null;
-    if (!nextTitle || nextTitle === current?.title) { render(); return; }
-    fetchJson(`/api/projects/${encodeURIComponent(id)}`)
-      .then((payload) => {
-        const doc = payload.project;
-        doc.project.title = nextTitle;
-        return fetchJson(`/api/projects/${encodeURIComponent(id)}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ project: doc })
-        });
-      })
-      .then((payload) => {
-        appState.projectList = payload.projects ?? appState.projectList;
-        if (appState.project?.project?.id === id) appState.project.project.title = nextTitle;
-        render();
-      })
-      .catch((error) => { window.alert(`重命名失败：${error.message}`); render(); });
-    return;
-  }
-  if (action === "request-delete-project") {
-    appState.projectDeleteConfirmId = id;
-    appState.projectMenuId = null;
-    render();
-    return;
-  }
-  if (action === "cancel-delete-project") {
-    appState.projectDeleteConfirmId = null;
-    render();
-    return;
-  }
-  if (action === "confirm-delete-project") {
-    const deletingId = id;
-    fetchJson(`/api/projects/${encodeURIComponent(deletingId)}`, { method: "DELETE" })
-      .then((payload) => {
-        appState.projectList = payload.projects ?? [];
-        appState.projectDeleteConfirmId = null;
-        if (appState.project?.project?.id === deletingId) {
-          window.clearTimeout(appState.saveTimer);
-          appState.runtime.dirty = false;
-          appState.project = null;
-        }
-        render();
-      })
-      .catch((error) => {
-        appState.projectDeleteConfirmId = null;
-        window.alert(`删除失败：${error.message}`);
-        render();
-      });
-    return;
-  }
   if (action === "go-step") return setCurrentStep(id);
-  if (action === "locks-tab") {
-    appState.locksActiveTab = id;
-    if (id === "kb" && appState.knowledge.sources.length === 0) {
-      kbFetchSources().then(() => { if (appState.knowledge.selectedSourceId) kbSearch(); });
-    } else if (id === "kb" && appState.knowledge.items.length === 0) {
-      kbSearch();
-    }
-    render();
-    return;
-  }
-  if (action === "ai-write-screenplay-bulk") {
-    aiWriteScreenplayBulk();
-    return;
-  }
-  if (action === "ai-rewrite-all-screenplay") {
-    const scenes = list(appState.project.scene_workbench?.scenes);
-    const written = scenes.filter((s) => s.script_full && s.script_full.trim().length > 0);
-    if (written.length === 0) {
-      alert("没有已写的剧本可以重写。");
-      return;
-    }
-    if (!confirm(`将清空全部 ${written.length} 个场景的剧本并重新生成（应用最新反同质化 prompt）。\n\n这会消耗较多 token 且不可撤销。继续？`)) return;
-    written.forEach((s) => { s.script_full = ""; });
-    markDirty();
-    render();
-    aiWriteScreenplayBulk();
-    return;
-  }
-  if (action === "export-screenplay-fountain") {
-    const text = buildFountainText(appState);
-    const title = (appState.project.project?.title || "screenplay").replace(/[\\/:*?"<>|]/g, "_");
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${title}.fountain`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    return;
-  }
-  if (action === "preview-screenplay-full") {
-    const text = buildFountainText(appState);
-    const title = appState.project.project?.title || "剧本预览";
-    const w = openFountainPreview(text, title);
-    if (!w) alert("浏览器拦截了弹窗，请允许后重试。");
-    return;
-  }
-  if (action === "cancel-reset") { appState.resetConfirmPending = false; renderAiSettingsDialog(dom, appState, aiGetters); return; }
-  if (action === "confirm-reset") {
-    appState.resetConfirmPending = false;
-    (async () => {
-      if (!appState.runtime.serverAvailable) {
-        appState.project = ensurePlotDrivenProject(cloneDefaultProject());
-        normalizeProject();
-        render();
-        return;
-      }
-      const payload = await fetchJson(`/api/projects/${encodeURIComponent(appState.project.project.id)}/reset`, { method: "POST" });
-      appState.project = ensurePlotDrivenProject(payload.project);
-      appState.projectList = payload.projects ?? appState.projectList;
-      normalizeProject();
-      render();
-    })();
-    return;
-  }
 }
 
 function handleInput(event) {
