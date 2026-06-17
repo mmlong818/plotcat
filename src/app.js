@@ -29,6 +29,9 @@ import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js"
 import { openFountainPreview } from "./render/fountainViewer.js";
 import { initContext } from "./handlers/context.js";
 import { handleCharacterClick } from "./handlers/character.js";
+import { handlePlotClick } from "./handlers/plot.js";
+import { handleSceneClick } from "./handlers/scene.js";
+import { handleStructureClick } from "./handlers/structure.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1440,7 +1443,12 @@ initContext({
   render, markDirty, normalizeProject, renderCreateForm: _renderProjectCreateForm,
   fetchJson, scheduleAutosave, saveProjectToServer, loadProjectFromServer,
   loadProjectsFromServer, setCurrentPage, setCurrentStep, renderRuntimeStatus,
-  saveLocalSnapshot, loadLocalSnapshot
+  saveLocalSnapshot, loadLocalSnapshot,
+  getNode, shiftPlotCardWithinLane, insertSceneFromPlotCard, openStructureLibrary,
+  applyLibraryStructure, handleGenStructureNotes, handleGenNodeNote,
+  dom,
+  setLibraryFilterTag: (tag) => { libraryFilterTag = tag; },
+  getLibraryFilterTag: () => libraryFilterTag
 });
 
 // ── Event handlers ────────────────────────────────────────────────────────────
@@ -1497,55 +1505,10 @@ function handleClick(event) {
     return;
   }
   if (handleCharacterClick(action, target, id, nodeId)) return;
-  if (action === "toggle-plot-trope") {
-    const card = getPlotCard();
-    if (card) {
-      const tags = list(card.trope_tags);
-      card.trope_tags = tags.includes(id) ? tags.filter((t) => t !== id) : [...tags, id];
-      markDirty(); render();
-    }
-    return;
-  }
-  // ── 场景编织事件处理 ──────────────────────────────────────────
-  if (action === "select-scene-dialogue-style") {
-    const scene = getScene();
-    if (scene) { scene.dialogue_style = scene.dialogue_style === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-subtext") {
-    const scene = getScene();
-    if (scene) { scene.subtext_type = scene.subtext_type === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-power") {
-    const scene = getScene();
-    if (scene) { scene.dialogue_power = scene.dialogue_power === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-pace") {
-    const scene = getScene();
-    if (scene) { scene.dialogue_pace = scene.dialogue_pace === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-desc-density") {
-    const scene = getScene();
-    if (scene) { scene.desc_density = scene.desc_density === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-scene-writing-style") {
-    const scene = getScene();
-    if (scene) { scene.writing_style = scene.writing_style === id ? "" : id; markDirty(); render(); }
-    return;
-  }
+  if (handlePlotClick(action, target, id, nodeId)) return;
+  if (handleSceneClick(action, target, id, nodeId)) return;
+  if (handleStructureClick(action, target, id, nodeId)) return;
   // ── 角色心理剖面事件处理 ──────────────────────────────────────
-  if (action === "ai-breakdown-scene") {
-    aiBreakdownScene(id);
-    return;
-  }
-  if (action === "ai-rate-scene") {
-    aiRateScene(id);
-    return;
-  }
   if (action === "ai-rate-screenplay-full") {
     aiRateScreenplayFull();
     return;
@@ -1561,10 +1524,6 @@ function handleClick(event) {
   }
   if (action === "apply-rater-revision-full") {
     aiReviseFullScreenplayWithRater();
-    return;
-  }
-  if (action === "ai-expand-scenes") {
-    aiExpandScenes();
     return;
   }
   if (action === "ai-extract-continuity") {
@@ -1603,39 +1562,7 @@ function handleClick(event) {
     return;
   }
   if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
-  if (action === "library-back") {
-    setCurrentPage(appState.libraryReturnPage ?? "project");
-    return;
-  }
   // ── 情节元件事件处理 ──────────────────────────────────────────
-  if (action === "select-plot-macguffin") {
-    const card = getPlotCard();
-    if (card) { card.macguffin = card.macguffin === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-plot-catalyst") {
-    const card = getPlotCard();
-    if (card) { card.catalyst_type = card.catalyst_type === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "toggle-plot-conflict") {
-    const card = getPlotCard();
-    if (card) {
-      const types = list(card.conflict_types);
-      card.conflict_types = types.includes(id) ? types.filter((t) => t !== id) : [...types, id];
-      markDirty(); render();
-    }
-    return;
-  }
-  if (action === "toggle-plot-twist") {
-    const card = getPlotCard();
-    if (card) {
-      const types = list(card.twist_types);
-      card.twist_types = types.includes(id) ? types.filter((t) => t !== id) : [...types, id];
-      markDirty(); render();
-    }
-    return;
-  }
   if (action === "select-rel-type-chip") {
     const rel = getRelationship();
     if (rel) {
@@ -1739,149 +1666,7 @@ function handleClick(event) {
       });
     return;
   }
-  if (action === "open-structure-library") { openStructureLibrary(); return; }
-  if (action === "open-structure-config") { openStructureLibrary(); return; }
-  if (action === "select-node") {
-    const nid = target.dataset.nodeId ?? "";
-    appState.selection.nodeId = appState.selection.nodeId === nid ? null : nid;
-    render();
-    return;
-  }
-  // 点击节点 card 内的 title input 时也展开 drawer（之前点击只让 input 聚焦，看起来「无反应」）
-  if (action === "node-field" && target.dataset.field === "title") {
-    const nodeCard = target.closest("[data-action='select-node']");
-    if (nodeCard && appState.selection.nodeId !== nodeCard.dataset.nodeId) {
-      appState.selection.nodeId = nodeCard.dataset.nodeId;
-      render();
-    }
-    return;
-  }
-  if (action === "close-node-drawer") {
-    appState.selection.nodeId = null;
-    render();
-    return;
-  }
-  if (action === "ai-gen-structure-notes") { handleGenStructureNotes(); return; }
-  if (action === "ai-gen-node-note") { handleGenNodeNote(id); return; }
-  if (action === "filter-library") {
-    libraryFilterTag = target.dataset.tag ?? "all";
-    dom.structureLibraryContent.innerHTML = renderStructureLibraryDialog(libraryFilterTag);
-    return;
-  }
-  if (action === "apply-library-structure") {
-    const structId = target.dataset.id;
-    if (structId) applyLibraryStructure(structId);
-    return;
-  }
   if (action === "go-step") return setCurrentStep(id);
-  if (action === "jump-to-plot-card") { appState.selection.plotCardId = id; appState.plotFilter = "all"; setCurrentStep("plots"); return; }
-  if (action === "jump-to-scene") { appState.selection.sceneId = id; setCurrentStep("scenes"); return; }
-  if (action === "select-plot-card") { appState.selection.plotCardId = id; render(); return; }
-  if (action === "open-plot-editor") { appState.plotEditorOpen = true; render(); return; }
-  if (action === "close-plot-editor") { appState.plotEditorOpen = false; render(); return; }
-  if (action === "add-plot-card") {
-    const laneId = target.dataset.laneId ?? "";
-    const actId = target.dataset.actId ?? "";
-    const targetNode = getNode(nodeId) ?? list(appState.project.structure_profile?.nodes)[0];
-    const defaultLane = getVisibleLanes()[0];
-    const newCard = {
-      id: createId("plot"),
-      title: "新剧情卡",
-      act_id: (actId || targetNode?.act_id) ?? list(appState.project.structure_profile?.acts)[0]?.id ?? "",
-      node_id: (nodeId || targetNode?.id) ?? "",
-      lane_id: (laneId || defaultLane?.id) ?? "",
-      lane_kind: defaultLane?.kind ?? "canonical_mainline",
-      type: "mainline",
-      status: "draft",
-      summary: "",
-      dramatic_question: "",
-      conflict: "",
-      change: "",
-      notes: "",
-      character_ids: [],
-      impact_tags: [],
-      depends_on: [],
-      next_ids: [],
-      scene_seed_ids: []
-    };
-    appState.project.plot_board.cards.push(newCard);
-    appState.selection.plotCardId = newCard.id;
-    appState.plotEditorOpen = true;
-    normalizeProject();
-    markDirty();
-    render();
-    return;
-  }
-  if (action === "delete-plot-node-col") {
-    const delNodeId = target.dataset.nodeId ?? "";
-    if (!delNodeId) return;
-    if (!confirm("删除此节点列？该列内的剧情卡不会删除，但将解除挂载。")) return;
-    const acts = list(appState.project.structure_profile?.acts);
-    for (const act of acts) {
-      act.nodes = list(act.nodes).filter((n) => n.id !== delNodeId);
-    }
-    list(appState.project.plot_board?.cards).forEach((c) => {
-      if (c.node_id === delNodeId) c.node_id = "";
-    });
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "add-plot-node-col") {
-    const acts = list(appState.project.structure_profile?.acts);
-    if (acts.length === 0) return;
-    const lastAct = acts[acts.length - 1];
-    const newNode = {
-      id: createId("node"),
-      act_id: lastAct.id,
-      title: "新节点",
-      node_type: "custom",
-      required: false,
-      note: "",
-      order_index: (list(lastAct.nodes).length + 1) * 10,
-    };
-    if (!lastAct.nodes) lastAct.nodes = [];
-    lastAct.nodes.push(newNode);
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "toggle-plot-lock") {
-    const card = getPlotCard(id);
-    if (card) { card.status = card.status === "locked" ? "review" : "locked"; normalizeProject(); markDirty(); render(); }
-    return;
-  }
-  if (action === "scene-from-plot") {
-    const card = getPlotCard(id);
-    if (card && card.status !== "locked") {
-      if (!confirm("该剧情卡尚未锁定，确认生成场景？\n建议先在「剧情开发」将卡片状态设为「锁定」再拆场景。")) return;
-    }
-    return insertSceneFromPlotCard(id);
-  }
-  if (action === "delete-plot-card") {
-    // 软删除：移到废纸篓
-    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).map((item) =>
-      item.id === id ? { ...item, deleted_at: new Date().toISOString() } : item
-    );
-    appState.plotEditorOpen = false;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "restore-plot-card") {
-    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).map((item) =>
-      item.id === id ? { ...item, deleted_at: null } : item
-    );
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "purge-plot-card") {
-    appState.project.plot_board.cards = list(appState.project.plot_board?.cards).filter((item) => item.id !== id);
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "toggle-plot-trash-view") {
-    appState.plotTrashOpen = !appState.plotTrashOpen;
-    render();
-    return;
-  }
   if (action === "add-relationship") {
     // 决议 4：关系 1 条对称 — (a,b) 与 (b,a) 视为同一对。
     // 新增时自动选第一对「还没有关系」的角色组合，否则固定取前两人会静默无效
@@ -2033,76 +1818,6 @@ function handleClick(event) {
     return;
   }
   if (action === "select-setup") { appState.selection.setupId = id; render(); return; }
-  if (action === "add-scene") {
-    const scene = {
-      id: createId("scene"),
-      order_index: list(appState.project.scene_workbench?.scenes).length + 1,
-      title: "新场景",
-      act_id: list(appState.project.structure_profile?.acts)[0]?.id ?? "",
-      linked_plot_card_ids: [],
-      pov_character_id: "",
-      location: "",
-      time_of_day: "",
-      purpose: "",
-      obstacle: "",
-      beat_summary: "",
-      entry_state: "",
-      exit_state: "",
-      status: "draft",
-      script_excerpt: "",
-      notes: ""
-    };
-    appState.project.scene_workbench.scenes.push(scene);
-    appState.selection.sceneId = scene.id;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "select-scene") { appState.selection.sceneId = id; render(); return; }
-  if (action === "delete-scene") {
-    const sceneToDelete = getScene(id);
-    if (sceneToDelete) {
-      const scriptLen = (sceneToDelete.script_full || "").trim().length;
-      const scriptNote = scriptLen > 0 ? `\n本场已有 ${scriptLen} 字剧本成稿，会一并删除。` : "";
-      if (!confirm(`删除场景「${sceneToDelete.title || "未命名场景"}」？此操作不可恢复。${scriptNote}`)) return;
-    }
-    appState.project.scene_workbench.scenes = list(appState.project.scene_workbench?.scenes).filter((item) => item.id !== id);
-    if (appState.project.story_bible) {
-      appState.project.story_bible.scene_cards = list(appState.project.story_bible.scene_cards).filter((item) => item.id !== id);
-    }
-    if (appState.selection.sceneId === id) appState.selection.sceneId = null;
-    if (appState.selection.screenplaySceneId === id) appState.selection.screenplaySceneId = null;
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "select-screenplay-scene") { appState.selection.screenplaySceneId = id; render(); return; }
-  if (action === "insert-scene-script-template") {
-    const scene = list(appState.project.scene_workbench?.scenes).find((s) => s.id === id);
-    if (!scene) return;
-    if (scene.script_full && scene.script_full.trim().length > 0) {
-      if (!confirm("本场已有内容，插入模板会附加在末尾。继续？")) return;
-    }
-    const intExt = (scene.location || "").trim().startsWith("内") ? "INT." : "EXT.";
-    const where = (scene.location || "未定地点").toUpperCase();
-    const when = (scene.time_of_day || "").toUpperCase();
-    const pov = list(appState.project.character_hub?.characters).find((c) => c.id === scene.pov_character_id)?.name ?? "人物名";
-    const tmpl = [
-      `${intExt} ${where}${when ? " - " + when : ""}`,
-      "",
-      `（${scene.purpose || "本场目标"}。${scene.obstacle || "本场障碍"}。）`,
-      "",
-      pov.toUpperCase(),
-      "（情绪/动作提示）",
-      "（对白...）",
-      ""
-    ].join("\n");
-    scene.script_full = (scene.script_full ? scene.script_full + "\n\n" : "") + tmpl;
-    markDirty(); render();
-    return;
-  }
-  if (action === "ai-write-scene-script") {
-    aiWriteSceneScript(id);
-    return;
-  }
   if (action === "ai-write-screenplay-bulk") {
     aiWriteScreenplayBulk();
     return;
@@ -2142,7 +1857,6 @@ function handleClick(event) {
     if (!w) alert("浏览器拦截了弹窗，请允许后重试。");
     return;
   }
-  if (action === "move-plot-card-position") { shiftPlotCardWithinLane(target.dataset.id ?? "", Number(target.dataset.direction) || 0); }
   if (action === "cancel-reset") { appState.resetConfirmPending = false; renderAiSettingsDialog(dom, appState, aiGetters); return; }
   if (action === "confirm-reset") {
     appState.resetConfirmPending = false;
@@ -2631,7 +2345,7 @@ initContext({
   kbFetchSources, kbSearch, kbOpenEntry, kbSync, kbImport,
   aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity,
-  handleRefineCharacter
+  handleRefineCharacter, globalFindReplace, auditScriptSpeakers
 });
 
 // 决议 3：直接创建空项目并跳到「结构骨架」（跳过 AI 入口）
