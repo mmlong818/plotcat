@@ -45,3 +45,5 @@ tests/e2e/realcheck-10-runs/
 tests/e2e/_fullflow_verify.out
 tests/e2e/_*.png
 .gstack/
+tests/e2e/refactor-smoke.mjs
+tests/e2e/.actions_baseline_DONOTCOMMIT.txt
