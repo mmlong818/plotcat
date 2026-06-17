@@ -28,6 +28,7 @@ import { renderScenesPage } from "./render/scenes.js";
 import { renderScreenplayPage, buildFountainText } from "./render/screenplay.js";
 import { openFountainPreview } from "./render/fountainViewer.js";
 import { initContext } from "./handlers/context.js";
+import { handleCharacterClick } from "./handlers/character.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -1495,15 +1496,7 @@ function handleClick(event) {
     _renderProjectCreateForm();
     return;
   }
-  if (action === "toggle-character-field-lock") {
-    const char = getCharacter();
-    if (char && id) {
-      const locked = list(char.locked_fields);
-      char.locked_fields = locked.includes(id) ? locked.filter((f) => f !== id) : [...locked, id];
-      markDirty(); render();
-    }
-    return;
-  }
+  if (handleCharacterClick(action, target, id, nodeId)) return;
   if (action === "toggle-plot-trope") {
     const card = getPlotCard();
     if (card) {
@@ -1545,23 +1538,6 @@ function handleClick(event) {
     return;
   }
   // ── 角色心理剖面事件处理 ──────────────────────────────────────
-  if (action === "select-char-mbti") {
-    const char = getCharacter();
-    if (char) { char.mbti = char.mbti === id ? "" : id; markDirty(); render(); }
-    return;
-  }
-  if (action === "select-char-drive") {
-    const char = getCharacter();
-    if (!char) return;
-    // 统一字符串：表示角色追求的需求上限（再次点击同一层清空）
-    const current = Array.isArray(char.core_drive)
-      ? (char.core_drive[char.core_drive.length - 1] ?? "")
-      : (char.core_drive ?? "");
-    char.core_drive = current === id ? "" : id;
-    markDirty();
-    render();
-    return;
-  }
   if (action === "ai-breakdown-scene") {
     aiBreakdownScene(id);
     return;
@@ -1607,10 +1583,6 @@ function handleClick(event) {
     aiGenreRemedy();
     return;
   }
-  if (action === "ai-character-audit") {
-    aiCharacterAudit();
-    return;
-  }
   if (action === "cf-toggle-genre") {
     const c = appState.creation;
     if (!c) return;
@@ -1633,17 +1605,6 @@ function handleClick(event) {
   if (action && action.startsWith("series-") && handleSeriesAction(action, id, target)) return;
   if (action === "library-back") {
     setCurrentPage(appState.libraryReturnPage ?? "project");
-    return;
-  }
-  if (action === "toggle-character-trait") {
-    const char = getCharacter();
-    if (!char) return;
-    const traits = list(char.traits);
-    char.traits = traits.includes(id)
-      ? traits.filter((t) => t !== id)
-      : [...traits, id];
-    markDirty();
-    render();
     return;
   }
   // ── 情节元件事件处理 ──────────────────────────────────────────
@@ -1814,7 +1775,6 @@ function handleClick(event) {
   }
   if (action === "go-step") return setCurrentStep(id);
   if (action === "jump-to-plot-card") { appState.selection.plotCardId = id; appState.plotFilter = "all"; setCurrentStep("plots"); return; }
-  if (action === "jump-to-character") { appState.selection.characterId = id; setCurrentStep("characters"); return; }
   if (action === "jump-to-scene") { appState.selection.sceneId = id; setCurrentStep("scenes"); return; }
   if (action === "select-plot-card") { appState.selection.plotCardId = id; render(); return; }
   if (action === "open-plot-editor") { appState.plotEditorOpen = true; render(); return; }
@@ -1920,84 +1880,6 @@ function handleClick(event) {
   if (action === "toggle-plot-trash-view") {
     appState.plotTrashOpen = !appState.plotTrashOpen;
     render();
-    return;
-  }
-  if (action === "add-character") {
-    const newId = createId("char");
-    const character = {
-      id: newId,
-      name: "新人物",
-      story_role: "supporting",
-      external_goal: "",
-      dramatic_need: "",
-      contradiction: "",
-      starting_mask: "",
-      pressure_point: "",
-      arc_start: "",
-      arc_end: "",
-      secret: "",
-      notes: "",
-      archetype: "",
-      traits: [],
-      locked_fields: [],
-      status: "active",
-      linked_plot_ids: []
-    };
-    appState.project.character_hub.characters.push(character);
-    // 同步写入 story_bible.characters，否则 normalizeProject → deriveCharacterHub 会用 story_bible 派生覆盖回来
-    appState.project.story_bible = appState.project.story_bible || {};
-    appState.project.story_bible.characters = list(appState.project.story_bible.characters);
-    appState.project.story_bible.characters.push({
-      id: newId,
-      name: "新人物",
-      story_role: "supporting",
-      external_want: "", internal_need: "", psychological_flaw: "", moral_flaw: "",
-      public_mask: "", core_fear: "", wound: "", arc_start: "", arc_end: "",
-      voice_rules: [], secret: ""
-    });
-    appState.selection.characterId = newId;
-    appState.characterDesign = { loading: false, error: "" };
-    normalizeProject(); markDirty(); render();
-    return;
-  }
-  if (action === "select-character") {
-    if (id && id === appState.characterCompareId) appState.characterCompareId = null;
-    appState.selection.characterId = id;
-    render();
-    return;
-  }
-  if (action === "edit-character") {
-    appState.selection.characterId = id;
-    appState.characterDesign = { loading: false, error: "" };
-    render();
-    return;
-  }
-  if (action === "clear-character-compare") {
-    appState.characterCompareId = null;
-    render();
-    return;
-  }
-  if (action === "ai-refine-character") {
-    handleRefineCharacter(id);
-    return;
-  }
-  if (action === "delete-character") {
-    const charToDelete = getCharacter(id);
-    const cascadeRels = list(appState.project.character_hub?.relationship_map)
-      .filter((r) => r.source_character_id === id || r.target_character_id === id);
-    const cascadeNote = cascadeRels.length ? `\n该人物关联的 ${cascadeRels.length} 条关系会一并删除。` : "";
-    if (!confirm(`删除人物「${charToDelete?.name || "未命名"}」？此操作不可恢复。${cascadeNote}`)) return;
-    appState.project.character_hub.characters = list(appState.project.character_hub?.characters).filter((item) => item.id !== id);
-    appState.project.character_hub.relationship_map = list(appState.project.character_hub?.relationship_map).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
-    // 同步从 story_bible.characters 删除，否则 normalize 时 deriveCharacterHub 会从 story_bible 把人物加回来
-    if (appState.project.story_bible) {
-      appState.project.story_bible.characters = list(appState.project.story_bible.characters).filter((item) => item.id !== id);
-      appState.project.story_bible.relationships = list(appState.project.story_bible.relationships).filter((item) => item.source_character_id !== id && item.target_character_id !== id);
-    }
-    list(appState.project.plot_board?.cards).forEach((card) => { card.character_ids = list(card.character_ids).filter((characterId) => characterId !== id); });
-    list(appState.project.scene_workbench?.scenes).forEach((scene) => { if (scene.pov_character_id === id) scene.pov_character_id = ""; });
-    if (appState.selection.characterId === id) appState.selection.characterId = null;
-    normalizeProject(); markDirty(); render();
     return;
   }
   if (action === "add-relationship") {
