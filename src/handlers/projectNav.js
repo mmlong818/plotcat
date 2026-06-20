@@ -7,15 +7,23 @@ import { renderAiSettingsDialog } from "../render/project.js";
 
 export function handleProjectNavClick(action, target, id, nodeId) {
   if (action === "open-project") {
+    // 形态分流：微短剧进独立创作区，其它进电影工作台
+    const enter = () => {
+      if (appState.project.project?.format === "micro_drama") {
+        ctx.setCurrentPage("micro");
+      } else {
+        ctx.setCurrentPage("workflow");
+        ctx.setCurrentStep("structure");
+      }
+    };
     ctx.loadProjectFromServer(id)
-      .then(() => { ctx.setCurrentPage("workflow"); ctx.setCurrentStep("structure"); })
+      .then(enter)
       .catch(() => {
         const snapshot = ctx.loadLocalSnapshot();
         if (snapshot?.project?.project?.id === id) {
           appState.project = ensurePlotDrivenProject(snapshot.project);
           ctx.normalizeProject();
-          ctx.setCurrentPage("workflow");
-          ctx.setCurrentStep("structure");
+          enter();
         }
       });
     return true;

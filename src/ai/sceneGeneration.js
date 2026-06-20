@@ -314,10 +314,22 @@ export function createSceneGeneration({ render, markDirty, normalizeProject }) {
         if (timedOut) return { choices: [], reasoning: "", warnings: [], error: "AI 响应超时（长时间无数据）。请检查设置 → 模型连接，确认所选模型可用。" };
         return { choices: [], reasoning: "", warnings: [], cancelled: true };
       }
-      return { choices: [], reasoning: "", warnings: [], error: error.message };
+      // 把生硬的技术错误（Failed to fetch / HTTP 5xx）翻译成编剧看得懂的提示，技术细节保留在括号内
+      const raw = error.message || "未知错误";
+      const friendly = /failed to fetch|networkerror|load failed/i.test(raw)
+        ? `无法连接到模型服务（网络中断或服务未响应）。请检查网络与设置 → 模型连接。（${raw}）`
+        : /^HTTP\s*\d/i.test(raw)
+          ? `模型服务返回错误，请稍后重试或检查设置 → 模型连接。（${raw}）`
+          : raw;
+      return { choices: [], reasoning: "", warnings: [], error: friendly };
     } finally {
       if (idleTimer) clearTimeout(idleTimer);
     }
+  }
+
+  // 中止进行中的流式生成（供创作流「取消生成」按钮调用——abort 控制器是本闭包私有的）
+  function cancelGeneration() {
+    _cfAbortController?.abort();
   }
 
   return {
@@ -327,6 +339,7 @@ export function createSceneGeneration({ render, markDirty, normalizeProject }) {
     aiWriteSceneScript,
     aiWriteScreenplayBulk,
     callGenerateAPI,
-    callGenerateAPIStream
+    callGenerateAPIStream,
+    cancelGeneration
   };
 }

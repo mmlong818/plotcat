@@ -149,6 +149,20 @@ function migrate(db) {
       PRIMARY KEY (project_id, id)
     );
 
+    CREATE TABLE IF NOT EXISTS episodes (
+      id TEXT NOT NULL,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      order_index INTEGER NOT NULL,
+      title TEXT NOT NULL DEFAULT '',
+      hook_3s TEXT NOT NULL DEFAULT '',
+      payoff TEXT NOT NULL DEFAULT '',
+      cliffhanger TEXT NOT NULL DEFAULT '',
+      paywall_point INTEGER NOT NULL DEFAULT 0,
+      summary TEXT NOT NULL DEFAULT '',
+      status TEXT NOT NULL DEFAULT 'draft',
+      PRIMARY KEY (project_id, id)
+    );
+
     CREATE TABLE IF NOT EXISTS setup_payoffs (
       id TEXT NOT NULL,
       project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
@@ -205,6 +219,10 @@ function migrate(db) {
   }
   if (!sceneColumns.some((column) => column.name === "screenplay_notes")) {
     db.exec("ALTER TABLE scene_cards ADD COLUMN screenplay_notes TEXT NOT NULL DEFAULT ''");
+  }
+  // 短剧「集(episode)」层：场归属到集（micro_drama 一集多场）。纯增量，老项目默认空归属。
+  if (!sceneColumns.some((column) => column.name === "episode_id")) {
+    db.exec("ALTER TABLE scene_cards ADD COLUMN episode_id TEXT NOT NULL DEFAULT ''");
   }
 
   // 把单列 PK (id) 迁移为复合 PK (project_id, id)，让同结构项目可共存。

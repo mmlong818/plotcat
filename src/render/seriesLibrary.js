@@ -58,7 +58,9 @@ export function renderSeriesLibraryPage(dom, appState) {
 
   const editorPane = !sel ? `
     <div class="summary-card">
-      <p class="scene-summary-hint">从左侧选择一个系列，或「新建系列」。</p>
+      <p class="section-label">系列库怎么用</p>
+      <p class="scene-summary-hint">系列库存放同一世界观下多部作品共享的设定——<strong>世界规则</strong>、<strong>纪元时间线</strong>、<strong>常驻人物</strong>。建好一个系列后，进入任一项目的资料库把它挂载上，这些设定就会只读注入该项目的结构 / 扩场 / 写本 / 幕评师。</p>
+      <p class="scene-summary-hint">第一步：点左上角「新建系列」，给它起个名字。${s.list.length === 0 ? "" : "或从左侧选择已有系列继续编辑。"}</p>
     </div>
   ` : `
     <div class="summary-card">

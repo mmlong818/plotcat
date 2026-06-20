@@ -255,6 +255,7 @@ async function anthropicComplete(prompt, { onChunk = null, signal = null } = {})
     body: JSON.stringify({
       model: llmConfig.model,
       max_tokens: 16000,
+      temperature: 0.6,
       stream,
       messages: [{ role: "user", content: prompt }]
     }),
@@ -290,6 +291,7 @@ async function openAiCompatComplete(prompt, { onChunk = null, signal = null } = 
     body: JSON.stringify({
       model: llmConfig.model,
       stream,
+      temperature: 0.6,
       messages: [{ role: "user", content: prompt }]
     }),
     signal: fetchSignal(signal)
