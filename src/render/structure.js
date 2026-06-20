@@ -95,6 +95,35 @@ function getStructureOptionsForFormat(format, currentTemplate = null) {
   return values.map((value) => [value, structureTemplateLabels[value] ?? value]);
 }
 
+// 项目定位栏：logline / 类型 / 基调。这些是项目级 meta（project.project），此前只能在创建向导设，
+// 工作台无处补填——而 AI 全步骤的「一句话概念/类型」正源于此，必须可在工作台随时编辑。
+function renderProjectAnchorBar(meta) {
+  const genreText = Array.isArray(meta.genre) ? meta.genre.join("、") : (meta.genre ?? "");
+  const filled = !!(meta.logline || genreText || meta.tone);
+  return `
+    <details class="story-core-bar" id="project-anchor-bar" open>
+      <summary>
+        <span class="sc-bar-label">项目定位</span>
+        <div class="sc-chips">${filled
+          ? [meta.logline && `一句话：${meta.logline}`, genreText && `类型：${genreText}`, meta.tone && `基调：${meta.tone}`].filter(Boolean).map((t) => `<span class="sc-chip">${escapeHtml(t)}</span>`).join("")
+          : '<span class="sc-chips__empty">先定 logline 与类型——AI 各步都靠它锚定，留空则全程脱锚</span>'}</div>
+        <span class="sc-chevron">▾</span>
+      </summary>
+      <div class="story-core-expanded">
+        <div class="sc-field sc-field--wide">
+          ${inputField("一句话故事 logline", "project-meta-field", "logline", meta.logline ?? "")}
+        </div>
+        <div class="sc-field">
+          ${inputField("类型（多个用、隔开）", "project-meta-field", "genre", genreText)}
+        </div>
+        <div class="sc-field">
+          ${inputField("风格基调", "project-meta-field", "tone", meta.tone ?? "")}
+        </div>
+      </div>
+    </details>
+  `;
+}
+
 function renderStoryCoreBar(storyCore) {
   const chips = [
     storyCore.emotional_promise && `情绪承诺：${storyCore.emotional_promise}`,
@@ -258,6 +287,9 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
           </button>
         </div>
       </div>
+
+      <!-- 项目定位栏（logline/类型/基调） -->
+      ${renderProjectAnchorBar(appState.project.project)}
 
       <!-- 故事核心折叠栏 -->
       ${renderStoryCoreBar(storyCore)}

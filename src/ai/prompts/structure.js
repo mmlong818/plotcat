@@ -1,4 +1,4 @@
-import { genreTagsOf, seriesBlocksOf, projectSummary, charactersSummary, structureSummary, DRAMA_PRINCIPLES } from "./shared.js";
+import { genreTagsOf, seriesBlocksOf, seriesInjectionBlock, projectSummary, charactersSummary, structureSummary, DRAMA_PRINCIPLES } from "./shared.js";
 import { buildGenreBlendContract } from "../../shared/genreContract.js";
 
 export function buildBeatSheetPrompt(projectContext, options, _genreData, beatData) {
@@ -12,7 +12,7 @@ export function buildBeatSheetPrompt(projectContext, options, _genreData, beatDa
 ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
-${blendContract ? `\n${blendContract}\n（节拍映射必须覆盖主导类型的全部必备场景——每个必备场景至少对应一个节拍）\n` : ""}
+${seriesInjectionBlock(projectContext)}${blendContract ? `\n${blendContract}\n（节拍映射必须覆盖主导类型的全部必备场景——每个必备场景至少对应一个节拍）\n` : ""}
 角色情况：
 ${charactersSummary(projectContext)}
 
@@ -245,7 +245,7 @@ export function buildActNodesPrompt(projectCtx, actTitle, actPurpose, nodes) {
 主角：${protagonist || "待定"}
 主题：${theme || "待定"}
 ${charLines ? `\n主要角色：\n${charLines}` : ""}
-${blendContract ? `\n${blendContract}\n（本幕节点的情节提炼必须落在主导类型的必备场景轨道上；调味类型用于给情节加肌理，不改骨架）\n` : ""}${actWorldRules ? `\n世界规则（情节不得违反）：\n${actWorldRules}\n` : ""}
+${blendContract ? `\n${blendContract}\n（本幕节点的情节提炼必须落在主导类型的必备场景轨道上；调味类型用于给情节加肌理，不改骨架）\n` : ""}${actWorldRules ? `\n世界规则（情节不得违反）：\n${actWorldRules}\n` : ""}${actSeries.regulars ? `\n系列常驻人物（沿用，不得改名/改写）：\n${actSeries.regulars}\n` : ""}
 当前幕：${actTitle}
 此幕叙事目的：${actPurpose}
 

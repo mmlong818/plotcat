@@ -6,11 +6,27 @@ export const AUTOSAVE_DELAY = 800;
 
 export const workflowSteps = [
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
+  { id: "episodes",      label: "分集脚本", description: "短剧按集创作：每集黄金三秒钩子、爽点、集尾 cliffhanger、付费卡点，挂载场景。", microOnly: true },
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
   { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
   { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
+];
+
+// 微短剧创作区·节点流水线（独立于电影 6 步）。依据《2025版微短剧AI辅助编剧系统》11节点。
+// phase 标注该节点实现阶段；done=已实现可用。
+export const MICRO_STEPS = [
+  { id: "theme",     label: "主题定位", node: "01", description: "锁定一句话故事/赛道/受众/价值边界/差异化/风险。", phase: "A-P4", done: true },
+  { id: "world",     label: "世界观",   node: "02", description: "背景三层+世界规则+冲突触发点。", phase: "A-P4", done: true },
+  { id: "characters",label: "人物",     node: "03", description: "主角(欲望/缺陷/能力/成长)+配角(功能/记忆标签)+反派(动机/魅力)+关系图谱+个人爽点。", phase: "A-P4", done: true },
+  { id: "plotframe", label: "总框架",   node: "04", description: "5-8句事件链+幕次划分+关键转折+悬念布局。", phase: "A-P4", done: true },
+  { id: "episodes",  label: "分集设计", node: "05", description: "每集：开场钩子/核心目标/障碍(外·内·时间)/戏剧转折/结尾钩子。", phase: "A-P3", done: true },
+  { id: "thrill",    label: "爽点·高潮", node: "06+07", description: "主/辅爽点+释放节奏表+压力递进+核心反转+高潮落点。", phase: "A-P5", done: true },
+  { id: "pacepay",   label: "节奏·付费", node: "10", description: "单集模板+全剧分区(免费/首付费/深付费)+付费节点。", phase: "A-P5", done: true },
+  { id: "dialogue",  label: "分集写本", node: "08", description: "场景级三段递进对话(挑衅→加压→反杀)+金句+动作。", phase: "A-P6", done: true },
+  { id: "themelift", label: "主题升华", node: "11", description: "主题陈述+情绪曲线+记忆锚点+观众代入。", phase: "A-P6", done: true },
+  { id: "gender",    label: "性别向", node: "09", description: "男频/女频/混频诉求映射+节奏/场景/台词调优(全局注入)。", phase: "A-P6", done: true }
 ];
 
 export const projectCreateStepsCurrent = [
@@ -73,7 +89,7 @@ export const formatDefaultTemplates = {
   feature_or_pilot: "three_act",
   feature: "three_act",
   pilot: "three_act",
-  series: "three_act",
+  series: "series_season",
   short: "three_act",
   micro_drama: "three_act"
 };
@@ -379,6 +395,7 @@ export const appState = {
   projectList: [],
   currentPage: "project",
   currentStepId: workflowSteps[0].id,
+  microStep: "episodes",
   toolbarMode: "compact",
   createDialogOpen: false,
   settingsDialogOpen: false,
@@ -397,6 +414,8 @@ export const appState = {
     setupId: null,
     sceneId: null,
     screenplaySceneId: null,
+    episodeId: null,
+    seasonNumber: 1,
     nodeId: null
   },
   runtime: {

@@ -1,9 +1,9 @@
-import { genreTagsOf, projectSummary, charactersSummary, DRAMA_PRINCIPLES, ROLE_LABEL_MAP, REFINE_FIELD_LABELS } from "./shared.js";
+import { genreTagsOf, seriesInjectionBlock, resolveProjectDoc, projectSummary, charactersSummary, DRAMA_PRINCIPLES, ROLE_LABEL_MAP, REFINE_FIELD_LABELS } from "./shared.js";
 import { buildGenreBlendContract } from "../../shared/genreContract.js";
 
 export function buildCharactersPrompt(projectContext, options) {
   const { count = 3, focusRole = "", theme = "" } = options ?? {};
-  const ctx = projectContext?.project ?? projectContext;
+  const ctx = resolveProjectDoc(projectContext);
   const treatment = ctx?.story_core?.premise ?? ctx?.project?.logline ?? "";
   const existingChars = charactersSummary(projectContext);
   const blendContract = buildGenreBlendContract(genreTagsOf(projectContext), "full");
@@ -12,7 +12,7 @@ export function buildCharactersPrompt(projectContext, options) {
 ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
-${blendContract ? `\n${blendContract}\n（人物设计必须服务主导类型的观众承诺；若有调味类型，至少一个主要角色要成为它的载体）\n` : ""}
+${seriesInjectionBlock(projectContext)}${blendContract ? `\n${blendContract}\n（人物设计必须服务主导类型的观众承诺；若有调味类型，至少一个主要角色要成为它的载体）\n` : ""}
 【独立命题纪律】每个主要角色（尤其主角与情感对象）的 external_want 必须包含一个与对方无关的人生命题——事业、信念、未竟之事、自我证明。两个人除了彼此没有别的人生，是审片人一票否决的角色空心化；关系是两条完整人生的相交，不是两个半人的拼合。
 
 Treatment摘要：${treatment || "参见项目概念"}

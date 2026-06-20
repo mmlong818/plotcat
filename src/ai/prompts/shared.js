@@ -33,6 +33,33 @@ export function seriesBlocksOf(ctx) {
   return { rules, timeline, regulars, regularNames: (sb.regulars ?? []).map((c) => (c.name ?? "").trim()).filter(Boolean) };
 }
 
+// 把任意 ctx 形状解析为【完整项目文档】。兼容三形态：完整文档（顶层有域键）、{project: 完整文档} 信封、裸 meta。
+// 关键陷阱：完整文档自身有一个名为 `project` 的 meta 子键（id/title/logline/genre…），
+// 所以决不能用 `ctx?.project ?? ctx` 粗暴解包——当 ctx 本身就是完整文档时会误塌成 meta，
+// 导致 logline/premise/已有人物等全部读成 undefined（feature AI 全步骤失明、micro 上游锚定失效的真凶）。
+export function resolveProjectDoc(ctx) {
+  if (!ctx || typeof ctx !== "object") return ctx ?? {};
+  const hasDomain = (o) => !!o && typeof o === "object" && (
+    o.story_bible || o.scene_workbench || o.plot_board || o.structure_profile ||
+    o.character_hub || o.intent_anchor || o.story_core || o.genre_profile ||
+    o.theme_anchor || o.world_forge || o.char_smith || o.plot_frame
+  );
+  if (hasDomain(ctx)) return ctx;
+  if (hasDomain(ctx.project)) return ctx.project;
+  return ctx;
+}
+
+// 完整系列注入块（规则+时间线+常驻人物）——供 beat_sheet/characters/relationships/scene_outline
+// 等核心 builder 统一拼接，确保挂载了系列的项目在「结构/人物/关系/大纲」各环节都看得到系列圣经。
+export function seriesInjectionBlock(ctx) {
+  const s = seriesBlocksOf(ctx);
+  const parts = [];
+  if (s.rules) parts.push(`系列世界规则（不得违反）：\n${s.rules}`);
+  if (s.timeline) parts.push(`系列时间线（已发生，须自洽）：\n${s.timeline}`);
+  if (s.regulars) parts.push(`系列常驻人物（沿用其设定，不得改写/改名）：\n${s.regulars}`);
+  return parts.length ? `\n【系列圣经·跨作品共享，最高约束优先级】\n${parts.join("\n\n")}\n` : "";
+}
+
 export const HOLLYWOOD_SHOWRUNNER_PERSONA = `
 你的身份：好莱坞 A 级 showrunner，10+ 年实战，参与过艾美/金球级别项目，深度师承 Save the Cat（Snyder）、Story（McKee）、Into the Woods（Yorke）、The Anatomy of Story（Truby）四大体系。
 
@@ -60,7 +87,7 @@ export const DRAMA_PRINCIPLES = HOLLYWOOD_SHOWRUNNER_PERSONA + `
 `;
 
 export function projectSummary(ctx) {
-  const p = ctx?.project ?? ctx;
+  const p = resolveProjectDoc(ctx);
   const title = p?.project?.title ?? "未命名项目";
   const format = p?.project?.format ?? "";
   const genre = (p?.project?.genre ?? []).join("、") || "待定";
@@ -85,7 +112,7 @@ export function projectSummary(ctx) {
 }
 
 export function charactersSummary(ctx) {
-  const p = ctx?.project ?? ctx;
+  const p = resolveProjectDoc(ctx);
   const characters = p?.character_hub?.characters ?? p?.story_bible?.characters ?? [];
   if (characters.length === 0) return "（暂无角色数据）";
   return characters.slice(0, 5).map((c) => {
@@ -94,7 +121,7 @@ export function charactersSummary(ctx) {
 }
 
 export function structureSummary(ctx) {
-  const p = ctx?.project ?? ctx;
+  const p = resolveProjectDoc(ctx);
   const nodes = p?.structure_profile?.nodes ?? [];
   const cards = p?.plot_board?.cards ?? [];
   if (nodes.length === 0) return "（暂无结构数据）";

@@ -1,6 +1,8 @@
 import {
   genreTagsOf,
   seriesBlocksOf,
+  seriesInjectionBlock,
+  resolveProjectDoc,
   projectSummary,
   structureSummary,
   buildCharacterPortrait,
@@ -14,7 +16,7 @@ import { buildGenreBlendContract } from "../../shared/genreContract.js";
 
 export function buildSceneOutlinePrompt(projectContext, options) {
   const { actId = "", nodeId = "" } = options ?? {};
-  const ctx = projectContext?.project ?? projectContext;
+  const ctx = resolveProjectDoc(projectContext);
   const nodes = ctx?.structure_profile?.nodes ?? [];
   const acts = ctx?.structure_profile?.acts ?? [];
   const cards = ctx?.plot_board?.cards ?? [];
@@ -33,7 +35,7 @@ export function buildSceneOutlinePrompt(projectContext, options) {
 ${DRAMA_PRINCIPLES}`;
 
   const user = `${projectSummary(projectContext)}
-
+${seriesInjectionBlock(projectContext)}
 ${nodeContext}
 
 前序场景上下文：
@@ -72,7 +74,7 @@ export function buildSceneWeavePrompt(projectContext, options) {
     subtextType = ""
   } = options ?? {};
 
-  const ctx = projectContext?.project ?? projectContext;
+  const ctx = resolveProjectDoc(projectContext);
   const scenes = ctx?.scene_workbench?.scenes ?? ctx?.story_bible?.scene_cards ?? [];
   const latestScene = scenes[scenes.length - 1];
 
@@ -451,9 +453,15 @@ ${setupTaskBlock ? `\n${setupTaskBlock}\n` : ""}${setupBlock ? `\n全片伏笔�
 对白风格：${dialogueStyle}（自然主义=贴近生活；戏剧化=高张力；幽默=诙谐；诗意=抒情）
 潜台词类型：${subtextType || "根据场景情感选择"}
 
+【可表演性铁律（剧本第一原则，违反即废稿）】
+- 动作行只能写镜头拍得到、话筒收得到的：可见的动作、表情、环境、可闻的声音。严禁写人物的内心活动——「知道 / 意识到 / 记起 / 明白 / 想起 / 仿佛 / 似乎 / 心想」等不可拍摄的心理叙述一律禁止。
+- 内心状态必须外化为可表演的东西：用动作、表情、停顿、或说出口的台词呈现。例：不写「她知道没人听过那条语音」，改为让她环顾空无一人的天台、或盯着通讯录里「顾时」的名字不动。
+- 禁止小说式写法：不用破折号拖出人物没说完的内心思绪（如「只有她和——」是小说，不是剧本）；要么写成她说出口的台词，要么删掉。
+- 不靠旁白/画外内心独白交代信息，除非本剧本已明确设定 V.O. 旁白体。
+
 请写本场完整的剧本格式文本，严格遵守：
 - 第一行必须是场景头（slug line）：${slug}
-- 动作描述左对齐段落，每段不超过 3 行，写画面而非感受
+- 动作描述左对齐段落，每段不超过 3 行，只写镜头看得见、话筒听得到的（画面/动作/表情/声音），绝不写感受或心理
 - 人物名单独成行${allowedNames.length > 0 ? `（只能从 ${allowedNames.join("、")} 中选）` : "（建议大写名字）"}，提示如「（停顿）」用括号
 - 对白下一行接说话内容，不超过 3 行
 - 对白不能解释性、说教式

@@ -10,6 +10,7 @@ import {
   appState, createDefaultProjectDraft,
   RELATIONSHIP_TYPE_OPTIONS
 } from "./state.js";
+if (typeof window !== "undefined") window.appState = appState; // 调试/E2E 验证用
 
 const RELATIONSHIP_TYPE_KIND_VALUES = new Set(RELATIONSHIP_TYPE_OPTIONS);
 
@@ -25,6 +26,8 @@ import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
+import { renderEpisodesPage } from "./render/episodes.js";
+import { renderMicroPage } from "./render/micro.js";
 import { renderScreenplayPage } from "./render/screenplay.js";
 import { initContext } from "./handlers/context.js";
 import { handleCharacterClick } from "./handlers/character.js";
@@ -39,6 +42,8 @@ import { handleScreenplayClick } from "./handlers/screenplay.js";
 import { handleProjectNavClick } from "./handlers/projectNav.js";
 import { handleAiConfigClick } from "./handlers/aiConfig.js";
 import { handleProjectDraftClick } from "./handlers/projectDraft.js";
+import { handleEpisodeClick } from "./handlers/episode.js";
+import { handleMicroClick } from "./handlers/micro.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
@@ -54,6 +59,7 @@ import { createCreationWorkbench } from "./ai/creationWorkbench.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
+  { id: "episodes",      label: "分集脚本", description: "连续剧按季-集创作：分季管理，每集黄金三秒钩子、爽点、集尾 cliffhanger、贯穿线，挂载场景。", seriesOnly: true },
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
@@ -94,6 +100,9 @@ const dom = {
   relationshipsContent: document.querySelector("#relationships-content"),
   locksContent: document.querySelector("#locks-content"),
   scenesContent: document.querySelector("#scenes-content"),
+  episodesContent: document.querySelector("#episodes-content"),
+  microNav: document.querySelector("#micro-nav"),
+  microContent: document.querySelector("#micro-content"),
   screenplayContent: document.querySelector("#screenplay-content"),
   pagePanels: Array.from(document.querySelectorAll("main [data-page]")),
   stepPanels: Array.from(document.querySelectorAll("[data-step-group]")),
@@ -1044,7 +1053,7 @@ async function fetchAiModelOptionsCurrentV2() {
 
 // ── Update handlers ──────────────────────────────────────────────────────────
 
-function updateProjectField(action, fieldName, value) {
+function updateProjectField(action, fieldName, value, target) {
   const selectedPlot = getPlotCard();
   const selectedCharacter = getCharacter();
   const selectedRelationship = getRelationship();
@@ -1167,9 +1176,13 @@ function stepHasContent(stepId) {
 }
 
 function renderStepperNav() {
-  const activeIdx = workflowSteps.findIndex((s) => s.id === appState.currentStepId);
-  const nextStep = workflowSteps[activeIdx + 1];
-  const stepButtons = workflowSteps
+  // 形态感知：seriesOnly 步骤（分集脚本·季-集）仅连续剧 series 显示
+  // （micro_drama 走独立创作区，分集在其 ⑤分集 节点，不经此工作台）
+  const isSeries = appState.project.project?.format === "series";
+  const steps = workflowSteps.filter((s) => !s.seriesOnly || isSeries);
+  const activeIdx = steps.findIndex((s) => s.id === appState.currentStepId);
+  const nextStep = steps[activeIdx + 1];
+  const stepButtons = steps
     .map(
       (item, index) => {
         const completed = isStepCompleted(item.id);
@@ -1439,6 +1452,8 @@ function render() {
   renderLocksPage(dom, appState, lockGetters);
   renderSeriesLibraryPage(dom, appState);
   renderScenesPage(dom, appState, sceneGetters);
+  renderEpisodesPage(dom, appState);
+  renderMicroPage(dom, appState);
   renderScreenplayPage(dom, appState);
   if (appState.creation) renderCreationPage();
   renderPageVisibility();
@@ -1476,6 +1491,8 @@ function handleClick(event) {
   if (handleCharacterClick(action, target, id, nodeId)) return;
   if (handlePlotClick(action, target, id, nodeId)) return;
   if (handleSceneClick(action, target, id, nodeId)) return;
+  if (handleEpisodeClick(action, target, id, nodeId)) return;
+  if (handleMicroClick(action, target, id, nodeId)) return;
   if (handleStructureClick(action, target, id, nodeId)) return;
   if (handleRelationshipClick(action, target, id, nodeId)) return;
   if (handleStoryBibleClick(action, target, id, nodeId)) return;
@@ -1527,10 +1544,118 @@ function handleInput(event) {
     markDirty();
     return;
   }
-  updateProjectField(action, fieldName, event.target.value);
+  if (action === "episode-field") {
+    const ep = list(appState.project.episode_board?.episodes).find((item) => item.id === event.target.dataset.id);
+    if (ep) ep[fieldName] = event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "project-meta-field") {
+    const meta = appState.project.project;
+    const val = event.target.value;
+    if (fieldName === "genre") meta.genre = val.split(/[、,，]/).map((g) => g.trim()).filter(Boolean);
+    else meta[fieldName] = val;
+    markDirty();
+    return;
+  }
+  if (action === "season-field") {
+    const board = appState.project.episode_board;
+    const num = appState.selection.seasonNumber ?? 1;
+    const season = list(board?.seasons).find((s) => s.number === num);
+    if (season) season[fieldName] = event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "theme-field") {
+    if (!appState.project.theme_anchor) appState.project.theme_anchor = {};
+    appState.project.theme_anchor[fieldName] = event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "world-field") {
+    if (!appState.project.world_forge) appState.project.world_forge = {};
+    if (fieldName.startsWith("rules.")) {
+      const k = fieldName.slice(6);
+      if (!appState.project.world_forge.rules) appState.project.world_forge.rules = {};
+      appState.project.world_forge.rules[k] = event.target.value;
+    } else {
+      appState.project.world_forge[fieldName] = event.target.value;
+    }
+    markDirty();
+    return;
+  }
+  if (action === "micro-field") {  // 通用：data-key=节点对象，data-field=点路径，data-array=按行拆数组
+    const key = event.target.dataset.key;
+    if (!key) return;
+    const obj = appState.project[key] ?? (appState.project[key] = {});
+    const path = fieldName.split(".");
+    let cur = obj;
+    for (let i = 0; i < path.length - 1; i++) cur = cur[path[i]] ?? (cur[path[i]] = {});
+    const last = path[path.length - 1];
+    cur[last] = event.target.dataset.array ? event.target.value.split("\n").map((s) => s.trim()).filter(Boolean) : event.target.value;
+    markDirty();
+    return;
+  }
+  if (action === "plotframe-field") {
+    const f = appState.project.plot_frame ?? (appState.project.plot_frame = {});
+    const val = event.target.value;
+    if (fieldName === "event_chain" || fieldName === "suspense") {
+      f[fieldName] = val.split("\n").map((s) => s.trim()).filter(Boolean);
+    } else if (fieldName.startsWith("acts.")) { (f.acts ?? (f.acts = {}))[fieldName.slice(5)] = val; }
+    else if (fieldName.startsWith("turns.")) { (f.turns ?? (f.turns = {}))[fieldName.slice(6)] = val; }
+    else { f[fieldName] = val; }
+    markDirty();
+    return;
+  }
+  if (action === "chars-field") {
+    const cs = appState.project.char_smith ?? (appState.project.char_smith = {});
+    const val = event.target.value;
+    if (fieldName.startsWith("protagonist.")) { (cs.protagonist ?? (cs.protagonist = {}))[fieldName.slice(12)] = val; }
+    else if (fieldName.startsWith("antagonist.")) { (cs.antagonist ?? (cs.antagonist = {}))[fieldName.slice(11)] = val; }
+    else if (fieldName.startsWith("supporting.")) {
+      const idx = Number(event.target.dataset.idx ?? -1);
+      const sub = fieldName.slice(11);
+      if (Array.isArray(cs.supporting) && cs.supporting[idx]) cs.supporting[idx][sub] = val;
+    } else { cs[fieldName] = val; }
+    markDirty();
+    return;
+  }
+  updateProjectField(action, fieldName, event.target.value, event.target);
+}
+
+// 改名联动：故事圣经把结构化外键(id)同步了，但 AI 生成的自由文本仍用旧名 → 数据割裂。
+// 确认式一键替换：仅在用户确认后，把项目自由文本里的旧名整体替换为新名（字面替换，避开正则陷阱）。
+function collectRenameTextHolders() {
+  const p = appState.project;
+  const holders = [];
+  const push = (obj, keys) => { if (obj) for (const k of keys) if (typeof obj[k] === "string" && obj[k]) holders.push([obj, k]); };
+  const REL = ["relationship_type", "tension", "power_balance", "shared_history", "hidden_information", "hidden_truth", "notes"];
+  list(p.character_hub?.relationship_map).forEach((r) => push(r, REL));
+  list(p.story_bible?.relationships).forEach((r) => push(r, REL));
+  list(p.plot_board?.cards).forEach((c) => push(c, ["title", "summary", "description"]));
+  list(p.scene_workbench?.scenes).forEach((s) => push(s, ["title", "summary", "purpose", "beat_summary", "synopsis"]));
+  list(p.structure_profile?.nodes).forEach((n) => push(n, ["note", "story_title", "summary"]));
+  push(p.story_core, ["premise", "core_conflict", "central_question", "emotional_promise", "theme_statement"]);
+  return holders;
+}
+
+function maybePropagateRename(oldName, newName) {
+  const holders = collectRenameTextHolders();
+  let occurrences = 0;
+  for (const [obj, k] of holders) occurrences += obj[k].split(oldName).length - 1;
+  if (occurrences === 0) return;
+  if (!confirm(`「${oldName}」已改名为「${newName}」。\n项目中有 ${occurrences} 处 AI 生成文本仍引用旧名（关系/剧情/场景/结构等），是否全部替换为新名？`)) return;
+  for (const [obj, k] of holders) if (obj[k].includes(oldName)) obj[k] = obj[k].split(oldName).join(newName);
+  markDirty(); render();
 }
 
 function handleChange(event) {
+  if (event.target.dataset.action === "character-field" && event.target.dataset.field === "name") {
+    const oldName = (event.target.dataset.origName || "").trim();
+    const newName = (event.target.value || "").trim();
+    if (oldName && newName && oldName !== newName) maybePropagateRename(oldName, newName);
+    return;
+  }
   if (event.target.dataset.action === "plot-character-toggle") {
     const card = getPlotCard();
     if (!card) return;
@@ -1935,7 +2060,8 @@ const {
   aiWriteSceneScript,
   aiWriteScreenplayBulk,
   callGenerateAPI,
-  callGenerateAPIStream
+  callGenerateAPIStream,
+  cancelGeneration
 } = createSceneGeneration({ render, markDirty, normalizeProject });
 
 // ── 创作工作台 AI 簇（知识库/幕评师/契约审计修复/连续性提炼）外提至 ai/creationWorkbench.js ──
@@ -1946,6 +2072,164 @@ const {
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity
 } = createCreationWorkbench({ render, markDirty, normalizeProject, callGenerateAPI, aiWriteSceneScript });
 
+// 微短剧节点①·主题定位：AI 生成 theme_anchor（节点01）。直接 fetch /api/generate，try/finally 保证状态复位。
+async function aiGenTheme() {
+  const t0 = appState.project.theme_anchor ?? (appState.project.theme_anchor = {});
+  t0.loading = true; t0.error = ""; render();
+  const opts = { concept: t0.input_concept || "", platform: t0.input_platform || "", audience: t0.input_audience || "" };
+  let result;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "theme_anchor", projectContext: appState.project, options: opts })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    result = await res.json();
+  } catch (e) {
+    result = { error: "生成失败：" + e.message };
+  }
+  // autosave 可能在 await 期间用新对象替换 appState.project，故重新取 live 引用再写回
+  const ta = appState.project.theme_anchor ?? (appState.project.theme_anchor = {});
+  ta.loading = false;
+  const d = result.choices?.[0]?.data ?? {};
+  if (result.error || !d.logline) {
+    ta.error = result.error || "AI 未返回有效定位，请重试";
+  } else {
+    ta.logline = d.logline;
+    ta.track = d.track ?? "";
+    ta.audience_out = d.audience ?? "";
+    ta.values = d.values ?? "";
+    ta.diff = Array.isArray(d.diff) ? d.diff : [];
+    ta.risks = Array.isArray(d.risks) ? d.risks : [];
+    markDirty();
+  }
+  render();
+}
+
+// 微短剧节点②·世界观：AI 生成 world_forge（节点02）。同样 await 后重取 live 引用防 autosave 孤立。
+async function aiGenWorld() {
+  const w0 = appState.project.world_forge ?? (appState.project.world_forge = {});
+  w0.loading = true; w0.error = ""; render();
+  const opts = { era: w0.input_era || "", place: w0.input_place || "", conflict_type: w0.input_conflict || "" };
+  let result;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "world_forge", projectContext: appState.project, options: opts })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    result = await res.json();
+  } catch (e) { result = { error: "生成失败：" + e.message }; }
+  const w = appState.project.world_forge ?? (appState.project.world_forge = {});
+  w.loading = false;
+  const d = result.choices?.[0]?.data ?? {};
+  if (result.error || !d.summary) {
+    w.error = result.error || "AI 未返回有效世界观，请重试";
+  } else {
+    w.summary = d.summary;
+    w.rules = (d.rules && typeof d.rules === "object") ? d.rules : {};
+    w.conflict_triggers = Array.isArray(d.conflict_triggers) ? d.conflict_triggers : [];
+    markDirty();
+  }
+  render();
+}
+
+// 微短剧节点③·人物：AI 生成 char_smith（节点03）。live-ref 防孤立。
+async function aiGenChars() {
+  const c0 = appState.project.char_smith ?? (appState.project.char_smith = {});
+  c0.loading = true; c0.error = ""; render();
+  const opts = { note: c0.input_note || "" };
+  let result;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "char_smith", projectContext: appState.project, options: opts })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    result = await res.json();
+  } catch (e) { result = { error: "生成失败：" + e.message }; }
+  const c = appState.project.char_smith ?? (appState.project.char_smith = {});
+  c.loading = false;
+  const d = result.choices?.[0]?.data ?? {};
+  if (result.error || !d.protagonist) {
+    c.error = result.error || "AI 未返回有效人物，请重试";
+  } else {
+    c.protagonist = (d.protagonist && typeof d.protagonist === "object") ? d.protagonist : {};
+    c.supporting = Array.isArray(d.supporting) ? d.supporting : [];
+    c.antagonist = (d.antagonist && typeof d.antagonist === "object") ? d.antagonist : {};
+    c.relations = d.relations ?? "";
+    markDirty();
+  }
+  render();
+}
+
+// 微短剧节点④·总框架：AI 生成 plot_frame（节点04）。live-ref 防孤立。
+async function aiGenPlotFrame() {
+  const f0 = appState.project.plot_frame ?? (appState.project.plot_frame = {});
+  f0.loading = true; f0.error = ""; render();
+  const opts = { episodes: f0.input_episodes || "", length: f0.input_length || "" };
+  let result;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step: "plot_frame", projectContext: appState.project, options: opts })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    result = await res.json();
+  } catch (e) { result = { error: "生成失败：" + e.message }; }
+  const f = appState.project.plot_frame ?? (appState.project.plot_frame = {});
+  f.loading = false;
+  const d = result.choices?.[0]?.data ?? {};
+  if (result.error || !Array.isArray(d.event_chain) || d.event_chain.length === 0) {
+    f.error = result.error || "AI 未返回有效框架，请重试";
+  } else {
+    f.event_chain = d.event_chain;
+    f.acts = (d.acts && typeof d.acts === "object") ? d.acts : {};
+    f.turns = (d.turns && typeof d.turns === "object") ? d.turns : {};
+    f.suspense = Array.isArray(d.suspense) ? d.suspense : [];
+    markDirty();
+  }
+  render();
+}
+
+// 微短剧节点⑥⑦/⑩/⑧/⑪/⑨ 的 AI 生成（统一 live-ref 防孤立模式）
+async function _microGen(key, step, optsFn, validateFn, applyFn) {
+  const s0 = appState.project[key] ?? (appState.project[key] = {});
+  s0.loading = true; s0.error = ""; render();
+  let result;
+  try {
+    const res = await fetch("/api/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ step, projectContext: appState.project, options: optsFn(s0) })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    result = await res.json();
+  } catch (e) { result = { error: "生成失败：" + e.message }; }
+  const s = appState.project[key] ?? (appState.project[key] = {});
+  s.loading = false;
+  const d = result.choices?.[0]?.data ?? {};
+  if (result.error || !validateFn(d)) {
+    s.error = result.error || "AI 未返回有效内容，请重试";
+  } else { applyFn(s, d); markDirty(); }
+  render();
+}
+const aiGenThrill = () => _microGen("thrill", "thrill", () => ({}),
+  (d) => Array.isArray(d.main_thrills) && d.main_thrills.length,
+  (s, d) => { s.main_thrills = d.main_thrills; s.aux_thrills = d.aux_thrills ?? []; s.release_table = d.release_table ?? []; s.pressure = d.pressure ?? {}; s.reversals = d.reversals ?? []; s.climax = d.climax ?? ""; });
+const aiGenPacePay = () => _microGen("pace_pay", "pace_pay", () => ({}),
+  (d) => !!d.ep_template,
+  (s, d) => { s.ep_template = d.ep_template; s.zones = d.zones ?? {}; s.pay_nodes = d.pay_nodes ?? []; });
+const aiGenDialogue = () => _microGen("micro_dialogue", "micro_dialogue", (s) => ({ scene: s.input_scene || "" }),
+  (d) => Array.isArray(d.rounds) && d.rounds.length,
+  (s, d) => { s.setting = d.setting ?? ""; s.rounds = d.rounds; s.golden_line = d.golden_line ?? ""; s.action = d.action ?? ""; });
+const aiGenThemeLift = () => _microGen("theme_lift", "theme_lift", () => ({}),
+  (d) => !!(d.theme_statement && d.theme_statement.core),
+  (s, d) => { s.theme_statement = d.theme_statement ?? {}; s.emotion_curve = d.emotion_curve ?? []; s.anchors = d.anchors ?? {}; s.immersion = d.immersion ?? ""; });
+const aiGenGender = () => _microGen("gender_tune", "gender_tune", (s) => ({ mode: s.mode || "mixed" }),
+  (d) => !!d.demand_map,
+  (s, d) => { s.demand_map = d.demand_map; s.pace = d.pace ?? ""; s.emotion = d.emotion ?? ""; s.scenes = d.scenes ?? []; s.dialogue_style = d.dialogue_style ?? ""; });
+
 // 第二段 ctx 注入：两个工厂簇的 AI 特性函数 + 异步处理器在此处才完成定义/解构，
 // 须在其后注入，供外提的事件 handler 模块经 ctx 调用。
 initContext({
@@ -1954,7 +2238,9 @@ initContext({
   kbFetchSources, kbSearch, kbOpenEntry, kbSync, kbImport,
   aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity,
-  handleRefineCharacter, globalFindReplace, auditScriptSpeakers, patchCreationCardFields
+  handleRefineCharacter, globalFindReplace, auditScriptSpeakers, patchCreationCardFields,
+  aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
+  aiGenThrill, aiGenPacePay, aiGenDialogue, aiGenThemeLift, aiGenGender
 });
 
 // 决议 3：直接创建空项目并跳到「结构骨架」（跳过 AI 入口）
@@ -2313,7 +2599,7 @@ function handleCreationClick(action, target) {
     return true;
   }
   if (action === "cancel-cf-ai") {
-    _cfAbortController?.abort();
+    cancelGeneration();
     appState.creation.loadingStep = -1;
     appState.creation.streamPreview = "";
     renderCreationPage();
@@ -2716,23 +3002,30 @@ async function autoEnrichNewProject({ withRelationships = false, withNodes = fal
   if (withRelationships && stillSame()) {
     const chars = list(appState.project.story_bible?.characters);
     if (chars.length >= 2 && list(appState.project.character_hub?.relationship_map).length === 0) {
-      const res = await callGenerateAPI("relationships", {
-        characters: chars,
-        concept: { title: appState.project.project.title, hook: appState.project.project.logline ?? "" },
-        synopsis: { summary: appState.project.story_core?.premise ?? "" }
-      }, {});
       const nameToId = new Map(chars.map((ch) => [ch.name, ch.id]));
-      const rels = list(res.choices?.[0]?.data?.relationships).map((rel) => ({
-        id: createId("rel"),
-        source_character_id: nameToId.get(rel.source_character_name) ?? "",
-        target_character_id: nameToId.get(rel.target_character_name) ?? "",
-        relationship_type: rel.relationship_type ?? "",
-        tension: rel.tension ?? "",
-        power_balance: rel.power_balance ?? "",
-        shared_history: rel.shared_history ?? "",
-        hidden_information: rel.hidden_information ?? ""
-      })).filter((rel) => rel.source_character_id && rel.target_character_id);
-      if (!res.error && rels.length > 0 && stillSame()) {
+      // 静默链失败用户无从知晓（精品创作组装期 AI 负载高易抖动）——多给一次机会，独立容错不连累后续补全
+      let rels = [];
+      for (let attempt = 0; attempt < 2 && rels.length === 0 && stillSame(); attempt++) {
+        try {
+          const res = await callGenerateAPI("relationships", {
+            characters: chars,
+            concept: { title: appState.project.project.title, hook: appState.project.project.logline ?? "" },
+            synopsis: { summary: appState.project.story_core?.premise ?? "" }
+          }, {});
+          if (res.error) continue;
+          rels = list(res.choices?.[0]?.data?.relationships).map((rel) => ({
+            id: createId("rel"),
+            source_character_id: nameToId.get(rel.source_character_name) ?? "",
+            target_character_id: nameToId.get(rel.target_character_name) ?? "",
+            relationship_type: rel.relationship_type ?? "",
+            tension: rel.tension ?? "",
+            power_balance: rel.power_balance ?? "",
+            shared_history: rel.shared_history ?? "",
+            hidden_information: rel.hidden_information ?? ""
+          })).filter((rel) => rel.source_character_id && rel.target_character_id);
+        } catch { /* 网络抖动，下一轮重试 */ }
+      }
+      if (rels.length > 0 && stillSame()) {
         appState.project.story_bible.relationships = rels;
         normalizeProject(); markDirty(); render();
         await saveProjectToServer().catch(() => {});

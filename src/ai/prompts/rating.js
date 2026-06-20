@@ -1,6 +1,7 @@
 import {
   HOLLYWOOD_SHOWRUNNER_PERSONA,
   DRAMA_PRINCIPLES,
+  resolveProjectDoc,
   projectSummary,
   charactersSummary,
   structureSummary,
@@ -159,7 +160,7 @@ ${isFullMode ? '- 全片模式：每条 directive 必须标明 scene_id（必填
 }
 
 export function buildDiagnosisPrompt(projectContext) {
-  const ctx = projectContext?.project ?? projectContext;
+  const ctx = resolveProjectDoc(projectContext);
   const scenes = ctx?.scene_workbench?.scenes ?? ctx?.story_bible?.scene_cards ?? [];
   const characters = ctx?.character_hub?.characters ?? ctx?.story_bible?.characters ?? [];
   const cards = ctx?.plot_board?.cards ?? [];

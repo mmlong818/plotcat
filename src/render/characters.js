@@ -200,6 +200,7 @@ function renderCharacterEditorFields(character) {
           <input
             class="char-name-hero"
             data-action="character-field" data-field="name"
+            data-orig-name="${escapeHtml(character.name)}"
             value="${escapeHtml(character.name)}"
             placeholder="输入人物名…"
           />

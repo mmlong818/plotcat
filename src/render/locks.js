@@ -329,6 +329,11 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
           <div class="form-grid form-grid--compact">
             ${textareaField("埋设内容", "setup-field", "setup_summary", getSetup().setup_summary, { rows: 3 })}
             ${inputField("预期回收窗口", "setup-field", "expected_payoff_window", getSetup().expected_payoff_window)}
+            ${(() => {
+              const sceneOpts = [["", "（未绑定场景）"], ...list(appState.project.scene_workbench?.scenes).map((s) => [s.id, s.title || "未命名场景"])];
+              return `${selectField("埋设于场景", "setup-field", "setup_scene_id", getSetup().setup_scene_id ?? "", sceneOpts)}
+            ${selectField("回收于场景", "setup-field", "payoff_scene_id", getSetup().payoff_scene_id ?? "", sceneOpts)}`;
+            })()}
             ${selectField("状态", "setup-field", "status", getSetup().status, Object.entries(setupStatusLabels))}
             ${textareaField("回收说明", "setup-field", "payoff_summary", getSetup().payoff_summary, { rows: 3 })}
           </div>

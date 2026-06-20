@@ -242,7 +242,7 @@ function templateFromProject(project) {
   if (format === "feature_or_pilot") return "three_act";
   if (format === "feature") return "three_act";
   if (format === "pilot") return "four_act"; // 电视试播沿用四幕
-  if (format === "series") return "three_act";
+  if (format === "series") return "series_season"; // 连续剧用季结构，配套季-集分集管理
   if (format === "short") return "three_act";
   if (format === "micro_drama") return "three_act";
   return list(project.story_bible?.beats).some((beat) => beat.framework === "four_act")
@@ -606,6 +606,45 @@ function syncLegacyStoryBible(project) {
   };
 }
 
+// 短剧「集(episode)」层：保证 episode_board 存在；micro_drama 老项目把「第N集」场景回填成集。
+// 集是一等公民，字段=黄金三秒钩子/爽点/集尾cliffhanger/付费卡点；一集挂多场（scene_ids）。
+function ensureEpisodeBoard(project) {
+  // 季层级（连续剧 series 用；micro_drama/短剧为单季扁平，seasons 仅占位不展示）。
+  const seasons = list(project.episode_board?.seasons);
+  const defaultSeasons = seasons.length ? seasons : [{ number: 1, throughline: "", season_hook: "" }];
+  const existing = list(project.episode_board?.episodes);
+  if (existing.length > 0) {
+    existing.forEach((e) => { if (e.season == null) e.season = 1; });
+    project.episode_board = { episodes: existing, seasons: defaultSeasons };
+    return;
+  }
+  const isMicro = project.project?.format === "micro_drama";
+  const scenes = list(project.scene_workbench?.scenes);
+  const epScenes = isMicro
+    ? scenes.filter((s) => /第\s*\d+\s*集/.test(s.title || "")).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    : [];
+  if (epScenes.length === 0) {
+    project.episode_board = { episodes: [], seasons: defaultSeasons };
+    return;
+  }
+  const episodes = epScenes.map((s, i) => ({
+    id: `ep_${s.id}`,
+    order_index: i + 1,
+    season: 1,
+    title: s.title || `第${i + 1}集`,
+    hook_3s: s.purpose || "",        // 黄金三秒钩子（回填：建库时塞在 purpose）
+    payoff: "",                       // 爽点（待补）
+    cliffhanger: s.exit_state || "",  // 集尾 cliffhanger（回填：塞在 exit_state）
+    paywall_point: false,             // 付费卡点
+    summary: s.beat_summary || "",
+    status: (s.script_full || "").trim().length > 200 ? "scripted" : "draft",
+    scene_ids: [s.id]
+  }));
+  const epIdByScene = new Map(episodes.map((e) => [e.scene_ids[0], e.id]));
+  scenes.forEach((s) => { if (epIdByScene.has(s.id)) s.episode_id = epIdByScene.get(s.id); });
+  project.episode_board = { episodes, seasons: defaultSeasons };
+}
+
 export function ensurePlotDrivenProject(sourceProject) {
   const project = clone(sourceProject, {});
   project.project = {
@@ -688,6 +727,15 @@ export function ensurePlotDrivenProject(sourceProject) {
   };
   relinkStructureCards(project);
   relinkCharacters(project);
+  ensureEpisodeBoard(project);
+  // transient UI 标志不应持久化/跨会话残留（否则 loading=true 会让按钮永久禁用）
+  if (project.theme_anchor) project.theme_anchor.loading = false;
+  if (project.world_forge) project.world_forge.loading = false;
+  if (project.char_smith) project.char_smith.loading = false;
+  if (project.plot_frame) project.plot_frame.loading = false;
+  for (const k of ["thrill", "pace_pay", "micro_dialogue", "theme_lift", "gender_tune"]) {
+    if (project[k]) project[k].loading = false;
+  }
   syncLegacyStoryBible(project);
   return project;
 }
