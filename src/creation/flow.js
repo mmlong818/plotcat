@@ -243,6 +243,13 @@ export function createCreationFlow(deps) {
     }
 
     if (action === "cf-step1-next") {
+      // 类型软引导：未选题材时提示(不硬拦)。类型契约(观众承诺/必备场景/禁忌)会注入后续所有 AI 生成,
+      // 空类型则失去护栏——给一次确认机会让用户回头补选。
+      if ((c.genres ?? []).length === 0) {
+        const proceed = window.confirm(
+          "还没选择题材类型。\n\n题材类型的「观众承诺 / 必备场景 / 禁忌」会作为契约注入后续所有 AI 生成——不选则失去这层护栏，生成更易跑偏。\n\n建议至少选 1 个主导类型。仍要继续？");
+        if (!proceed) return true; // 留在 step1 让用户补选
+      }
       c.currentStep = 2;
       c.aiError = "";
       renderCreationPage();

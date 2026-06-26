@@ -57,6 +57,18 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
     const sceneCount = item.scene_count ?? 0;
     const writtenCount = item.scene_written_count ?? 0;
     const progress = sceneCount > 0 ? Math.round((writtenCount / sceneCount) * 100) : 0;
+    // hero 卡（最近打开项目）同样需要重命名/删除入口，否则该项目无法管理（须先打开别的项目挤下 hero 位）。
+    // 删除当前项目由 confirm-delete-project 安全处理（置 appState.project=null）。
+    const heroMenu = appState.projectDeleteConfirmId === item.id ? `
+          <button class="button button--danger button--tiny" type="button" data-action="confirm-delete-project" data-id="${escapeHtml(item.id)}">确认删除</button>
+          <button class="button button--ghost button--tiny" type="button" data-action="cancel-delete-project">取消</button>
+        ` : appState.projectMenuId === item.id ? `
+          <button class="button button--ghost button--tiny" type="button" data-action="rename-project" data-id="${escapeHtml(item.id)}">重命名</button>
+          <button class="button button--ghost button--tiny" type="button" data-action="request-delete-project" data-id="${escapeHtml(item.id)}">删除</button>
+          <button class="button button--ghost button--tiny" type="button" data-action="close-project-menu" aria-label="收起菜单">×</button>
+        ` : `
+          <button class="project-card__more" type="button" data-action="open-project-menu" data-id="${escapeHtml(item.id)}" title="更多操作" aria-label="更多操作">⋯</button>
+        `;
     return `
       <article class="project-hero" data-action="open-project" data-id="${escapeHtml(item.id)}">
         <div class="project-hero__left">
@@ -78,6 +90,7 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
             <span class="project-hero__progress-label">进度 ${progress}%</span>
           ` : ""}
           <button class="button button--primary" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">继续创作 →</button>
+          <div class="project-card__actions" style="justify-content:flex-end">${heroMenu}</div>
         </div>
       </article>
     `;
