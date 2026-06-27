@@ -7805,6 +7805,12 @@ body[data-mode="creation"] {
   box-shadow: 0 4px 16px rgba(200,164,90,0.12);
   transform: translateY(-1px);
 }
+.cf-choice-card.is-selected {
+  border-color: var(--accent, #b5601d);
+  border-width: 2px;
+  background: rgba(181,96,29,0.06);
+  box-shadow: 0 4px 16px rgba(181,96,29,0.15);
+}
 [data-theme="dark"] .cf-choice-card {
   background: rgba(255,255,255,0.04);
   border-color: rgba(255,255,255,0.08);

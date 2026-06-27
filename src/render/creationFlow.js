@@ -247,8 +247,9 @@ function renderStep1(creation) {
             <div class="cf-choices-grid">
               ${conceptChoices.map((choice, idx) => {
                 const d = choice.data ?? {};
+                const sel = (creation.selectedConceptIdx ?? -1) === idx;
                 return `
-                  <article class="cf-choice-card">
+                  <article class="cf-choice-card ${sel ? "is-selected" : ""}">
                     <header class="cf-choice-head">
                       <span class="cf-choice-tag">${escapeHtml(choice.label ?? `方案${idx + 1}`)}</span>
                       <strong class="cf-choice-title">${escapeHtml(d.title ?? "（无标题）")}</strong>
@@ -256,8 +257,8 @@ function renderStep1(creation) {
                     <p class="cf-choice-hook">${escapeHtml(d.hook ?? "")}</p>
                     ${d.core_conflict ? `<p class="cf-choice-meta"><b>核心冲突：</b>${escapeHtml(d.core_conflict)}</p>` : ""}
                     ${d.unique_angle ? `<p class="cf-choice-meta"><b>独特视角：</b>${escapeHtml(d.unique_angle)}</p>` : ""}
-                    <button class="cf-choice-pick" type="button"
-                      data-action="cf-step1-pick-concept" data-idx="${idx}">采用此方向</button>
+                    <button class="cf-choice-pick ${sel ? "button--primary" : ""}" type="button"
+                      data-action="cf-step1-pick-concept" data-idx="${idx}">${sel ? "✓ 已采用（可改填回上方）" : "采用此方向"}</button>
                   </article>
                 `;
               }).join("")}
