@@ -55,7 +55,7 @@ function renderRelationshipRail(characters, relationships, selectedId) {
     .filter(Boolean);
 
   if (!sections.length) {
-    return renderEmptyState("还没有关系，点击「新增」开始。");
+    return renderEmptyState("还没有关系。点顶部「✦ AI 生成关系网」让 AI 按人物自动建立，或「新增」手动添加。");
   }
   return `<div class="stack workbench-scroll-list">${sections.join("")}</div>`;
 }
@@ -78,7 +78,10 @@ export function renderRelationshipsPage(dom, appState, { getRelationship, getCha
               <p class="section-label">关系网 · 按角色分组</p>
               <h3>${relationships.length} 条关系</h3>
             </div>
-            <button class="button button--ghost button--tiny" type="button" data-action="add-relationship">新增</button>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+              ${characters.length >= 2 ? `<button class="button button--primary button--small" type="button" data-action="ai-gen-relationships" ${appState.relGenLoading ? "disabled" : ""}>${appState.relGenLoading ? "AI 生成中…" : "✦ AI 生成关系网"}</button>` : ""}
+              <button class="button button--ghost button--tiny" type="button" data-action="add-relationship">新增</button>
+            </div>
           </div>
           ${renderRelationshipRail(characters, relationships, appState.selection.relationshipId)}
         </div>
