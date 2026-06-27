@@ -101,7 +101,9 @@ export function createMicroGen({ render, markDirty }) {
   async function aiGenPlotFrame() {
     const f0 = appState.project.plot_frame ?? (appState.project.plot_frame = {});
     f0.loading = true; f0.error = ""; appState.microGenBusy = "plot_frame"; render();
-    const opts = { episodes: f0.input_episodes || "", length: f0.input_length || "" };
+    // 集数统一取自 episode_board(开篇设定/分集设计增删)，不再单独输入，避免与分集设计脱节
+    const epCount = (appState.project.episode_board?.episodes ?? []).length;
+    const opts = { episodes: epCount ? String(epCount) : "", length: f0.input_length || "" };
     let result;
     try {
       const res = await fetch("/api/generate", {

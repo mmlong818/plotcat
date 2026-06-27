@@ -305,8 +305,8 @@ function plotFrameNodeHTML(appState) {
         
         <h3>总框架 · 全剧"起—承—转—合"主轴，为分集预留节点</h3>
         <div class="form-grid form-grid--compact" style="margin-top:10px">
-          <label class="field"><span>预期总集数</span>
-            <input class="cf-input" type="text" data-action="plotframe-field" data-field="input_episodes" value="${tag(f.input_episodes)}" placeholder="如 80" /></label>
+          <label class="field"><span>总集数（开篇设定 · 分集设计可增删）</span>
+            <input class="cf-input" type="text" value="${(appState.project.episode_board?.episodes ?? []).length} 集" disabled style="opacity:.75" /></label>
           <label class="field"><span>单集时长</span>
             <input class="cf-input" type="text" data-action="plotframe-field" data-field="input_length" value="${tag(f.input_length)}" placeholder="如 2-3分钟" /></label>
         </div>
