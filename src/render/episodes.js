@@ -68,6 +68,23 @@ export function episodeBoardHTML(appState) {
     </div>
     ${designErr ? `<p class="cf-error" style="margin-top:6px">${escapeHtml(designErr)}</p>` : ""}`;
 
+  // 连续剧全空（刚建项目）：先做季集设置——定季数+每季集数，一键铺季-集骨架，再 AI 设计本季
+  if (withSeasons && allEps.length === 0) {
+    return `
+      <section class="panel-inner"><div class="summary-card">
+        <p class="section-label">季集设置</p>
+        <h3>先规划季与集，再逐集铺剧情</h3>
+        <p class="scene-summary-hint" style="margin-top:4px">连续剧按「季 → 集」管理：先定几季、每季多少集，建出骨架后用「AI 设计本季分集」按季贯穿线逐集铺钩子/爽点/集尾。</p>
+        <div class="form-grid form-grid--compact" style="margin-top:12px;max-width:520px">
+          <label class="field"><span>季数</span>
+            <input class="cf-input" id="series-season-count" type="number" min="1" max="12" value="1" /></label>
+          <label class="field"><span>每季集数</span>
+            <input class="cf-input" id="series-ep-count" type="number" min="1" max="60" value="12" /></label>
+        </div>
+        <div style="margin-top:14px"><button class="button button--primary" type="button" data-action="series-setup-build">建立季-集骨架 →</button></div>
+      </div></section>`;
+  }
+
   if (eps.length === 0) {
     return `
       <section class="panel-inner">${seasonBar}<div class="summary-card">${header}

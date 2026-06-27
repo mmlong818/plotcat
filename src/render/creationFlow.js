@@ -64,7 +64,8 @@ function renderStepper(creation) {
   const cur = creation.currentStep ?? 1;
   // 连续剧走季-集模式：跳过电影式「情节大纲」(逐幕 step4)，时间线不展示该步
   const isSeries = creation.draft?.format === "series";
-  const steps = CREATION_STEPS.filter((s) => !(isSeries && s.id === 4));
+  // 连续剧只保留 故事核心→结构→人物 三步：去掉电影式 ④逐幕大纲 与 ⑤审核（季/集规划在分集板做）
+  const steps = CREATION_STEPS.filter((s) => !(isSeries && (s.id === 4 || s.id === 5)));
   const pos = Math.max(1, steps.findIndex((s) => s.id === cur) + 1);
   const items = steps.map((step, i) => {
     const isDone = step.id < cur;
@@ -346,6 +347,9 @@ function renderStep3New(creation) {
   const proposals = creation.characterProposals ?? [];
   const isLoading = creation.loadingStep === 3;
   const hasAnyConfirmed = proposals.some((p) => p._status === "confirmed");
+  const isSeries = creation.draft?.format === "series";
+  // 连续剧：人物确认即建项目进季-集分集板（无电影式逐幕/审核步）；其余形态进情节大纲
+  const nextLabel = isSeries ? "完成创建 · 进入季-集分集" : "情节大纲";
 
   return `
     <div class="cf-section">
@@ -375,7 +379,7 @@ function renderStep3New(creation) {
               用默认骨架填入 3 个主角（再手动改）
             </button>
             <button class="cf-btn-ghost" type="button" data-action="cf-step3-next">
-              直接跳到情节大纲 →
+              ${isSeries ? "直接完成创建 →" : "直接跳到情节大纲 →"}
             </button>
           </div>
         </div>
@@ -470,7 +474,7 @@ function renderStep3New(creation) {
           <button class="cf-deco-btn" type="button"
             data-action="cf-step3-next"
             ${isLoading ? "disabled" : ""}>
-            下一步：情节大纲 <span class="cf-arrow">→</span>
+            ${isSeries ? "完成创建" : "下一步：情节大纲"} <span class="cf-arrow">→</span>
           </button>
           ${!hasAnyConfirmed && !isLoading ? `<span class="cf-next-hint">可直接跳过角色步骤</span>` : ""}
         </div>
@@ -479,7 +483,7 @@ function renderStep3New(creation) {
           <button class="cf-deco-btn" type="button"
             data-action="cf-step3-next"
             ${isLoading ? "disabled" : ""}>
-            ${isLoading ? loadingDots("生成中") : "跳过，直接进入情节大纲"} <span class="cf-arrow">→</span>
+            ${isLoading ? loadingDots("生成中") : (isSeries ? "跳过角色，完成创建" : "跳过，直接进入情节大纲")} <span class="cf-arrow">→</span>
           </button>
         </div>
       `}
