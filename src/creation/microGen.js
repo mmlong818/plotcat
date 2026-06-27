@@ -216,6 +216,8 @@ export function createMicroGen({ render, markDirty }) {
     const eps0 = appState.project.episode_board?.episodes ?? [];
     const ep0 = eps0.find((e) => e.id === epId);
     if (!ep0) return;
+    // 瞬态写本标记(autosave 不会重置)，否则生成期间 autosave 替换 project 会抹掉 loading
+    appState.episodeWriteBusy = epId;
     ep0.script_loading = true; ep0.error = ""; render();
     const sorted = eps0.slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const idx = sorted.findIndex((e) => e.id === epId);
@@ -235,6 +237,7 @@ export function createMicroGen({ render, markDirty }) {
       result = await res.json();
     } catch (e) { result = { error: "生成失败：" + e.message }; }
     // autosave 可能在 await 期间整体重赋 appState.project，重取 live 集引用再写
+    appState.episodeWriteBusy = "";
     const ep = (appState.project.episode_board?.episodes ?? []).find((e) => e.id === epId);
     if (!ep) return;
     ep.script_loading = false;
