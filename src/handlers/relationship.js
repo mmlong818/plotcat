@@ -21,6 +21,50 @@ export function handleRelationshipClick(action, target, id, nodeId) {
     }
     return true;
   }
+  if (action === "ai-gen-relationships") {
+    // 用户主动生成（连续剧创建不再后台抢跑，故在此步显式提供）：按人物让 AI 铺关系网
+    const chars = list(appState.project.story_bible?.characters).length >= 2
+      ? list(appState.project.story_bible.characters)
+      : list(appState.project.character_hub?.characters);
+    if (chars.length < 2) { alert("至少需要两个人物才能生成关系网"); return true; }
+    if (appState.relGenLoading) return true;
+    const existing = list(appState.project.character_hub?.relationship_map);
+    if (existing.length > 0 && !confirm(`将用 AI 重新生成关系网，覆盖现有 ${existing.length} 条关系？`)) return true;
+    appState.relGenLoading = true;
+    ctx.render();
+    (async () => {
+      try {
+        const nameToId = new Map(chars.map((ch) => [ch.name, ch.id]));
+        const res = await ctx.callGenerateAPI("relationships", {
+          characters: chars,
+          concept: { title: appState.project.project.title, hook: appState.project.project.logline ?? "" },
+          synopsis: { summary: appState.project.story_core?.premise ?? "" }
+        }, {});
+        if (res.error) { alert("生成关系网失败：" + res.error); return; }
+        const rels = list(res.choices?.[0]?.data?.relationships).map((rel) => ({
+          id: createId("rel"),
+          source_character_id: nameToId.get(rel.source_character_name) ?? "",
+          target_character_id: nameToId.get(rel.target_character_name) ?? "",
+          relationship_type: rel.relationship_type ?? "",
+          tension: rel.tension ?? "",
+          power_balance: rel.power_balance ?? "",
+          shared_history: rel.shared_history ?? "",
+          hidden_information: rel.hidden_information ?? ""
+        })).filter((rel) => rel.source_character_id && rel.target_character_id);
+        if (rels.length === 0) { alert("AI 未返回有效关系，请重试"); return; }
+        if (!appState.project.story_bible) appState.project.story_bible = {};
+        appState.project.story_bible.relationships = rels;
+        ctx.normalizeProject(); ctx.markDirty();
+        await ctx.saveProjectToServer().catch(() => {});
+      } catch (e) {
+        alert("生成关系网失败：" + (e?.message || e));
+      } finally {
+        appState.relGenLoading = false;
+        ctx.render();
+      }
+    })();
+    return true;
+  }
   if (action === "add-relationship") {
     // 决议 4：关系 1 条对称 — (a,b) 与 (b,a) 视为同一对。
     // 新增时自动选第一对「还没有关系」的角色组合，否则固定取前两人会静默无效
