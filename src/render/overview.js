@@ -16,6 +16,21 @@ function editBtn(stepId, text = "去编辑 →") {
   return `<button class="button button--ghost button--tiny" type="button" data-action="go-step" data-id="${stepId}">${text}</button>`;
 }
 
+// 连续剧季阶段：有分集就映射成集数区间(开季段·第1–3集)，否则只呈现阶段弧(名字)。
+// 百分比是电影时长思维，对剧集不直观——精确占比留在结构骨架详情步。
+function actEpisodeRanges(acts, epCount) {
+  let prevEnd = 0;
+  return acts.map((a) => {
+    const m = String(a.range_label || "").match(/(\d+)\s*%?\s*[-–~]\s*(\d+)/);
+    const endPct = m ? Number(m[2]) : 0;
+    const start = prevEnd + 1;
+    let end = Math.max(start, Math.round((endPct / 100) * epCount));
+    end = Math.min(end, epCount);
+    prevEnd = end;
+    return { title: a.title || "阶段", label: start === end ? `第${start}集` : `第${start}–${end}集` };
+  });
+}
+
 export function renderOverviewPage(dom, appState) {
   if (!dom.overviewContent) return;
   const p = appState.project;
@@ -71,7 +86,9 @@ export function renderOverviewPage(dom, appState) {
         <div class="summary-card ov-card">
           <div class="list-card__head"><p class="section-label">结构 · ${escapeHtml(tplLabel)}</p>${editBtn("structure")}</div>
           ${acts.length
-            ? `<div class="ov-acts">${acts.map((a) => `<span class="ov-act-chip">${escapeHtml(a.title || "阶段")}${a.range_label ? `<em>${escapeHtml(a.range_label)}</em>` : ""}</span>`).join("")}</div>`
+            ? (eps.length > 0
+                ? `<div class="ov-acts">${actEpisodeRanges(acts, eps.length).map((a) => `<span class="ov-act-chip">${escapeHtml(a.title)}<em>${escapeHtml(a.label)}</em></span>`).join("")}</div>`
+                : `<div class="ov-arc">${acts.map((a) => `<span class="ov-arc-node">${escapeHtml(a.title || "阶段")}</span>`).join('<span class="ov-arc-sep">→</span>')}</div>`)
             : `<p class="ov-empty">还没有结构。</p>`}
         </div>
 

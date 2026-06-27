@@ -8904,6 +8904,12 @@ body[data-active-step] .char-card:hover {
   background: var(--surface-2, rgba(255,255,255,0.04)); border-radius: 10px; padding: 5px 11px;
 }
 .ov-act-chip em { font-style: normal; color: var(--text-2); font-size: 11px; }
+.ov-arc { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.ov-arc-node {
+  font-size: 13px; font-weight: 500;
+  background: var(--surface-2, rgba(255,255,255,0.04)); border-radius: 10px; padding: 5px 12px;
+}
+.ov-arc-sep { color: var(--accent); font-size: 13px; }
 .ov-char-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 .ov-char-card { background: var(--surface-2, rgba(255,255,255,0.04)); border-radius: 12px; padding: 11px 14px; }
 .ov-char-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; }
