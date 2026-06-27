@@ -1,7 +1,8 @@
 // 创作流程编排层：创作页重绘入口 renderCreationPage + 点击/输入事件分发器，
 // 组合微短剧生成簇（microGen）与创作 AI 异步簇（creationAI）。
 // 从 app.js 外提；运行期依赖经 createCreationFlow 注入。
-import { appState, structurePresets, formatDefaultTemplates } from "../state.js";
+import { appState, structurePresets } from "../state.js";
+import { defaultTemplateFor } from "../modes/registry.js";
 import { createEmptyProject } from "../shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { renderProCreationPage } from "../render/proCreationFlow.js";
@@ -106,9 +107,8 @@ export function createCreationFlow(deps) {
       appState.createDialogOpen = false;
       if (!appState.creation) {
         appState.creation = {
-          // 结构模板按形态取默认(连续剧→季播 series_season，微短剧→连载，电影→三幕)，
-          // 否则连续剧也会从三幕起步，结构骨架一路三幕式
-          draft: { format: pickedFormat, structure_template: formatDefaultTemplates[pickedFormat] ?? "three_act" },
+          // 结构模板按形态取默认(连续剧→季播 series_season，微短剧→连载，电影→三幕)，经模式注册表
+          draft: { format: pickedFormat, structure_template: defaultTemplateFor(pickedFormat) },
           currentStep: 1, genres: [], era: "", conceptHint: "",
           conceptChoices: [], selectedConceptIdx: -1, selectedConcept: null,
           conceptCustom: "", conceptCustomOpen: false,

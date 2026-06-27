@@ -1,5 +1,6 @@
 import { escapeHtml, field, inputField, textareaField, list } from "../utils.js";
 import { structureTemplateLabels, formatStructureOptions } from "../state.js";
+import { getMode } from "../modes/registry.js";
 
 // 节拍名采用行业通用术语（Save the Cat / Hero's Journey 通译）
 const NODE_TYPE_LABELS = {
@@ -165,8 +166,8 @@ function renderStoryCoreBar(storyCore) {
   `;
 }
 
-function renderActRow(act, index, nodes, isSeries) {
-  // 连续剧的"幕"其实是季阶段(开季段/前中段/季终段)：不用电影"第N幕"语言，改中性阶段序号
+function renderActRow(act, index, nodes, sd) {
+  // 编号/单位语言由模式注册表声明(电影:第N幕；连续剧:季阶段①②③)，不在此判断形态
   const color = ACT_COLORS[index % ACT_COLORS.length];
   const chineseNum = ACT_CHINESE_NUMS[index] ?? String(index + 1);
   const { start, end } = parseActRange(act.range_label);
@@ -200,10 +201,10 @@ function renderActRow(act, index, nodes, isSeries) {
   return `
     <div class="struct-act-row" style="--act-bg:${color.bg};--act-border:${color.border};--act-num-color:${color.num}">
       <div class="struct-act-row__label">
-        <div class="struct-act-row__num">${isSeries ? (CIRC_NUMS[index] ?? String(index + 1)) : `第${chineseNum}幕`}</div>
+        <div class="struct-act-row__num">${sd.numbering === "phase" ? (CIRC_NUMS[index] ?? String(index + 1)) : `第${chineseNum}幕`}</div>
         <input class="struct-act-row__title"
           data-action="act-field" data-id="${escapeHtml(act.id)}" data-field="title"
-          value="${escapeHtml(act.title)}" placeholder="${isSeries ? "阶段名" : "幕名"}" />
+          value="${escapeHtml(act.title)}" placeholder="${escapeHtml(sd.unitWord + "名")}" />
         <div class="struct-act-row__range" title="结构比例">${start}–${end}%</div>
       </div>
       <div class="struct-act-row__nodes">
@@ -256,9 +257,9 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
     story_circle: "故事圆环", none: "无节拍表",
   }[structure.rhythm_overlay] ?? structure.rhythm_overlay ?? "";
 
-  const isSeries = appState.project.project?.format === "series";
+  const sd = getMode(appState.project.project?.format).structure;
   const actsHtml = orderedActs.length > 0
-    ? orderedActs.map((act, i) => renderActRow(act, i, getOrderedNodes(act.id), isSeries)).join("")
+    ? orderedActs.map((act, i) => renderActRow(act, i, getOrderedNodes(act.id), sd)).join("")
     : `<div class="empty-state"><p>选定结构模板后将自动生成幕结构</p></div>`;
 
   dom.structureContent.innerHTML = `

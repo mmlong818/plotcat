@@ -22,19 +22,22 @@ export const MODES = {
     label: "电影",
     steps: ["structure", "characters", "relationships", "plots", "scenes", "screenplay"],
     landing: { page: "workflow", step: "structure" },
-    episode: null
+    episode: null,
+    structure: { numbering: "act", unitWord: "幕" }      // 第N幕 + 占比
   },
   series: {
     label: "连续剧",
     steps: ["overview", "characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"],
     landing: { page: "workflow", step: "overview" },
-    episode: { paywall: false, labels: SERIES_EP }
+    episode: { paywall: false, labels: SERIES_EP },
+    structure: { numbering: "phase", unitWord: "阶段" }  // 季阶段(①②③ + 阶段名)，无电影"幕"语言
   },
   micro_drama: {
     label: "微短剧",
     steps: [],                       // 独立创作区(MICRO_STEPS)，不走工作台步骤条
     landing: { page: "micro" },
-    episode: { paywall: true, labels: MICRO_EP }
+    episode: { paywall: true, labels: MICRO_EP },
+    structure: { numbering: "act", unitWord: "幕" }      // 微短剧不走此结构步，占位
   }
 };
 
