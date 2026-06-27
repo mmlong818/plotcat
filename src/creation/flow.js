@@ -305,11 +305,10 @@ export function createCreationFlow(deps) {
     }
 
     if (action === "cf-step3-next") {
-      // 连续剧走季-集模式：跳过电影式逐幕「情节大纲」(step4)，直接进审核完成 → 季-集分集板
+      // 连续剧走季-集模式：跳过电影式逐幕(step4)与审核(step5)，确认人物即建项目，进季-集分集板做季集设置
       if (c.draft?.format === "series") {
-        c.currentStep = 5;
         c.aiError = "";
-        renderCreationPage();
+        handleFinalizeNewCreation();
         return true;
       }
       c.currentStep = 4;

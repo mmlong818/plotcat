@@ -46,6 +46,31 @@ export function handleEpisodeClick(action, target, id, nodeId) {
     ctx.markDirty(); ctx.render();
     return true;
   }
+  if (action === "series-setup-build") {                                         // 连续剧季集设置：按季数+每季集数建季-集骨架
+    let nSeasons = parseInt(document.querySelector("#series-season-count")?.value ?? "1", 10);
+    let perSeason = parseInt(document.querySelector("#series-ep-count")?.value ?? "12", 10);
+    if (!Number.isFinite(nSeasons) || nSeasons < 1) nSeasons = 1;
+    if (nSeasons > 12) nSeasons = 12;
+    if (!Number.isFinite(perSeason) || perSeason < 1) perSeason = 12;
+    if (perSeason > 60) perSeason = 60;
+    const board = appState.project.episode_board ?? (appState.project.episode_board = { episodes: [], seasons: [] });
+    board.seasons = [];
+    board.episodes = [];
+    let order = 0;
+    for (let s = 1; s <= nSeasons; s++) {
+      board.seasons.push({ number: s, throughline: "", season_hook: "" });
+      for (let e = 1; e <= perSeason; e++) {
+        board.episodes.push({
+          id: `ep_${s}_${e}_${order}`, order_index: ++order, season: s, title: `S${s}E${e}`,
+          hook_3s: "", payoff: "", cliffhanger: "", paywall_point: false,
+          summary: "", script_full: "", status: "draft", scene_ids: []
+        });
+      }
+    }
+    appState.selection.seasonNumber = 1;
+    ctx.markDirty(); ctx.render();
+    return true;
+  }
   if (action === "add-season") {
     const ss = seasons();
     const next = Math.max(0, ...ss.map((s) => s.number ?? 0)) + 1;
