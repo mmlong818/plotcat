@@ -18,7 +18,7 @@ export function handleMicroClick(action, target, id, nodeId) {
         summary: "", script_full: "", script_loading: false, scene_ids: []
       });
     }
-    appState.microStep = "episodes";
+    appState.microStep = "theme"; // 开篇后进入节点流水线第一页(主题定位)，按编辑顺序往下走
     ctx.markDirty(); ctx.render();
     return true;
   }

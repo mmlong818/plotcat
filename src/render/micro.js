@@ -62,7 +62,18 @@ export function renderMicroPage(dom, appState) {
       <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
     </div></section>`;
   }
-  dom.microContent.innerHTML = body;
+  // 流程导航：按编辑页面顺序的「上一步 / 下一步」（开篇设置阶段不显示）
+  let footer = "";
+  if (!noEpisodes) {
+    const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
+    const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
+    const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
+    footer = `<div class="micro-flow-nav">
+      ${prev ? `<button class="button button--ghost button--small" type="button" data-action="micro-step" data-id="${escapeHtml(prev.id)}">← ${escapeHtml(prev.label)}</button>` : "<span></span>"}
+      ${next ? `<button class="button button--primary button--small" type="button" data-action="micro-step" data-id="${escapeHtml(next.id)}">${escapeHtml(next.label)} →</button>` : "<span></span>"}
+    </div>`;
+  }
+  dom.microContent.innerHTML = body + footer;
 }
 
 // 微短剧开篇设置：先问集数 + 频向（取代电影三幕结构），定好后生成分集骨架。

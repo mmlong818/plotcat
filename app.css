@@ -9620,3 +9620,6 @@ body[data-active-step] .char-card:hover {
 .micro-card__k { flex: 0 0 56px; color: var(--muted, #999); font-size: 12px; }
 .micro-card__v { flex: 1; color: var(--ink); }
 .micro-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* 微短剧节点流程导航：上一步 / 下一步（按编辑页面顺序） */
+.micro-flow-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 18px 4px 8px; }
