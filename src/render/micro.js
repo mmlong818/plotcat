@@ -458,9 +458,12 @@ function scriptScrollHTML(appState) {
           ${ep.hook_3s ? `<p class="ep-script__hook">🎬 钩子：${escapeHtml(ep.hook_3s)}</p>` : ""}
           ${chips ? `<div style="margin:4px 0 8px">${chips}</div>` : ""}
           ${ep.error ? `<p class="cf-error" style="margin:4px 0">${escapeHtml(ep.error)}</p>` : ""}
-          <div style="margin-bottom:8px"><button class="button ${has ? "button--ghost" : "button--primary"} button--small" type="button"
+          <div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap"><button class="button ${has ? "button--ghost" : "button--primary"} button--small" type="button"
             data-action="ai-write-episode" data-id="${escapeHtml(ep.id)}" ${loading ? "disabled" : ""}>
-            ${loading ? "✦ AI 写本中…" : has ? "↺ 重写本集" : "✦ AI 写本集"}</button></div>
+            ${loading ? "✦ AI 写本中…" : has ? "↺ 重写本集" : "✦ AI 写本集"}</button>
+            ${has ? `<button class="button button--ghost button--small" type="button" data-action="ai-rewrite-episode" data-mode="dialogue" data-id="${escapeHtml(ep.id)}" ${loading ? "disabled" : ""} title="保持情节，只把对白改得更短狠戳心+金句">✎ 打磨对白</button>
+            <button class="button button--ghost button--small" type="button" data-action="ai-rewrite-episode" data-mode="shorter" data-id="${escapeHtml(ep.id)}" ${loading ? "disabled" : ""} title="压缩到单集 1-2 分钟体量">⤵ 缩短</button>
+            <button class="button button--ghost button--small" type="button" data-action="ai-rewrite-episode" data-mode="longer" data-id="${escapeHtml(ep.id)}" ${loading ? "disabled" : ""} title="适当扩展丰满冲突">⤴ 延长</button>` : ""}</div>
           <textarea class="cf-textarea ep-script-text" rows="14" spellcheck="false"
             style="width:100%;font-family:var(--mono,monospace);line-height:1.7"
             data-action="episode-field" data-field="script_full" data-id="${escapeHtml(ep.id)}"

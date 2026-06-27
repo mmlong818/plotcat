@@ -228,14 +228,18 @@ export function createMicroGen({ render, markDirty }) {
       prevTail
     };
     let result;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 150000);
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step: "episode_script", projectContext: appState.project, options })
+        body: JSON.stringify({ step: "episode_script", projectContext: appState.project, options }),
+        signal: ctrl.signal
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       result = await res.json();
-    } catch (e) { result = { error: "生成失败：" + e.message }; }
+    } catch (e) { result = { error: e.name === "AbortError" ? "写本超时，请重试" : "生成失败：" + e.message }; }
+    finally { clearTimeout(timer); }
     // autosave 可能在 await 期间整体重赋 appState.project，重取 live 集引用再写
     appState.episodeWriteBusy = "";
     const ep = (appState.project.episode_board?.episodes ?? []).find((e) => e.id === epId);
@@ -245,6 +249,41 @@ export function createMicroGen({ render, markDirty }) {
     const script = (d.script ?? "").trim();
     if (result.error || !script) {
       ep.error = result.error || "AI 未返回剧本，请重试";
+    } else {
+      ep.script_full = script;
+      ep.status = "scripted";
+      ep.error = "";
+      markDirty();
+    }
+    render();
+  }
+
+  // 剧本卷轴 · 单集定向改写：mode = dialogue(打磨对白) / shorter(缩短) / longer(延长)
+  async function aiRewriteEpisode(epId, mode) {
+    const ep0 = (appState.project.episode_board?.episodes ?? []).find((e) => e.id === epId);
+    if (!ep0) return;
+    appState.episodeWriteBusy = epId;
+    ep0.script_loading = true; ep0.error = ""; render();
+    let result;
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 150000);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: "episode_rewrite", projectContext: appState.project, options: { mode, script: ep0.script_full || "", episodeNumber: ep0.order_index } }),
+        signal: ctrl.signal
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      result = await res.json();
+    } catch (e) { result = { error: e.name === "AbortError" ? "改写超时，请重试" : "改写失败：" + e.message }; }
+    finally { clearTimeout(timer); }
+    appState.episodeWriteBusy = "";
+    const ep = (appState.project.episode_board?.episodes ?? []).find((e) => e.id === epId);
+    if (!ep) return;
+    ep.script_loading = false;
+    const script = (result.choices?.[0]?.data?.script ?? "").trim();
+    if (result.error || !script) {
+      ep.error = result.error || "AI 未返回改写结果，请重试";
     } else {
       ep.script_full = script;
       ep.status = "scripted";
@@ -288,7 +327,7 @@ export function createMicroGen({ render, markDirty }) {
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
     aiGenThrill, aiGenPacePay, aiGenDialogue,
-    aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode,
+    aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode,
     aiCascadeFrom, CASCADE_IDS
   };
 }
