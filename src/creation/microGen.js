@@ -155,12 +155,6 @@ export function createMicroGen({ render, markDirty }) {
   const aiGenDialogue = () => _microGen("micro_dialogue", "micro_dialogue", (s) => ({ scene: s.input_scene || "" }),
     (d) => Array.isArray(d.rounds) && d.rounds.length,
     (s, d) => { s.setting = d.setting ?? ""; s.rounds = d.rounds; s.golden_line = d.golden_line ?? ""; s.action = d.action ?? ""; });
-  const aiGenThemeLift = () => _microGen("theme_lift", "theme_lift", () => ({}),
-    (d) => !!(d.theme_statement && d.theme_statement.core),
-    (s, d) => { s.theme_statement = d.theme_statement ?? {}; s.emotion_curve = d.emotion_curve ?? []; s.anchors = d.anchors ?? {}; s.immersion = d.immersion ?? ""; });
-  const aiGenGender = () => _microGen("gender_tune", "gender_tune", (s) => ({ mode: s.mode || "mixed" }),
-    (d) => !!d.demand_map,
-    (s, d) => { s.demand_map = d.demand_map; s.pace = d.pace ?? ""; s.emotion = d.emotion ?? ""; s.scenes = d.scenes ?? []; s.dialogue_style = d.dialogue_style ?? ""; });
 
   // 流式剧本卷轴 · 单集写本（live-ref 防 autosave 孤立）。承接上一集结尾续写。
   async function aiWriteEpisode(epId) {
@@ -211,7 +205,7 @@ export function createMicroGen({ render, markDirty }) {
 
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-    aiGenThrill, aiGenPacePay, aiGenDialogue, aiGenThemeLift, aiGenGender,
+    aiGenThrill, aiGenPacePay, aiGenDialogue,
     aiWriteEpisode, aiContinueEpisode
   };
 }

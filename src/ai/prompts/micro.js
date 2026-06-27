@@ -52,6 +52,9 @@ export function buildThemeAnchorPrompt(ctx, opts) {
   const platform = (o.platform || "竖屏微短剧 / 单集2-3分钟").trim();
   const audience = (o.audience || "").trim();
   const genres = (Array.isArray(p.genre) ? p.genre : []).join("、") || "不限";
+  // 频向在设计之初(主题定位)即确立，须从本节点起贯穿全剧基调
+  const gmode = resolveProjectDoc(ctx).gender_tune?.mode;
+  const genderLine = gmode ? `\n频向（贯穿全剧基调，受众/赛道/价值观都须据此）：${{ male: "男频", female: "女频", mixed: "混频" }[gmode]}` : "";
 
   const system = `你是微短剧创意分析专家（主题与创意定位器 ThemeAnchor），负责在动笔前锁定赛道、受众与价值观，为后续所有节点提供"方向锚"。
 ${NO_EN_QUOTE}`;
@@ -60,7 +63,7 @@ ${NO_EN_QUOTE}`;
 故事概念/关键词：${concept || "（待定，请基于题材自由发挥一个有钩子的方向）"}
 目标平台/时长：${platform}
 受众设想：${audience || "（未定，请给出建议画像）"}
-题材类型：${genres}
+题材类型：${genres}${genderLine}
 
 【分析框架】创意诊断矩阵：赛道匹配（类型→受众→平台时长）｜情感驱动（目标情绪与宣泄点）｜冲突潜力（可持续推进的矛盾源）｜差异化（避同质化的独特切口）。
 【质量要求】
