@@ -86,6 +86,7 @@ const dom = {
   seriesContent: document.querySelector("#series-content"),
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
+  stepCtaSlot: document.querySelector("#step-cta-slot"),
   workflowStepFooter: document.querySelector("#workflow-step-footer"),
   overviewContent: document.querySelector("#overview-content"),
   projectList: document.querySelector("#project-list"),
@@ -1228,8 +1229,12 @@ function renderStepperNav() {
   const nextCta = nextStep
     ? `<button class="step-next-cta" type="button" data-action="go-step" data-id="${escapeHtml(nextStep.id)}">进入「${escapeHtml(nextStep.label)}」 →</button>`
     : "";
-  dom.stepperNav.innerHTML = stepButtons + nextCta;
+  dom.stepperNav.innerHTML = stepButtons;
   dom.stepperNav.hidden = appState.currentPage !== "workflow";
+  // 「进入下一步」CTA 放固定槽位（stepper 与状态区之间），不随激活步标签变宽而漂移
+  if (dom.stepCtaSlot) {
+    dom.stepCtaSlot.innerHTML = appState.currentPage === "workflow" ? nextCta : "";
+  }
 
   // 步骤底部导航：跟随内容的「← 上一步 / 下一步：X →」，比顶部 tab 更明确
   if (dom.workflowStepFooter) {
