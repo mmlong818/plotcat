@@ -165,7 +165,8 @@ function renderStoryCoreBar(storyCore) {
   `;
 }
 
-function renderActRow(act, index, nodes) {
+function renderActRow(act, index, nodes, isSeries) {
+  // 连续剧的"幕"其实是季阶段(开季段/前中段/季终段)：不用电影"第N幕"语言，改中性阶段序号
   const color = ACT_COLORS[index % ACT_COLORS.length];
   const chineseNum = ACT_CHINESE_NUMS[index] ?? String(index + 1);
   const { start, end } = parseActRange(act.range_label);
@@ -199,10 +200,10 @@ function renderActRow(act, index, nodes) {
   return `
     <div class="struct-act-row" style="--act-bg:${color.bg};--act-border:${color.border};--act-num-color:${color.num}">
       <div class="struct-act-row__label">
-        <div class="struct-act-row__num">第${chineseNum}幕</div>
+        <div class="struct-act-row__num">${isSeries ? (CIRC_NUMS[index] ?? String(index + 1)) : `第${chineseNum}幕`}</div>
         <input class="struct-act-row__title"
           data-action="act-field" data-id="${escapeHtml(act.id)}" data-field="title"
-          value="${escapeHtml(act.title)}" placeholder="幕名" />
+          value="${escapeHtml(act.title)}" placeholder="${isSeries ? "阶段名" : "幕名"}" />
         <div class="struct-act-row__range" title="结构比例">${start}–${end}%</div>
       </div>
       <div class="struct-act-row__nodes">
@@ -255,8 +256,9 @@ export function renderStructurePage(dom, appState, { getOrderedActs, getOrderedN
     story_circle: "故事圆环", none: "无节拍表",
   }[structure.rhythm_overlay] ?? structure.rhythm_overlay ?? "";
 
+  const isSeries = appState.project.project?.format === "series";
   const actsHtml = orderedActs.length > 0
-    ? orderedActs.map((act, i) => renderActRow(act, i, getOrderedNodes(act.id))).join("")
+    ? orderedActs.map((act, i) => renderActRow(act, i, getOrderedNodes(act.id), isSeries)).join("")
     : `<div class="empty-state"><p>选定结构模板后将自动生成幕结构</p></div>`;
 
   dom.structureContent.innerHTML = `
