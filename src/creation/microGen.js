@@ -155,9 +155,6 @@ export function createMicroGen({ render, markDirty }) {
   const aiGenPacePay = () => _microGen("pace_pay", "pace_pay", () => ({}),
     (d) => !!d.ep_template,
     (s, d) => { s.ep_template = d.ep_template; s.zones = d.zones ?? {}; s.pay_nodes = d.pay_nodes ?? []; });
-  const aiGenDialogue = () => _microGen("micro_dialogue", "micro_dialogue", (s) => ({ scene: s.input_scene || "" }),
-    (d) => Array.isArray(d.rounds) && d.rounds.length,
-    (s, d) => { s.setting = d.setting ?? ""; s.rounds = d.rounds; s.golden_line = d.golden_line ?? ""; s.action = d.action ?? ""; });
 
   // 节点⑤分集设计 · AI 一键铺分集大纲：依据总框架把每集的钩子/爽点/cliffhanger/情节填上。
   // 分批生成(每批 BATCH 集)——一次性让 GLM 生成几十集会极慢/挂起，分批可见进度且单批可超时。
@@ -326,7 +323,7 @@ export function createMicroGen({ render, markDirty }) {
 
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-    aiGenThrill, aiGenPacePay, aiGenDialogue,
+    aiGenThrill, aiGenPacePay,
     aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode,
     aiCascadeFrom, CASCADE_IDS
   };

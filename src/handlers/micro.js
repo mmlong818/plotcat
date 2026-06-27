@@ -45,7 +45,6 @@ export function handleMicroClick(action, target, id, nodeId) {
   }
   if (action === "ai-gen-thrill") { ctx.aiGenThrill(); return true; }        // ⑥⑦爽点高潮
   if (action === "ai-gen-pacepay") { ctx.aiGenPacePay(); return true; }      // ⑩节奏付费
-  if (action === "ai-gen-dialogue") { ctx.aiGenDialogue(); return true; }    // ⑧分集写本
   if (action === "select-gender-mode") {                                      // ①主题定位·频向（设计之初基调）
     const gt = appState.project.gender_tune ?? (appState.project.gender_tune = {});
     gt.mode = id;
