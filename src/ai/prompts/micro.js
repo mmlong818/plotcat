@@ -82,7 +82,6 @@ ${NO_EN_QUOTE}`;
   "audience": "目标受众：性别/年龄/核心诉求",
   "values": "主题与价值观：主旨/价值底色/不可逾线点",
   "theme_statement": {"core": "核心命题：一句话本剧到底要说什么", "form": "通过什么情节/人物转变来体现", "meaning": "对目标受众的情感或价值意义"},
-  "anchors": {"line": "全剧金句（可独立传播）", "scene": "最高记忆点的场面", "emotion": "最强情感锚点"},
   "diff": ["差异化要素（独特设定/结构/人物关系/情感表达，可落到桥段）", "..."],
   "risks": ["风险预警（同质化/逻辑漏洞/审查/审美疲劳）及规避建议", "..."]
 }`;
@@ -230,7 +229,7 @@ function microCtxLines(proj) {
 export function buildThrillPrompt(ctx) {
   const proj = resolveProjectDoc(ctx);
   const system = `你是微短剧爽点与冲突设计专家（爽点引擎 ThrillEngine ＋ 矛盾递进高潮 ClimaxLadder），提炼主/辅爽点并规划全剧释放节奏，同时设计压力递进与重量级反转、高潮落点。\n${NO_EN_QUOTE}`;
-  const user = `【上游输入】\n${microCtxLines(proj)}\n\n【框架】三层爽点（本能/社会/智慧）＋复合化（叠加/升级/反转）；多重压力叠加（外压+内压+时间压）；反转=埋伏笔→误导→揭晓→余波。\n【要求】主爽点与主线紧绑；强度分级与间隔合理避疲劳；反转伏笔可回溯非生造巧合；高潮兼顾情绪峰值与信息价值。\n\n仅输出 JSON：\n{\n  "main_thrills": [{"layer":"本能/社会/智慧层","desc":"触发机制+表现形式","payoff":"情感回报"}],\n  "aux_thrills": ["辅助爽点（过渡/铺垫/变奏）"],\n  "release_table": [{"ep":"集数/区间","type":"爽点类型","strength":"强度1-10","note":"与悬念/付费关系"}],\n  "pressure": {"s1":"第1阶段·小摩擦","s2":"第2阶段·中冲突","s3":"第3阶段·大危机"},\n  "reversals": [{"foreshadow":"伏笔布局","mislead":"误导方向","reveal":"真相揭示","aftermath":"后果波及"}],\n  "climax": "高潮爆发点：触发时机/爆发形式/情感峰值/价值确认"\n}`;
+  const user = `【上游输入】\n${microCtxLines(proj)}\n\n【框架】三层爽点（本能/社会/智慧）＋复合化（叠加/升级/反转）；多重压力叠加（外压+内压+时间压）；反转=埋伏笔→误导→揭晓→余波。\n【要求】主爽点与主线紧绑；强度分级与间隔合理避疲劳；反转伏笔可回溯非生造巧合；高潮兼顾情绪峰值与信息价值。\n\n仅输出 JSON：\n{\n  "main_thrills": [{"layer":"本能/社会/智慧层","desc":"触发机制+表现形式","payoff":"情感回报"}],\n  "aux_thrills": ["辅助爽点（过渡/铺垫/变奏）"],\n  "release_table": [{"ep":"集数/区间","type":"爽点类型","strength":"强度1-10","note":"与悬念/付费关系"}],\n  "pressure": {"s1":"第1阶段·小摩擦","s2":"第2阶段·中冲突","s3":"第3阶段·大危机"},\n  "reversals": [{"foreshadow":"伏笔布局","mislead":"误导方向","reveal":"真相揭示","aftermath":"后果波及"}],\n  "climax": "高潮爆发点：触发时机/爆发形式/情感峰值/价值确认",\n  "anchors": {"line":"全剧金句（可独立传播）","scene":"最高记忆点的场面","emotion":"最强情感锚点"}\n}`;
   return { system, user };
 }
 
