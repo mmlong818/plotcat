@@ -32,6 +32,7 @@ export function createMicroGen({ render, markDirty }) {
       ta.track = d.track ?? "";
       ta.audience_out = d.audience ?? "";
       ta.values = d.values ?? "";
+      ta.theme_statement = (d.theme_statement && typeof d.theme_statement === "object") ? d.theme_statement : (ta.theme_statement ?? {});
       ta.diff = Array.isArray(d.diff) ? d.diff : [];
       ta.risks = Array.isArray(d.risks) ? d.risks : [];
       markDirty();
@@ -148,7 +149,7 @@ export function createMicroGen({ render, markDirty }) {
   }
   const aiGenThrill = () => _microGen("thrill", "thrill", () => ({}),
     (d) => Array.isArray(d.main_thrills) && d.main_thrills.length,
-    (s, d) => { s.main_thrills = d.main_thrills; s.aux_thrills = d.aux_thrills ?? []; s.release_table = d.release_table ?? []; s.pressure = d.pressure ?? {}; s.reversals = d.reversals ?? []; s.climax = d.climax ?? ""; });
+    (s, d) => { s.main_thrills = d.main_thrills; s.aux_thrills = d.aux_thrills ?? []; s.release_table = d.release_table ?? []; s.pressure = d.pressure ?? {}; s.reversals = d.reversals ?? []; s.climax = d.climax ?? ""; s.anchors = (d.anchors && typeof d.anchors === "object") ? d.anchors : (s.anchors ?? {}); });
   const aiGenPacePay = () => _microGen("pace_pay", "pace_pay", () => ({}),
     (d) => !!d.ep_template,
     (s, d) => { s.ep_template = d.ep_template; s.zones = d.zones ?? {}; s.pay_nodes = d.pay_nodes ?? []; });
