@@ -8,18 +8,28 @@ export function renderMicroPage(dom, appState) {
   if (!dom.microNav || !dom.microContent) return;
   const cur = appState.microStep || "episodes";
 
-  // ── 节点流水线导航 ──
-  dom.microNav.innerHTML = MICRO_STEPS.map((s, i) => {
-    const active = s.id === cur;
-    const ready = !!s.done;
-    return `
-      <button class="micro-step ${active ? "is-active" : ""} ${ready ? "is-ready" : "is-todo"}"
-        type="button" data-action="micro-step" data-id="${escapeHtml(s.id)}" title="${escapeHtml(s.description)}">
-        <span class="micro-step__no">${escapeHtml(s.node)}</span>
-        <span class="micro-step__label">${escapeHtml(s.label)}</span>
-        ${ready ? `<span class="micro-step__dot" title="可用">●</span>` : `<span class="micro-step__todo">${escapeHtml(s.phase)}</span>`}
-      </button>${i < MICRO_STEPS.length - 1 ? `<span class="micro-step__arrow">→</span>` : ""}`;
-  }).join("");
+  // ── 节点导航：按语义分组（设定/结构/节奏/打磨/成稿），消除散乱编号 ──
+  const groups = [];
+  MICRO_STEPS.forEach((s) => {
+    let g = groups[groups.length - 1];
+    if (!g || g.name !== s.group) { g = { name: s.group, steps: [] }; groups.push(g); }
+    g.steps.push(s);
+  });
+  dom.microNav.innerHTML = groups.map((g) => `
+    <div class="micro-group">
+      <span class="micro-group__label">${escapeHtml(g.name)}</span>
+      <div class="micro-group__steps">
+        ${g.steps.map((s) => {
+          const active = s.id === cur;
+          const filled = nodeFilled(s.id, appState);
+          return `<button class="micro-step ${active ? "is-active" : ""} ${filled ? "is-filled" : ""}"
+            type="button" data-action="micro-step" data-id="${escapeHtml(s.id)}" title="${escapeHtml(s.description)}">
+            <span class="micro-step__label">${escapeHtml(s.label)}</span>
+            ${filled ? `<span class="micro-step__dot" title="已有内容">●</span>` : ""}
+          </button>`;
+        }).join("")}
+      </div>
+    </div>`).join("");
 
   // ── 激活节点内容 ──
   const step = MICRO_STEPS.find((s) => s.id === cur) || MICRO_STEPS[0];
@@ -44,18 +54,34 @@ export function renderMicroPage(dom, appState) {
     body = themeLiftNodeHTML(appState);
   } else if (cur === "gender") {
     body = genderNodeHTML(appState);
+  } else if (cur === "script") {
+    body = scriptScrollHTML(appState);
   } else {
-    body = `
-      <section class="panel-inner">
-        <div class="summary-card">
-          <p class="section-label">节点 ${escapeHtml(step.node)} · ${escapeHtml(step.label)}</p>
-          <h3>${escapeHtml(step.label)}</h3>
-          <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
-          <p class="scene-summary-hint" style="margin-top:10px;color:var(--muted)">本节点将依据《2025版微短剧AI辅助编剧系统》节点 ${escapeHtml(step.node)} 的提示词实现（计划阶段 ${escapeHtml(step.phase)}）。</p>
-        </div>
-      </section>`;
+    body = `<section class="panel-inner"><div class="summary-card">
+      <h3>${escapeHtml(step.label)}</h3>
+      <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
+    </div></section>`;
   }
   dom.microContent.innerHTML = body;
+}
+
+// 节点是否已有内容（导航上显示进度点）
+function nodeFilled(id, appState) {
+  const p = appState.project ?? {};
+  switch (id) {
+    case "theme": return !!(p.theme_anchor?.logline);
+    case "world": return !!(p.world_forge?.summary);
+    case "characters": return !!(p.char_smith?.protagonist?.identity || p.char_smith?.protagonist?.name);
+    case "plotframe": return (p.plot_frame?.event_chain ?? []).length > 0;
+    case "episodes": return (p.episode_board?.episodes ?? []).length > 0;
+    case "thrill": return (p.thrill?.main_thrills ?? []).length > 0;
+    case "pacepay": return !!(p.pace_pay?.ep_template);
+    case "dialogue": return (p.micro_dialogue?.rounds ?? []).length > 0;
+    case "themelift": return !!(p.theme_lift?.theme_statement?.core);
+    case "gender": return !!(p.gender_tune?.demand_map);
+    case "script": return (p.episode_board?.episodes ?? []).some((e) => (e.script_full ?? "").trim());
+    default: return false;
+  }
 }
 
 // 节点①·主题定位（ThemeAnchor）：输入 → AI 生成 → 可编辑输出
@@ -72,7 +98,7 @@ function themeNodeHTML(appState) {
   return `
     <section class="panel-inner">
       <div class="summary-card">
-        <p class="section-label">节点 01 · 主题与创意定位器 ThemeAnchor</p>
+        
         <h3>主题定位 · 为后续所有节点提供"方向锚"</h3>
         <div class="form-grid form-grid--compact" style="margin-top:10px">
           <label class="field field--full"><span>故事概念 / 关键词</span>
@@ -119,7 +145,7 @@ function worldNodeHTML(appState) {
   return `
     <section class="panel-inner">
       <div class="summary-card">
-        <p class="section-label">节点 02 · 背景与世界观构建器 WorldForge</p>
+        
         <h3>世界观 · 让冲突合理、反转可解释的"叙事土壤"</h3>
         <div class="form-grid form-grid--compact" style="margin-top:10px">
           <label class="field"><span>时代设想</span>
@@ -171,7 +197,7 @@ function charsNodeHTML(appState) {
   return `
     <section class="panel-inner">
       <div class="summary-card">
-        <p class="section-label">节点 03 · 人物设定工坊 CharSmith</p>
+        
         <h3>人物 · 主角/配角/反派的"欲望—障碍—代价—成长"闭环</h3>
         <label class="field field--full" style="margin-top:10px"><span>创作者补充（可选）</span>
           <input class="cf-input" type="text" data-action="chars-field" data-field="input_note" value="${tag(c.input_note)}" placeholder="对人物的特别要求，如 主角女性/反派是亲人" /></label>
@@ -231,7 +257,7 @@ function plotFrameNodeHTML(appState) {
   return `
     <section class="panel-inner">
       <div class="summary-card">
-        <p class="section-label">节点 04 · 总剧情框架架构师 PlotFrame</p>
+        
         <h3>总框架 · 全剧"起—承—转—合"主轴，为分集预留节点</h3>
         <div class="form-grid form-grid--compact" style="margin-top:10px">
           <label class="field"><span>预期总集数</span>
@@ -280,7 +306,7 @@ function plotFrameNodeHTML(appState) {
 function mf(key, label, df, val, ph = "") { return `<label class="field field--full"><span>${label}</span><input class="cf-input" type="text" data-action="micro-field" data-key="${key}" data-field="${df}" value="${escapeHtml(val ?? "")}" placeholder="${ph}" /></label>`; }
 function mt(key, label, df, val) { return `<label class="field field--full"><span>${label}</span><textarea class="cf-textarea" rows="2" data-action="micro-field" data-key="${key}" data-field="${df}">${escapeHtml(val ?? "")}</textarea></label>`; }
 function genBtn(action, loading, has, idle, busy) { return `<div style="margin-top:10px"><button class="button button--primary button--small" type="button" data-action="${action}" ${loading ? "disabled" : ""}>${loading ? busy : has ? "↺ 重新生成" : idle}</button></div>`; }
-function nodeHead(node, title, sub) { return `<p class="section-label">节点 ${node}</p><h3>${escapeHtml(title)}</h3>${sub ? `<p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(sub)}</p>` : ""}`; }
+function nodeHead(_node, title, sub) { return `<h3 style="margin:0">${escapeHtml(title)}</h3>${sub ? `<p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(sub)}</p>` : ""}`; }
 function roList(label, arr, fmt) { const a = Array.isArray(arr) ? arr : []; if (!a.length) return ""; return `<div class="cf-field"><span class="cf-label">${label}</span><ul class="theme-list">${a.map((x) => `<li>${escapeHtml(fmt(x))}</li>`).join("")}</ul></div>`; }
 
 // 节点⑥⑦·爽点高潮
@@ -331,4 +357,63 @@ function genderNodeHTML(appState) {
     <div style="margin-top:10px;display:flex;gap:6px">${modeBtn("male", "男频")}${modeBtn("female", "女频")}${modeBtn("mixed", "混频")}</div>
     ${genBtn("ai-gen-gender", loading, has, "✦ AI 生成频向调优方案", "AI 调优中…")}${g.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(g.error)}</p>` : ""}</div>
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">调优方案（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("gender_tune", "受众诉求映射", "demand_map", g.demand_map)}${mt("gender_tune", "节奏控制", "pace", g.pace)}${mt("gender_tune", "情感处理", "emotion", g.emotion)}${mt("gender_tune", "台词风格", "dialogue_style", g.dialogue_style)}</div>${roList("典型场景建议", g.scenes, (x) => x)}</div>` : ""}</section>`;
+}
+
+// 流式剧本卷轴：整片连续脚本流（集为分隔），按集续写/编辑完整剧本。
+function scriptScrollHTML(appState) {
+  const eps = (appState.project?.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const written = eps.filter((e) => (e.script_full || "").trim().length > 80).length;
+  const totalChars = eps.reduce((n, e) => n + (e.script_full || "").length, 0);
+  if (eps.length === 0) {
+    return `<section class="panel-inner"><div class="summary-card">
+      <p class="section-label">节点 ✎ · 剧本卷轴</p><h3>还没有分集</h3>
+      <p class="scene-summary-hint" style="margin-top:8px">先到 <strong>⑤ 分集设计</strong> 建立分集（或用 ④ 总框架一键起集），再回这里逐集写本。</p>
+      <div style="margin-top:12px"><button class="button button--primary button--small" type="button" data-action="micro-step" data-id="episodes">→ 去分集设计</button></div>
+    </div></section>`;
+  }
+  const firstEmptyNum = (eps.find((e) => !(e.script_full || "").trim())?.order_index) ?? null;
+  // 已写的集折叠成一行摘要，未写的展开待填——保留连续流、消除整屏文本框墙
+  const blocks = eps.map((ep) => {
+    const num = ep.order_index ?? "";
+    const loading = !!ep.script_loading;
+    const has = (ep.script_full || "").trim().length > 0;
+    const chars = (ep.script_full || "").length;
+    const preview = (ep.script_full || "").replace(/\s+/g, " ").slice(0, 48);
+    const chips = [
+      ep.cliffhanger ? `<span class="chip chip--soft">cliff▸${escapeHtml(ep.cliffhanger)}</span>` : "",
+      ep.paywall_point ? `<span class="chip chip--warn">💰付费卡点</span>` : ""
+    ].filter(Boolean).join(" ");
+    return `
+      <details class="ep-script" ${has ? "" : "open"}>
+        <summary class="ep-script__sum">
+          <span class="ep-script__no">第 ${escapeHtml(num)} 集</span>
+          <span class="ep-script__title">${escapeHtml(ep.title || "")}</span>
+          ${has ? `<span class="ep-script__badge ep-script__badge--ok">已写 ${chars}字</span>` : `<span class="ep-script__badge">未写</span>`}
+          ${has ? `<span class="ep-script__preview">${escapeHtml(preview)}…</span>` : ""}
+        </summary>
+        <div class="ep-script__body">
+          ${ep.hook_3s ? `<p class="ep-script__hook">🎬 钩子：${escapeHtml(ep.hook_3s)}</p>` : ""}
+          ${chips ? `<div style="margin:4px 0 8px">${chips}</div>` : ""}
+          ${ep.error ? `<p class="cf-error" style="margin:4px 0">${escapeHtml(ep.error)}</p>` : ""}
+          <div style="margin-bottom:8px"><button class="button ${has ? "button--ghost" : "button--primary"} button--small" type="button"
+            data-action="ai-write-episode" data-id="${escapeHtml(ep.id)}" ${loading ? "disabled" : ""}>
+            ${loading ? "✦ AI 写本中…" : has ? "↺ 重写本集" : "✦ AI 写本集"}</button></div>
+          <textarea class="cf-textarea ep-script-text" rows="14" spellcheck="false"
+            style="width:100%;font-family:var(--mono,monospace);line-height:1.7"
+            data-action="episode-field" data-field="script_full" data-id="${escapeHtml(ep.id)}"
+            placeholder="第 ${escapeHtml(num)} 集剧本：内景/外景 地点 时间 → 动作 → 角色名+对白。可手写，或点「AI 写本集」。">${escapeHtml(ep.script_full || "")}</textarea>
+        </div>
+      </details>`;
+  }).join("");
+  return `<section class="panel-inner"><div class="summary-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div><h3 style="margin:0">剧本卷轴</h3><p class="scene-summary-hint" style="margin-top:2px">${eps.length} 集 · 已写 ${written} · 共 ${totalChars} 字</p></div>
+      <div style="display:flex;gap:8px">
+        ${firstEmptyNum ? `<button class="button button--primary button--small" type="button" data-action="ai-continue-episode">✦ 续写下一集（第 ${escapeHtml(firstEmptyNum)} 集）</button>` : ""}
+        <button class="button button--ghost button--small" type="button" data-action="export-micro-script">⬇ 导出整片</button>
+      </div>
+    </div>
+    <p class="scene-summary-hint" style="margin-top:6px">已写的集已折叠（点标题展开编辑）；未写的展开待填。每集承接上一集、落在 cliffhanger，AI 写本严守锁定的主角/世界观/题材。</p>
+    <div class="ep-script-list" style="margin-top:10px">${blocks}</div>
+  </div></section>`;
 }
