@@ -53,10 +53,9 @@ export function renderMicroPage(dom, appState) {
     body = charsNodeHTML(appState);
   } else if (cur === "plotframe") {
     body = plotFrameNodeHTML(appState);
-  } else if (cur === "thrill") {
-    body = thrillNodeHTML(appState);
-  } else if (cur === "pacepay") {
-    body = pacePayNodeHTML(appState);
+  } else if (cur === "rhythm" || cur === "thrill" || cur === "pacepay") {
+    // 节奏·爽点·付费：合并节点——宏观高潮/反转/释放节奏(thrill) + 付费分区/节点(pacepay)
+    body = thrillNodeHTML(appState) + pacePayNodeHTML(appState);
   } else if (cur === "dialogue") {
     body = dialogueNodeHTML(appState);
   } else if (cur === "script") {
@@ -104,8 +103,7 @@ function nodeFilled(id, appState) {
     case "characters": return !!(p.char_smith?.protagonist?.identity || p.char_smith?.protagonist?.name);
     case "plotframe": return (p.plot_frame?.event_chain ?? []).length > 0;
     case "episodes": return (p.episode_board?.episodes ?? []).length > 0;
-    case "thrill": return (p.thrill?.main_thrills ?? []).length > 0;
-    case "pacepay": return !!(p.pace_pay?.ep_template);
+    case "rhythm": return (p.thrill?.main_thrills ?? []).length > 0 || !!(p.pace_pay?.ep_template);
     case "dialogue": return (p.micro_dialogue?.rounds ?? []).length > 0;
     case "themelift": return !!(p.theme_lift?.theme_statement?.core);
     case "gender": return !!(p.gender_tune?.demand_map);
