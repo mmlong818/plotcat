@@ -438,7 +438,7 @@ function scriptScrollHTML(appState) {
   // 已写的集折叠成一行摘要，未写的展开待填——保留连续流、消除整屏文本框墙
   const blocks = eps.map((ep) => {
     const num = ep.order_index ?? "";
-    const loading = !!ep.script_loading;
+    const loading = !!ep.script_loading || appState.episodeWriteBusy === ep.id;
     const has = (ep.script_full || "").trim().length > 0;
     const chars = (ep.script_full || "").length;
     const preview = (ep.script_full || "").replace(/\s+/g, " ").slice(0, 48);
