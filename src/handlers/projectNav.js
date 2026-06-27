@@ -7,10 +7,14 @@ import { renderAiSettingsDialog } from "../render/project.js";
 
 export function handleProjectNavClick(action, target, id, nodeId) {
   if (action === "open-project") {
-    // 形态分流：微短剧进独立创作区，其它进电影工作台
+    // 形态分流：微短剧进独立创作区；连续剧季-集模式进分集板；其它进电影工作台结构步
     const enter = () => {
-      if (appState.project.project?.format === "micro_drama") {
+      const fmt = appState.project.project?.format;
+      if (fmt === "micro_drama") {
         ctx.setCurrentPage("micro");
+      } else if (fmt === "series") {
+        ctx.setCurrentPage("workflow");
+        ctx.setCurrentStep("episodes");
       } else {
         ctx.setCurrentPage("workflow");
         ctx.setCurrentStep("structure");
