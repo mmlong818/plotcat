@@ -27,9 +27,7 @@ export function handleMicroClick(action, target, id, nodeId) {
   if (action === "ai-gen-thrill") { ctx.aiGenThrill(); return true; }        // ⑥⑦爽点高潮
   if (action === "ai-gen-pacepay") { ctx.aiGenPacePay(); return true; }      // ⑩节奏付费
   if (action === "ai-gen-dialogue") { ctx.aiGenDialogue(); return true; }    // ⑧分集写本
-  if (action === "ai-gen-themelift") { ctx.aiGenThemeLift(); return true; }  // ⑪主题升华
-  if (action === "ai-gen-gender") { ctx.aiGenGender(); return true; }        // ⑨性别向
-  if (action === "select-gender-mode") {                                      // ⑨频向切换
+  if (action === "select-gender-mode") {                                      // ①主题定位·频向（设计之初基调）
     const gt = appState.project.gender_tune ?? (appState.project.gender_tune = {});
     gt.mode = id;
     ctx.markDirty(); ctx.render();
@@ -37,16 +35,31 @@ export function handleMicroClick(action, target, id, nodeId) {
   }
   if (action === "ai-write-episode") { ctx.aiWriteEpisode(id); return true; }   // ✎卷轴·单集写本
   if (action === "ai-continue-episode") { ctx.aiContinueEpisode(); return true; } // ✎卷轴·续写下一集
-  if (action === "export-micro-script") {                                       // ✎卷轴·导出整片
+  if (action === "export-micro-script") {                                       // ✎卷轴·导出 PDF 剧本（浏览器打印→另存为 PDF）
     const eps = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
     const title = appState.project.project?.title || "微短剧";
-    const text = `《${title}》\n\n` + eps.map((e) => `══ 第 ${e.order_index ?? ""} 集 ══ ${e.title || ""}\n${(e.script_full || "").trim() || "（未写）"}`).join("\n\n\n");
-    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${title}-剧本.txt`;
-    document.body.appendChild(a); a.click(); a.remove();
-    URL.revokeObjectURL(url);
+    const esc = (s) => String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+    const body = eps.map((e) => `<section class="ep"><h2>第 ${esc(e.order_index ?? "")} 集　${esc(e.title || "")}</h2><pre>${esc((e.script_full || "").trim() || "（本集未写）")}</pre></section>`).join("");
+    const html = `<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>${esc(title)}-剧本</title>
+      <style>
+        @page { margin: 22mm 18mm; }
+        body { font: 14px/1.85 "Songti SC","SimSun","Noto Serif CJK SC",serif; color:#111; }
+        h1 { text-align:center; font-size:24px; margin:0 0 4px; }
+        .sub { text-align:center; color:#666; font-size:12px; margin-bottom:28px; }
+        .ep { page-break-inside:avoid; margin-bottom:26px; }
+        .ep h2 { font-size:16px; border-bottom:1px solid #ccc; padding-bottom:4px; margin:0 0 8px; }
+        pre { white-space:pre-wrap; word-break:break-word; font:inherit; margin:0; }
+        @media print { .tip { display:none; } }
+        .tip { position:fixed; top:8px; right:8px; background:#b5601d; color:#fff; padding:6px 12px; border-radius:6px; font-size:12px; }
+      </style></head><body>
+      <div class="tip">按 Ctrl/⌘+P → 目标选「另存为 PDF」</div>
+      <h1>《${esc(title)}》</h1><div class="sub">微短剧剧本 · 共 ${eps.length} 集</div>
+      ${body}
+      <script>window.onload=function(){setTimeout(function(){window.print();},300);};<\/script>
+      </body></html>`;
+    const w = window.open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); }
+    else { window.alert("浏览器拦截了弹窗，请允许后重试导出 PDF。"); }
     return true;
   }
   return false;

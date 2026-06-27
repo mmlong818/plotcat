@@ -50,10 +50,6 @@ export function renderMicroPage(dom, appState) {
     body = pacePayNodeHTML(appState);
   } else if (cur === "dialogue") {
     body = dialogueNodeHTML(appState);
-  } else if (cur === "themelift") {
-    body = themeLiftNodeHTML(appState);
-  } else if (cur === "gender") {
-    body = genderNodeHTML(appState);
   } else if (cur === "script") {
     body = scriptScrollHTML(appState);
   } else {
@@ -99,7 +95,13 @@ function themeNodeHTML(appState) {
     <section class="panel-inner">
       <div class="summary-card">
         
-        <h3>主题定位 · 为后续所有节点提供"方向锚"</h3>
+        <h3>主题定位 · 全剧基调锚点（频向 / 主题在此一锤定音，影响后续所有生成）</h3>
+        ${(() => {
+          const mode = appState.project.gender_tune?.mode || "mixed";
+          const b = (m, label) => `<button class="button ${mode === m ? "button--primary" : "button--ghost"} button--small" type="button" data-action="select-gender-mode" data-id="${m}">${label}</button>`;
+          return `<div class="cf-field" style="margin-top:10px"><span class="cf-label">频向（决定节奏/爽点/台词基调——开局就定，自动注入后续每个 AI 节点）</span>
+            <div style="display:flex;gap:6px;margin-top:5px">${b("male", "男频")}${b("female", "女频")}${b("mixed", "混频")}</div></div>`;
+        })()}
         <div class="form-grid form-grid--compact" style="margin-top:10px">
           <label class="field field--full"><span>故事概念 / 关键词</span>
             <textarea class="cf-textarea" rows="2" data-action="theme-field" data-field="input_concept" placeholder="一句话或几个关键词；留空让 AI 基于题材自由发挥">${tag(ta.input_concept)}</textarea></label>
@@ -126,7 +128,7 @@ function themeNodeHTML(appState) {
             <input class="cf-input" type="text" data-action="theme-field" data-field="track" value="${tag(ta.track)}" /></label>
           <label class="field field--full"><span>目标受众</span>
             <input class="cf-input" type="text" data-action="theme-field" data-field="audience_out" value="${tag(ta.audience_out)}" /></label>
-          <label class="field field--full"><span>主题与价值观</span>
+          <label class="field field--full"><span>主题陈述 · 价值底色（本剧到底要说什么——升华落点在此奠定）</span>
             <textarea class="cf-textarea" rows="2" data-action="theme-field" data-field="values">${tag(ta.values)}</textarea></label>
         </div>
         ${listBlock("差异化要素", ta.diff)}
@@ -360,23 +362,6 @@ function dialogueNodeHTML(appState) {
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">场景设定</p><p class="scene-summary-hint">${escapeHtml(d.setting ?? "")}</p>
     <div class="dialogue-rounds" style="margin-top:8px">${d.rounds.map((r) => `<div class="genre-contract-row" style="margin-top:6px"><strong>${escapeHtml(r.round ?? "")}</strong><p class="scene-summary-hint">A：${escapeHtml(r.a ?? "")}</p><p class="scene-summary-hint">B：${escapeHtml(r.b ?? "")}</p></div>`).join("")}</div>
     <div class="form-grid form-grid--compact" style="margin-top:10px">${mt("micro_dialogue", "金句", "golden_line", d.golden_line)}${mt("micro_dialogue", "关键动作", "action", d.action)}</div></div>` : ""}</section>`;
-}
-
-// 节点⑪·主题升华
-function themeLiftNodeHTML(appState) {
-  const t = appState.project.theme_lift ?? {}; const ts = t.theme_statement ?? {}; const an = t.anchors ?? {}; const loading = !!t.loading; const has = !!(ts.core);
-  return `<section class="panel-inner"><div class="summary-card">${nodeHead("11 · 主题升华与观众代入 ThemeLift", "主题升华", "终局价值验证+情绪曲线+记忆锚点")}${genBtn("ai-gen-themelift", loading, has, "✦ AI 升华主题", "AI 升华中…")}${t.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(t.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">主题陈述 + 记忆锚点（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("theme_lift", "核心命题", "theme_statement.core", ts.core)}${mt("theme_lift", "表现形式", "theme_statement.form", ts.form)}${mt("theme_lift", "社会意义", "theme_statement.meaning", ts.meaning)}${mf("theme_lift", "金句锚点", "anchors.line", an.line)}${mf("theme_lift", "场面锚点", "anchors.scene", an.scene)}${mf("theme_lift", "情感锚点", "anchors.emotion", an.emotion)}${mt("theme_lift", "观众代入机制", "immersion", t.immersion)}</div>${roTable("情绪曲线", t.emotion_curve, [{ key: "eps", label: "集段" }, { key: "mood", label: "情绪" }, { key: "strength", label: "强度" }, { key: "turn", label: "转折" }])}</div>` : ""}</section>`;
-}
-
-// 节点⑨·性别向（全局调优）
-function genderNodeHTML(appState) {
-  const g = appState.project.gender_tune ?? {}; const mode = g.mode || "mixed"; const loading = !!g.loading; const has = !!g.demand_map;
-  const modeBtn = (m, label) => `<button class="button ${mode === m ? "button--primary" : "button--ghost"} button--small" type="button" data-action="select-gender-mode" data-id="${m}">${label}</button>`;
-  return `<section class="panel-inner"><div class="summary-card">${nodeHead("09 · 性别向差异化调优 GenderTune", "性别向", "选定频向后注入所有 AI 生成，优化诉求/节奏/场景/台词")}
-    <div style="margin-top:10px;display:flex;gap:6px">${modeBtn("male", "男频")}${modeBtn("female", "女频")}${modeBtn("mixed", "混频")}</div>
-    ${genBtn("ai-gen-gender", loading, has, "✦ AI 生成频向调优方案", "AI 调优中…")}${g.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(g.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">调优方案（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("gender_tune", "受众诉求映射", "demand_map", g.demand_map)}${mt("gender_tune", "节奏控制", "pace", g.pace)}${mt("gender_tune", "情感处理", "emotion", g.emotion)}${mt("gender_tune", "台词风格", "dialogue_style", g.dialogue_style)}</div>${roChips("典型场景建议", g.scenes)}</div>` : ""}</section>`;
 }
 
 // 流式剧本卷轴：整片连续脚本流（集为分隔），按集续写/编辑完整剧本。
