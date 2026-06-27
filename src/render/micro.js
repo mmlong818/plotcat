@@ -258,10 +258,10 @@ function charsNodeHTML(appState) {
       <div class="summary-card" style="margin-top:12px">
         <p class="section-label">主角档案（可编辑）</p>
         <div class="form-grid form-grid--compact" style="margin-top:8px">
-          ${fld("身份标签", "protagonist.identity", pr.identity)}
-          ${fld("核心欲望", "protagonist.desire", pr.desire)}
-          ${fld("致命缺陷", "protagonist.flaw", pr.flaw)}
-          ${fld("独特能力", "protagonist.ability", pr.ability)}
+          ${tfld("身份标签", "protagonist.identity", pr.identity)}
+          ${tfld("核心欲望", "protagonist.desire", pr.desire)}
+          ${tfld("致命缺陷", "protagonist.flaw", pr.flaw)}
+          ${tfld("独特能力", "protagonist.ability", pr.ability)}
           ${tfld("成长路径", "protagonist.growth", pr.growth)}
         </div>
       </div>
@@ -272,9 +272,9 @@ function charsNodeHTML(appState) {
           <div class="genre-contract-row" style="margin-top:8px">
             <div class="form-grid form-grid--compact">
               <label class="field"><span>姓名</span><input class="cf-input" type="text" data-action="chars-field" data-field="supporting.name" data-idx="${i}" value="${tag(s.name)}" /></label>
-              <label class="field"><span>功能定位</span><input class="cf-input" type="text" data-action="chars-field" data-field="supporting.function" data-idx="${i}" value="${tag(s.function)}" /></label>
-              <label class="field"><span>与主角关系</span><input class="cf-input" type="text" data-action="chars-field" data-field="supporting.relation" data-idx="${i}" value="${tag(s.relation)}" /></label>
               <label class="field"><span>记忆标签</span><input class="cf-input" type="text" data-action="chars-field" data-field="supporting.memory_tag" data-idx="${i}" value="${tag(s.memory_tag)}" /></label>
+              <label class="field field--full"><span>功能定位</span><textarea class="cf-textarea" rows="2" data-action="chars-field" data-field="supporting.function" data-idx="${i}">${tag(s.function)}</textarea></label>
+              <label class="field field--full"><span>与主角关系</span><textarea class="cf-textarea" rows="2" data-action="chars-field" data-field="supporting.relation" data-idx="${i}">${tag(s.relation)}</textarea></label>
             </div>
           </div>`).join("") || `<p class="scene-summary-hint">（暂无配角）</p>`}
       </div>
@@ -282,9 +282,9 @@ function charsNodeHTML(appState) {
       <div class="summary-card" style="margin-top:12px">
         <p class="section-label">反派设计 + 关系图谱</p>
         <div class="form-grid form-grid--compact" style="margin-top:8px">
-          ${fld("反派·动机逻辑", "antagonist.motive", an.motive)}
-          ${fld("反派·能力评估", "antagonist.power", an.power)}
-          ${fld("反派·魅力包装", "antagonist.charm", an.charm)}
+          ${tfld("反派·动机逻辑", "antagonist.motive", an.motive)}
+          ${tfld("反派·能力评估", "antagonist.power", an.power)}
+          ${tfld("反派·魅力包装", "antagonist.charm", an.charm)}
           ${tfld("关系图谱", "relations", c.relations)}
         </div>
       </div>` : ""}
