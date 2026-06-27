@@ -162,8 +162,56 @@ export function createMicroGen({ render, markDirty }) {
     (d) => !!d.demand_map,
     (s, d) => { s.demand_map = d.demand_map; s.pace = d.pace ?? ""; s.emotion = d.emotion ?? ""; s.scenes = d.scenes ?? []; s.dialogue_style = d.dialogue_style ?? ""; });
 
+  // 流式剧本卷轴 · 单集写本（live-ref 防 autosave 孤立）。承接上一集结尾续写。
+  async function aiWriteEpisode(epId) {
+    const eps0 = appState.project.episode_board?.episodes ?? [];
+    const ep0 = eps0.find((e) => e.id === epId);
+    if (!ep0) return;
+    ep0.script_loading = true; ep0.error = ""; render();
+    const sorted = eps0.slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const idx = sorted.findIndex((e) => e.id === epId);
+    const prevTail = idx > 0 ? (sorted[idx - 1].script_full || "") : "";
+    const options = {
+      episodeNumber: ep0.order_index,
+      plan: { hook_3s: ep0.hook_3s, payoff: ep0.payoff, cliffhanger: ep0.cliffhanger, summary: ep0.summary },
+      prevTail
+    };
+    let result;
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: "episode_script", projectContext: appState.project, options })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      result = await res.json();
+    } catch (e) { result = { error: "生成失败：" + e.message }; }
+    // autosave 可能在 await 期间整体重赋 appState.project，重取 live 集引用再写
+    const ep = (appState.project.episode_board?.episodes ?? []).find((e) => e.id === epId);
+    if (!ep) return;
+    ep.script_loading = false;
+    const d = result.choices?.[0]?.data ?? {};
+    const script = (d.script ?? "").trim();
+    if (result.error || !script) {
+      ep.error = result.error || "AI 未返回剧本，请重试";
+    } else {
+      ep.script_full = script;
+      ep.status = "scripted";
+      ep.error = "";
+      markDirty();
+    }
+    render();
+  }
+
+  // 续写下一集：定位首个未写本的集，写它
+  async function aiContinueEpisode() {
+    const sorted = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const target = sorted.find((e) => !(e.script_full || "").trim());
+    if (target) await aiWriteEpisode(target.id);
+  }
+
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-    aiGenThrill, aiGenPacePay, aiGenDialogue, aiGenThemeLift, aiGenGender
+    aiGenThrill, aiGenPacePay, aiGenDialogue, aiGenThemeLift, aiGenGender,
+    aiWriteEpisode, aiContinueEpisode
   };
 }
