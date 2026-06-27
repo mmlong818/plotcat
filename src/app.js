@@ -61,13 +61,14 @@ import { createCreationWorkbench } from "./ai/creationWorkbench.js";
 import { createCreationFlow } from "./creation/flow.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
-  // 总览：连续剧的常驻主页(落地与打开项目先到这)，合呈现 故事核心/结构/人物 并作各步入口
-  { id: "overview",      label: "总览", description: "项目总览：故事核心、结构、人物一览，从这里进入各步细化。", seriesOnly: true },
+  // 总览：连续剧的常驻主页(落地与打开项目先到这)，合呈现 故事核心/结构/人物 并作各步入口。
+  // 各形态展示哪些步骤、顺序如何，由模式注册表 MODE.steps 决定(不再用 seriesOnly 标记)。
+  { id: "overview",      label: "总览", description: "项目总览：故事核心、结构、人物一览，从这里进入各步细化。" },
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   // 连续剧·分集大纲：定义每集是什么(钩子/爽点/cliffhanger/梗概)，非写剧本本身(那在「剧本撰写」)
-  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集开场钩子、主线推进、集尾钩子、季贯穿线，挂载场景。", seriesOnly: true },
+  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集开场钩子、主线推进、集尾钩子、季贯穿线，挂载场景。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
   { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
   { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
