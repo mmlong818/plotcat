@@ -469,11 +469,11 @@ export function createCreationAI(deps) {
     if (fmt === "micro_drama") {
       setCurrentPage("micro");
     } else if (fmt === "series") {
-      // 连续剧落在第一步「人物核心」：顺导航往右走(人物→关系→季弧→分集→…)即正确开发流程
+      // 连续剧落在第一步「人物核心」：顺导航往右走(人物→关系→季弧→分集→…)即正确开发流程。
+      // 不在此后台跑 autoEnrich——它每完成一步就整页 render，落地后会连闪数次；
+      // 连续剧按步骤走，关系网/故事核心由用户在对应步骤主动生成。
       setCurrentPage("workflow");
       setCurrentStep("characters");
-      // 关系网后台生成（连续剧无剧情卡，autoEnrich 的场景规划会自动跳过）
-      autoEnrichNewProject({ withRelationships: true }).catch(() => {});
     } else {
       setCurrentPage("workflow");
       setCurrentStep("structure");
