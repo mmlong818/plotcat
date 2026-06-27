@@ -183,7 +183,15 @@ export function createCreationAI(deps) {
 
   function streamingOnChunk(c, text) {
     c.streamPreview = (c.streamPreview ?? "") + text;
-    renderCreationPage();
+    // 流式期间只更新预览元素的文本，不重建整页——否则每来一个 chunk 就 renderCreationPage
+    // 会让整页(所有面板 innerHTML)反复重建，表现为"AI 生成时一直闪"。
+    const preview = c.streamPreview;
+    const overlayEl = document.querySelector(".cf-ai-overlay-stream"); // 加载遮罩里的流式行
+    const streamEl = document.querySelector(".cf-stream-text");        // step3 内联预览
+    if (overlayEl) overlayEl.textContent = preview.length > 200 ? "…" + preview.slice(-200) : preview;
+    if (streamEl) streamEl.textContent = preview.length > 300 ? "…" + preview.slice(-300) : preview;
+    // 首个 chunk 时预览容器尚未渲染(页面以空 preview 渲染)，渲染一次把它建出来；后续只走上面的文本更新
+    if (!overlayEl && !streamEl) renderCreationPage();
   }
 
   async function handleGenerateAct(actKey) {
