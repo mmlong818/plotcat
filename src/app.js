@@ -1974,7 +1974,7 @@ const {
   handleRefineCharacter, handleGenStructureNotes, handleGenNodeNote,
   aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
   aiGenThrill, aiGenPacePay, aiGenDialogue,
-  aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode, aiCascadeFrom
+  aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
 } = creationFlow;
 
 // 系列库（跨项目世界观）数据流——依赖 renderCreationPage，故在创作流程簇之后创建
@@ -1996,7 +1996,7 @@ initContext({
   handleGenStructureNotes, handleGenNodeNote,
   aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
   aiGenThrill, aiGenPacePay, aiGenDialogue,
-  aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode, aiCascadeFrom
+  aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
 });
 
 // ── Patch event delegation to include creation actions ────────────────────────

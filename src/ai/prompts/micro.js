@@ -303,6 +303,35 @@ ${priorTail ? `上一集（第 ${from - 1} 集）结尾：${priorTail}\n须无�
   return { system, user };
 }
 
+// 剧本卷轴 · 单集定向改写：mode = dialogue(打磨对白) / shorter(缩短) / longer(延长)
+export function buildEpisodeRewritePrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const mode = opts?.mode || "dialogue";
+  const script = (opts?.script || "").trim();
+  const num = opts?.episodeNumber ?? "";
+  const modeInstr = {
+    dialogue: "【只打磨对白】保持场景头/情节/动作结构基本不变，把台词改得更短、更狠、更戳心，强化情绪节拍(挑衅→加压→反杀)，并提炼一句可独立传播的金句。",
+    shorter: "【缩短】本集太长，压缩到单集 1-2 分钟竖屏可演完的体量(正文约 250-400 字)，删冗余铺垫/重复/可有可无的过场，保留黄金三秒钩子、核心爽点、集尾 cliffhanger。",
+    longer: "【延长】当前偏短，补充必要的动作细节、情绪铺垫与一两轮关键对白以丰满冲突，但仍控制在单集 1-2 分钟内，保留钩子与 cliffhanger。"
+  }[mode] || "打磨本集剧本。";
+  const system = `你是微短剧剧本打磨师，对单集剧本做定向改写，输出可直接拍摄的完整单集剧本。${NO_EN_QUOTE}`;
+  const user = `${COHERENCE}
+${hardAnchor(proj)}
+
+【已锁定设定】
+${lockedSettings(proj)}
+
+【第 ${num} 集 · 当前剧本】
+${script || "（本集尚无剧本，请据上游设定与本集定位直接写一版）"}
+
+【改写要求】${modeInstr}
+- 严格沿用锁定主角/世界观/题材，保持本集在主线中的位置与前后衔接
+- 标准剧本格式：场景头(内/外景 地点 时间)→动作→角色名+对白
+
+仅输出 JSON：{ "script": "改写后的完整单集剧本" }`;
+  return { system, user };
+}
+
 // 流式剧本卷轴 · 单集写本/续写（节点⑤分集 + ⑥⑦爽点 + ⑩付费 落地为可拍剧本）
 export function buildEpisodeScriptPrompt(ctx, opts) {
   const proj = resolveProjectDoc(ctx);
