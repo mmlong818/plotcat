@@ -244,7 +244,7 @@ function templateFromProject(project) {
   if (format === "pilot") return "four_act"; // 电视试播沿用四幕
   if (format === "series") return "series_season"; // 连续剧用季结构，配套季-集分集管理
   if (format === "short") return "three_act";
-  if (format === "micro_drama") return "three_act";
+  if (format === "micro_drama") return "micro_drama_serial";
   return list(project.story_bible?.beats).some((beat) => beat.framework === "four_act")
     ? "four_act"
     : list(project.story_bible?.beats).some((beat) => beat.framework === "three_act")

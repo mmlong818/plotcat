@@ -34,7 +34,11 @@ export function renderMicroPage(dom, appState) {
   // ── 激活节点内容 ──
   const step = MICRO_STEPS.find((s) => s.id === cur) || MICRO_STEPS[0];
   let body;
-  if (cur === "episodes") {
+  const noEpisodes = (appState.project?.episode_board?.episodes ?? []).length === 0;
+  if (noEpisodes) {
+    // 微短剧开篇：先定集数 + 频向（地基决策），再展开节点。不套电影三幕。
+    body = microSetupHTML(appState);
+  } else if (cur === "episodes") {
     body = episodeBoardHTML(appState);
   } else if (cur === "theme") {
     body = themeNodeHTML(appState);
@@ -59,6 +63,23 @@ export function renderMicroPage(dom, appState) {
     </div></section>`;
   }
   dom.microContent.innerHTML = body;
+}
+
+// 微短剧开篇设置：先问集数 + 频向（取代电影三幕结构），定好后生成分集骨架。
+function microSetupHTML(appState) {
+  const mode = appState.project?.gender_tune?.mode || "mixed";
+  const b = (m, label) => `<button class="button ${mode === m ? "button--primary" : "button--ghost"} button--small" type="button" data-action="select-gender-mode" data-id="${m}">${label}</button>`;
+  return `<section class="panel-inner"><div class="summary-card">
+    <h3>微短剧开篇 · 先定两件事</h3>
+    <p class="scene-summary-hint" style="margin-top:6px">集数与频向是微短剧的地基——决定节奏、爽点密度与全局基调（微短剧不套电影三幕）。定好后自动建出分集骨架，再逐节点展开。</p>
+    <div class="cf-field" style="margin-top:16px"><span class="cf-label">① 频向（男频 / 女频 / 混频——自动注入后续所有 AI 生成）</span>
+      <div style="display:flex;gap:6px;margin-top:6px">${b("male", "男频")}${b("female", "女频")}${b("mixed", "混频")}</div></div>
+    <div class="cf-field" style="margin-top:16px"><span class="cf-label">② 计划集数</span>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <input id="micro-ep-count" class="cf-input" type="number" min="1" max="200" value="60" style="max-width:120px" />
+        <span class="scene-summary-hint">竖屏微短剧常见 60–100 集；先建占位，后续可增删</span></div></div>
+    <div style="margin-top:18px"><button class="button button--primary" type="button" data-action="micro-setup-init">开始创作 · 生成分集骨架 →</button></div>
+  </div></section>`;
 }
 
 // 节点是否已有内容（导航上显示进度点）

@@ -1,8 +1,27 @@
 import { ctx } from "./context.js";
 import { appState } from "../state.js";
+import { createId } from "../shared/projectFactory.js";
 
 // 微短剧创作区交互（节点流水线导航等）。
 export function handleMicroClick(action, target, id, nodeId) {
+  if (action === "micro-setup-init") {                                          // 开篇：按集数+频向建分集骨架
+    const input = document.querySelector("#micro-ep-count");
+    let n = parseInt(input?.value ?? "60", 10);
+    if (!Number.isFinite(n) || n < 1) n = 60;
+    if (n > 200) n = 200;
+    const board = appState.project.episode_board ?? (appState.project.episode_board = { episodes: [], seasons: [{ number: 1, throughline: "", season_hook: "" }] });
+    if (!Array.isArray(board.episodes)) board.episodes = [];
+    for (let i = 1; i <= n; i++) {
+      board.episodes.push({
+        id: createId("ep"), order_index: i, season: 1, title: `第${i}集`,
+        hook_3s: "", payoff: "", cliffhanger: "", paywall_point: false,
+        summary: "", script_full: "", script_loading: false, scene_ids: []
+      });
+    }
+    appState.microStep = "episodes";
+    ctx.markDirty(); ctx.render();
+    return true;
+  }
   if (action === "micro-step") {
     appState.microStep = id;
     ctx.render();
