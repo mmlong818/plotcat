@@ -93,7 +93,7 @@ export const formatDefaultTemplates = {
   pilot: "three_act",
   series: "series_season",
   short: "three_act",
-  micro_drama: "three_act"
+  micro_drama: "micro_drama_serial"
 };
 
 export const formatStructureOptions = {
