@@ -66,10 +66,18 @@ export function renderMicroPage(dom, appState) {
       <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
     </div></section>`;
   }
-  // 流程导航：按编辑页面顺序的「上一步 / 下一步」+ 一键级联重生成
-  const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
-  const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
-  const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
+  // 流程导航：主线「上一步 / 下一步」+ 一键级联重生成。
+  // 对白打磨是可选工具(单集对白不满意时用)，不在主线流转——主线在剧本卷轴终止；从其进入则只给「返回剧本卷轴」。
+  const FLOW = MICRO_STEPS.filter((s) => s.id !== "dialogue");
+  let prev, next;
+  if (cur === "dialogue") {
+    prev = MICRO_STEPS.find((s) => s.id === "script") ?? null;
+    next = null;
+  } else {
+    const idx = FLOW.findIndex((s) => s.id === cur);
+    prev = idx > 0 ? FLOW[idx - 1] : null;
+    next = idx >= 0 && idx < FLOW.length - 1 ? FLOW[idx + 1] : null;
+  }
   const CASCADE_NODES = ["theme", "world", "characters", "plotframe", "rhythm", "episodes"];
   const cascading = !!appState.microCascadeBusy;
   const cascadeBtn = CASCADE_NODES.includes(cur)

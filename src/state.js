@@ -24,8 +24,8 @@ export const MICRO_STEPS = [
   { id: "plotframe", label: "总框架",   group: "结构", description: "5-8句事件链+幕次划分+关键转折+悬念布局。", done: true },
   { id: "rhythm",    label: "节奏·爽点·付费", group: "节奏", description: "全剧高潮/反转/爽点释放节奏 + 免费/首付费/深付费分区与付费节点——先定宏观节奏，分集照此铺。", done: true },
   { id: "episodes",  label: "分集设计", group: "分集", description: "按总框架与节奏，逐集落地：开场钩子/本集爽点/集尾cliffhanger/付费卡点。", done: true },
-  { id: "dialogue",  label: "对白打磨", group: "成稿", description: "场景级三段递进对话(挑衅→加压→反杀)+金句+动作。", done: true },
-  { id: "script",    label: "剧本卷轴", group: "成稿", description: "整片连续脚本流：按集续写完整可拍剧本，前后衔接、集尾cliffhanger，支持手动编辑与整片导出。", done: true }
+  { id: "script",    label: "剧本卷轴", group: "成稿", description: "分集设计后的主线：按分集大纲逐集编写完整可拍剧本，前后衔接、集尾cliffhanger，支持手动编辑与整片导出。", done: true },
+  { id: "dialogue",  label: "对白打磨", group: "打磨", description: "可选工具：某集对白不满意时，单独打磨三段递进对白(挑衅→加压→反杀)+金句+动作。", done: true }
 ];
 // 注：频向(男频/女频/混频)与主题陈述属"设计之初"的基调决策，已并入①主题定位节点(theme)，
 // 频向经 lockedSettings 注入全部下游生成；不再设独立的「性别向」「主题升华」末端节点。
