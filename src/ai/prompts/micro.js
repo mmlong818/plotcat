@@ -274,23 +274,29 @@ export function buildGenderTunePrompt(ctx, opts) {
 export function buildEpisodeDesignPrompt(ctx, opts) {
   const proj = resolveProjectDoc(ctx);
   const count = opts?.count || 60;
+  const from = opts?.from || 1;
+  const to = opts?.to || count;
+  const priorTail = (opts?.priorTail || "").trim();
   const user = `${COHERENCE}
 ${hardAnchor(proj)}
 
 【已锁定设定】
 ${lockedSettings(proj)}
 
-【任务】把上述总框架/事件链铺排成 ${count} 集的分集大纲。要求：
+【任务】本剧共 ${count} 集，把总框架/事件链铺成逐集大纲。本次只设计【第 ${from} 到 ${to} 集】（共 ${to - from + 1} 集，其余批次另行处理）。
+${priorTail ? `上一集（第 ${from - 1} 集）结尾：${priorTail}\n须无缝承接，不重复、不跳脱。` : "这是开篇批次，从第 1 集黄金三秒钩子直接切入。"}
+要求：
 - 黄金三秒钩子：每集开场前3秒就抓人（冲突/反差/悬念），禁止铺垫开场
 - 本集爽点：逐集兑付递进，强度有起伏不疲劳
-- 集尾 cliffhanger：每集结尾留强钩子逼追下一集（最后一集为大结局回收）
-- 本集情节：一句话概括，承接上一集、推进主线，整体覆盖完整事件链
-- 严格沿用锁定的主角/世界观/题材，按频向基调；正好输出 ${count} 集，ep 从 1 连续编号
+- 集尾 cliffhanger：每集结尾留强钩子逼追下一集（第 ${count} 集为大结局回收）
+- 本集情节：一句话概括，承接上一集、推进主线
+- 严格沿用锁定的主角/世界观/题材，按频向基调
+- 正好输出第 ${from} 到 ${to} 集，ep 用真实集号（${from}…${to}）
 
 仅输出 JSON（不要解释/代码块）：
 {
   "episodes": [
-    {"ep": 1, "title": "本集标题", "hook_3s": "黄金三秒钩子", "payoff": "本集爽/虐点", "cliffhanger": "集尾钩子", "summary": "本集情节一句话"}
+    {"ep": ${from}, "title": "本集标题", "hook_3s": "黄金三秒钩子", "payoff": "本集爽/虐点", "cliffhanger": "集尾钩子", "summary": "本集情节一句话"}
   ]
 }`;
   const system = `你是微短剧分集编剧（节点⑤分集设计器），把总框架拆成强钩子、快节奏、每集必留 cliffhanger 的逐集大纲。\n${NO_EN_QUOTE}`;

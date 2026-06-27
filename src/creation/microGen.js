@@ -160,30 +160,44 @@ export function createMicroGen({ render, markDirty }) {
     (s, d) => { s.setting = d.setting ?? ""; s.rounds = d.rounds; s.golden_line = d.golden_line ?? ""; s.action = d.action ?? ""; });
 
   // 节点⑤分集设计 · AI 一键铺分集大纲：依据总框架把每集的钩子/爽点/cliffhanger/情节填上。
+  // 分批生成(每批 BATCH 集)——一次性让 GLM 生成几十集会极慢/挂起，分批可见进度且单批可超时。
   async function aiDesignEpisodes() {
-    const n0 = (appState.project.episode_board?.episodes ?? []).length;
-    if (n0 === 0) return;
-    appState.microGenBusy = "episode_design"; render();
-    let result;
-    try {
-      const res = await fetch("/api/generate", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step: "episode_design", projectContext: appState.project, options: { count: n0 } })
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      result = await res.json();
-    } catch (e) { result = { error: "生成失败：" + e.message }; }
-    appState.microGenBusy = "";
-    const designs = result.choices?.[0]?.data?.episodes;
-    // live-ref：await 后重取当前 episodes，按顺序写入 AI 设计（保留 id/scene_ids/script_full）
-    const live = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    if (result.error || !Array.isArray(designs) || designs.length === 0) {
-      appState.episodeDesignError = result.error || "AI 未返回分集大纲，请重试";
-    } else {
-      appState.episodeDesignError = "";
+    const total = (appState.project.episode_board?.episodes ?? []).length;
+    if (total === 0) return;
+    const BATCH = 12, PER_BATCH_TIMEOUT = 90000;
+    appState.microGenBusy = "episode_design";
+    appState.episodeDesignError = "";
+    for (let start = 0; start < total; start += BATCH) {
+      const from = start + 1, to = Math.min(start + BATCH, total);
+      appState.episodeDesignProgress = `${start}/${total}`;
+      render();
+      // 上一集结尾做衔接（取当前 live 的上一集）
+      const liveSorted = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+      const prev = start > 0 ? liveSorted[start - 1] : null;
+      const priorTail = prev ? `《${prev.title || ""}》${prev.cliffhanger || prev.summary || ""}` : "";
+      let result;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), PER_BATCH_TIMEOUT);
+      try {
+        const res = await fetch("/api/generate", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ step: "episode_design", projectContext: appState.project, options: { count: total, from, to, priorTail } }),
+          signal: ctrl.signal
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        result = await res.json();
+      } catch (e) { result = { error: e.name === "AbortError" ? `第 ${from}-${to} 集生成超时` : "生成失败：" + e.message }; }
+      finally { clearTimeout(timer); }
+      const designs = result.choices?.[0]?.data?.episodes;
+      if (result.error || !Array.isArray(designs) || designs.length === 0) {
+        appState.episodeDesignError = `${result.error || "AI 未返回分集大纲"}（已完成 ${start}/${total} 集，可重试续铺）`;
+        break;
+      }
+      // live-ref：每批后重取当前 episodes 再写（autosave 可能替换 project）
+      const live = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
       designs.forEach((d, i) => {
-        const ep = live[i];
-        if (!ep) return;
+        const ep = live[start + i];
+        if (!ep || start + i >= to) return;
         if (d.title) ep.title = String(d.title);
         ep.hook_3s = d.hook_3s ?? ep.hook_3s ?? "";
         ep.payoff = d.payoff ?? ep.payoff ?? "";
@@ -192,6 +206,8 @@ export function createMicroGen({ render, markDirty }) {
       });
       markDirty();
     }
+    appState.microGenBusy = "";
+    appState.episodeDesignProgress = "";
     render();
   }
 
