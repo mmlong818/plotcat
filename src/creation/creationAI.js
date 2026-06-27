@@ -488,8 +488,9 @@ export function createCreationAI(deps) {
     if (fmt === "micro_drama") {
       setCurrentPage("micro");
     } else if (fmt === "series") {
+      // 连续剧落在第一步「人物核心」：顺导航往右走(人物→关系→季弧→分集→…)即正确开发流程
       setCurrentPage("workflow");
-      setCurrentStep("episodes");
+      setCurrentStep("characters");
     } else {
       setCurrentPage("workflow");
       setCurrentStep("structure");
