@@ -28,6 +28,7 @@ function lockedSettings(proj, level = 5) {
     if (ta.logline) L.push(`· 一句话故事：《${ta.logline}》`);
     if (ta.track) L.push(`· 赛道：${ta.track}`);
     if (ta.values) L.push(`· 价值底色：${ta.values}`);
+    if (ta.theme_statement?.core) L.push(`· 核心命题(全剧升华落点)：${ta.theme_statement.core}`);
   }
   if (level >= 2) {
     if (w.summary) L.push(`· 世界观：${w.summary}`);
@@ -71,6 +72,8 @@ ${NO_EN_QUOTE}`;
 - 冲突源能连贯支撑多集推进
 - 主题价值观清晰、不含越界表达
 - 差异化必须能落到具体桥段或设定
+【主题升华·开局即定】动笔前先钉死本剧的核心命题与记忆锚点，作为全剧情感与价值的最终落点，
+反向指导后续每一集的写作（不是写完才升华，而是开局就立住要升华什么）。
 
 仅输出如下 JSON（不要任何解释或代码块标记）：
 {
@@ -78,6 +81,8 @@ ${NO_EN_QUOTE}`;
   "track": "赛道定位：类型/子类型/平台节奏要求",
   "audience": "目标受众：性别/年龄/核心诉求",
   "values": "主题与价值观：主旨/价值底色/不可逾线点",
+  "theme_statement": {"core": "核心命题：一句话本剧到底要说什么", "form": "通过什么情节/人物转变来体现", "meaning": "对目标受众的情感或价值意义"},
+  "anchors": {"line": "全剧金句（可独立传播）", "scene": "最高记忆点的场面", "emotion": "最强情感锚点"},
   "diff": ["差异化要素（独特设定/结构/人物关系/情感表达，可落到桥段）", "..."],
   "risks": ["风险预警（同质化/逻辑漏洞/审查/审美疲劳）及规避建议", "..."]
 }`;
