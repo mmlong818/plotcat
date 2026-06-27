@@ -56,8 +56,6 @@ export function renderMicroPage(dom, appState) {
   } else if (cur === "rhythm" || cur === "thrill" || cur === "pacepay") {
     // 节奏·爽点·付费：合并节点——宏观高潮/反转/释放节奏(thrill) + 付费分区/节点(pacepay)
     body = thrillNodeHTML(appState) + pacePayNodeHTML(appState);
-  } else if (cur === "dialogue") {
-    body = dialogueNodeHTML(appState);
   } else if (cur === "script") {
     body = scriptScrollHTML(appState);
   } else {
@@ -66,18 +64,10 @@ export function renderMicroPage(dom, appState) {
       <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
     </div></section>`;
   }
-  // 流程导航：主线「上一步 / 下一步」+ 一键级联重生成。
-  // 对白打磨是可选工具(单集对白不满意时用)，不在主线流转——主线在剧本卷轴终止；从其进入则只给「返回剧本卷轴」。
-  const FLOW = MICRO_STEPS.filter((s) => s.id !== "dialogue");
-  let prev, next;
-  if (cur === "dialogue") {
-    prev = MICRO_STEPS.find((s) => s.id === "script") ?? null;
-    next = null;
-  } else {
-    const idx = FLOW.findIndex((s) => s.id === cur);
-    prev = idx > 0 ? FLOW[idx - 1] : null;
-    next = idx >= 0 && idx < FLOW.length - 1 ? FLOW[idx + 1] : null;
-  }
+  // 流程导航：主线「上一步 / 下一步」+ 一键级联重生成
+  const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
+  const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
+  const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
   const CASCADE_NODES = ["theme", "world", "characters", "plotframe", "rhythm", "episodes"];
   const cascading = !!appState.microCascadeBusy;
   const cascadeBtn = CASCADE_NODES.includes(cur)
@@ -118,7 +108,6 @@ function nodeFilled(id, appState) {
     case "plotframe": return (p.plot_frame?.event_chain ?? []).length > 0;
     case "episodes": return (p.episode_board?.episodes ?? []).length > 0;
     case "rhythm": return (p.thrill?.main_thrills ?? []).length > 0 || !!(p.pace_pay?.ep_template);
-    case "dialogue": return (p.micro_dialogue?.rounds ?? []).length > 0;
     case "themelift": return !!(p.theme_lift?.theme_statement?.core);
     case "gender": return !!(p.gender_tune?.demand_map);
     case "script": return (p.episode_board?.episodes ?? []).some((e) => (e.script_full ?? "").trim());
@@ -409,17 +398,6 @@ function pacePayNodeHTML(appState) {
   const p = appState.project.pace_pay ?? {}; const z = p.zones ?? {}; const loading = !!p.loading || appState.microGenBusy === "pace_pay"; const has = !!p.ep_template;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("10 · 分集节奏与付费设计 PacePay", "节奏·付费", "单集模板+全剧分区+付费节点，实现看完必点下一集")}${genBtn("ai-gen-pacepay", loading, has, "✦ AI 设计节奏与付费", "AI 编排中…")}${p.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(p.error)}</p>` : ""}</div>
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">节奏与付费（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("pace_pay", "单集标准模板", "ep_template", p.ep_template)}${mt("pace_pay", "免费区", "zones.free", z.free)}${mt("pace_pay", "首付费区", "zones.paid1", z.paid1)}${mt("pace_pay", "深度付费区", "zones.paid2", z.paid2)}</div>${roTable("付费节点", p.pay_nodes, [{ key: "at", label: "触发时机" }, { key: "mechanism", label: "心理机制" }, { key: "value", label: "付费价值" }])}</div>` : ""}</section>`;
-}
-
-// 节点⑧·分集写本（三段对话）
-function dialogueNodeHTML(appState) {
-  const d = appState.project.micro_dialogue ?? {}; const loading = !!d.loading || appState.microGenBusy === "micro_dialogue"; const has = Array.isArray(d.rounds) && d.rounds.length;
-  return `<section class="panel-inner"><div class="summary-card">${nodeHead("08 · 对话冲突生成器 DialogueForge", "分集写本", "把冲突落地为挑衅→加压→反杀三段递进对白+金句")}
-    ${mf("micro_dialogue", "本场冲突描述", "input_scene", d.input_scene, "留空让AI据主线选高张力对峙场景")}
-    ${genBtn("ai-gen-dialogue", loading, has, "✦ AI 生成三段对话", "AI 写本中…")}${d.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(d.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">场景设定</p><p class="scene-summary-hint">${escapeHtml(d.setting ?? "")}</p>
-    <div class="dialogue-rounds" style="margin-top:8px">${d.rounds.map((r) => `<div class="genre-contract-row" style="margin-top:6px"><strong>${escapeHtml(r.round ?? "")}</strong><p class="scene-summary-hint">A：${escapeHtml(r.a ?? "")}</p><p class="scene-summary-hint">B：${escapeHtml(r.b ?? "")}</p></div>`).join("")}</div>
-    <div class="form-grid form-grid--compact" style="margin-top:10px">${mt("micro_dialogue", "金句", "golden_line", d.golden_line)}${mt("micro_dialogue", "关键动作", "action", d.action)}</div></div>` : ""}</section>`;
 }
 
 // 流式剧本卷轴：整片连续脚本流（集为分隔），按集续写/编辑完整剧本。

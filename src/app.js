@@ -1973,7 +1973,7 @@ const {
   renderCreationPage, handleCreationClick, handleCreationInput,
   handleRefineCharacter, handleGenStructureNotes, handleGenNodeNote,
   aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-  aiGenThrill, aiGenPacePay, aiGenDialogue,
+  aiGenThrill, aiGenPacePay,
   aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
 } = creationFlow;
 
@@ -1995,7 +1995,7 @@ initContext({
   handleRefineCharacter, globalFindReplace, auditScriptSpeakers, patchCreationCardFields,
   handleGenStructureNotes, handleGenNodeNote,
   aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-  aiGenThrill, aiGenPacePay, aiGenDialogue,
+  aiGenThrill, aiGenPacePay,
   aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
 });
 
