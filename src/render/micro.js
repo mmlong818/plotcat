@@ -6,6 +6,15 @@ import { episodeBoardHTML } from "./episodes.js";
 // 后端/数据/AI 全复用；这里只是短剧专属前端外壳。
 export function renderMicroPage(dom, appState) {
   if (!dom.microNav || !dom.microContent) return;
+
+  // 开篇阶段（还没分集）：只显示「开篇设置」，不显示流水线导航——避免导航高亮与内容错位。
+  const noEpisodes = (appState.project?.episode_board?.episodes ?? []).length === 0;
+  if (noEpisodes) {
+    dom.microNav.innerHTML = "";
+    dom.microContent.innerHTML = microSetupHTML(appState);
+    return;
+  }
+
   const cur = appState.microStep || "episodes";
 
   // ── 节点导航：按语义分组（设定/结构/节奏/打磨/成稿），消除散乱编号 ──
@@ -34,11 +43,7 @@ export function renderMicroPage(dom, appState) {
   // ── 激活节点内容 ──
   const step = MICRO_STEPS.find((s) => s.id === cur) || MICRO_STEPS[0];
   let body;
-  const noEpisodes = (appState.project?.episode_board?.episodes ?? []).length === 0;
-  if (noEpisodes) {
-    // 微短剧开篇：先定集数 + 频向（地基决策），再展开节点。不套电影三幕。
-    body = microSetupHTML(appState);
-  } else if (cur === "episodes") {
+  if (cur === "episodes") {
     body = episodeBoardHTML(appState);
   } else if (cur === "theme") {
     body = themeNodeHTML(appState);
@@ -62,17 +67,14 @@ export function renderMicroPage(dom, appState) {
       <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
     </div></section>`;
   }
-  // 流程导航：按编辑页面顺序的「上一步 / 下一步」（开篇设置阶段不显示）
-  let footer = "";
-  if (!noEpisodes) {
-    const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
-    const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
-    const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
-    footer = `<div class="micro-flow-nav">
-      ${prev ? `<button class="button button--ghost button--small" type="button" data-action="micro-step" data-id="${escapeHtml(prev.id)}">← ${escapeHtml(prev.label)}</button>` : "<span></span>"}
-      ${next ? `<button class="button button--primary button--small" type="button" data-action="micro-step" data-id="${escapeHtml(next.id)}">${escapeHtml(next.label)} →</button>` : "<span></span>"}
-    </div>`;
-  }
+  // 流程导航：按编辑页面顺序的「上一步 / 下一步」
+  const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
+  const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
+  const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
+  const footer = `<div class="micro-flow-nav">
+    ${prev ? `<button class="button button--ghost button--small" type="button" data-action="micro-step" data-id="${escapeHtml(prev.id)}">← ${escapeHtml(prev.label)}</button>` : "<span></span>"}
+    ${next ? `<button class="button button--primary button--small" type="button" data-action="micro-step" data-id="${escapeHtml(next.id)}">${escapeHtml(next.label)} →</button>` : "<span></span>"}
+  </div>`;
   dom.microContent.innerHTML = body + footer;
 }
 
