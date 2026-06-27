@@ -22,6 +22,7 @@ import {
   isBrokenPlaceholderText
 } from "./utils.js";
 
+import { renderOverviewPage } from "./render/overview.js";
 import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
@@ -59,6 +60,8 @@ import { createCreationWorkbench } from "./ai/creationWorkbench.js";
 import { createCreationFlow } from "./creation/flow.js";
 
 workflowSteps.splice(0, workflowSteps.length, ...[
+  // 总览：连续剧的常驻主页(落地与打开项目先到这)，合呈现 故事核心/结构/人物 并作各步入口
+  { id: "overview",      label: "总览", description: "项目总览：故事核心、结构、人物一览，从这里进入各步细化。", seriesOnly: true },
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
@@ -84,6 +87,7 @@ const dom = {
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
   workflowStepFooter: document.querySelector("#workflow-step-footer"),
+  overviewContent: document.querySelector("#overview-content"),
   projectList: document.querySelector("#project-list"),
   projectCreateDialog: document.querySelector("#project-create-dialog"),
   projectCreateEyebrow: document.querySelector("#project-create-eyebrow"),
@@ -1161,6 +1165,8 @@ function stepHasContent(stepId) {
   const p = appState.project;
   if (!p) return false;
   switch (stepId) {
+    case "overview":
+      return !!(p.project?.title); // 总览是主页，有项目即视为"有内容"
     case "structure":
       return list(p.structure_profile?.nodes).some((n) => n.note && n.note.trim().length > 0);
     case "characters":
@@ -1186,7 +1192,7 @@ function renderStepperNav() {
   if (isSeries) {
     // 连续剧是人物/关系驱动的(可再生冲突引擎)：基础(人物→关系)先立，季弧(结构骨架)从人物长出来，
     // 再据季弧拆分集→细化剧情→拆场→成稿。电影保持结构优先，不受此重排影响。
-    const order = ["characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"];
+    const order = ["overview", "characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"];
     steps = order.map((id) => steps.find((s) => s.id === id)).filter(Boolean);
   }
   const activeIdx = steps.findIndex((s) => s.id === appState.currentStepId);
@@ -1465,6 +1471,7 @@ function render() {
   renderProjectList(dom, appState, projectGetters);
   _renderProjectCreateForm();
   renderAiSettingsDialog(dom, appState, aiGetters);
+  renderOverviewPage(dom, appState);
   renderStructurePage(dom, appState, structureGetters);
   renderPlotsPage(dom, appState, plotGetters);
   renderCharactersPage(dom, appState, characterGetters);
