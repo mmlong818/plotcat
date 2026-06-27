@@ -270,6 +270,41 @@ export function buildGenderTunePrompt(ctx, opts) {
   return { system, user };
 }
 
+// 连续剧 · 分集设计（季感知）：按 故事核心/季结构/人物/季贯穿 铺本季逐集大纲
+export function buildSeriesEpisodeDesignPrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const o = opts ?? {};
+  const meta = proj.project ?? {};
+  const sc = proj.story_core ?? {};
+  const chars = (proj.story_bible?.characters ?? proj.character_hub?.characters ?? []).map((c) => c.name).filter(Boolean).join("、");
+  const acts = (proj.structure_profile?.acts ?? []).map((a) => `${a.title}(${a.purpose || ""})`).join(" → ");
+  const season = o.season || 1;
+  const from = o.from || 1, to = o.to || (o.count || 12);
+  const throughline = (o.throughline || "").trim();
+  const priorTail = (o.priorTail || "").trim();
+  const system = `你是连续剧分集编剧，把季度走向铺成逐集大纲：每集有清晰的主线推进、看点与集尾钩子。\n${NO_EN_QUOTE}`;
+  const user = `【本剧设定】
+一句话故事：${meta.logline || "（未填）"}
+题材：${(Array.isArray(meta.genre) ? meta.genre : []).join("、") || "不限"}
+核心冲突：${sc.core_conflict || sc.premise || "（未填）"}
+主要人物：${chars || "（未填）"}
+季度结构：${acts || "（未设）"}
+第 ${season} 季贯穿线：${throughline || "（未填，请据设定自定本季推进）"}
+
+【任务】设计第 ${season} 季的【第 ${from} 到 ${to} 集】（共 ${to - from + 1} 集）。
+${priorTail ? `上一集结尾：${priorTail}\n须无缝承接。` : "这是本季开篇若干集，从抓人的开场切入。"}
+要求：
+- 开场钩子：每集开头制造看点/悬念
+- 本集看点：本集的核心戏剧事件或情感爆点
+- 集尾钩子：留扣勾着追下一集（本季最后一集为季终钩子）
+- 本集主线：一句话概括，承接上一集、推进本季贯穿线与人物弧
+- 沿用上述人物/题材/核心冲突；正好输出第 ${from} 到 ${to} 集，ep 用真实集号
+
+仅输出 JSON：
+{ "episodes": [ {"ep": ${from}, "title": "本集标题", "hook_3s": "开场钩子", "payoff": "本集看点", "cliffhanger": "集尾钩子", "summary": "本集主线一句话"} ] }`;
+  return { system, user };
+}
+
 // 节点⑤ · 分集设计：把总框架(事件链/幕次/转折)铺成逐集大纲(钩子/爽点/集尾cliffhanger/情节)
 export function buildEpisodeDesignPrompt(ctx, opts) {
   const proj = resolveProjectDoc(ctx);
