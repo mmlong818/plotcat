@@ -61,7 +61,7 @@ export function episodeBoardHTML(appState) {
         <p class="scene-summary-hint" style="margin-top:4px">${hintText}</p>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
-        ${isMicro ? `<button class="button button--primary button--small" type="button" data-action="ai-design-episodes" ${designing ? "disabled" : ""}>${designing ? "AI 设计中…（约 30-60 秒）" : "✦ AI 设计分集（按总框架铺钩子/爽点/cliff）"}</button>` : ""}
+        ${isMicro ? `<button class="button button--primary button--small" type="button" data-action="ai-design-episodes" ${designing ? "disabled" : ""}>${designing ? `AI 设计中…（${appState.episodeDesignProgress || "0/" + eps.length} 集，分批生成）` : "✦ AI 设计分集（按总框架铺钩子/爽点/cliff）"}</button>` : ""}
         <button class="button button--ghost button--tiny" type="button" data-action="add-episode">+ 新增一集</button>
       </div>
     </div>
