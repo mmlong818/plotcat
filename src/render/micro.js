@@ -135,15 +135,13 @@ function themeNodeHTML(appState) {
         ${listBlock("风险预警", ta.risks)}
       </div>` : ""}
       <div class="summary-card" style="margin-top:12px">
-        <p class="section-label">主题升华 · 开局即定的价值与记忆落点（反向指导每一集，不是写完才升华；可手动填，也会随 AI 主题定位一并生成）</p>
+        <p class="section-label">主题陈述 · 开局即定的核心命题（反向指导每一集，不是写完才升华；可手动填，也会随 AI 主题定位一并生成）</p>
         <div class="form-grid form-grid--compact" style="margin-top:8px">
           ${mt("theme_anchor", "核心命题（本剧到底要说什么）", "theme_statement.core", ta.theme_statement?.core)}
           ${mt("theme_anchor", "如何体现（情节/人物转变）", "theme_statement.form", ta.theme_statement?.form)}
           ${mt("theme_anchor", "对受众的意义", "theme_statement.meaning", ta.theme_statement?.meaning)}
-          ${mf("theme_anchor", "全剧金句", "anchors.line", ta.anchors?.line)}
-          ${mf("theme_anchor", "高记忆点场面", "anchors.scene", ta.anchors?.scene)}
-          ${mf("theme_anchor", "最强情感锚点", "anchors.emotion", ta.anchors?.emotion)}
         </div>
+        <p class="scene-summary-hint" style="margin-top:8px">全剧金句 / 高记忆点场面 / 最强情感锚点已移至 ⑥爽点·高潮 节点（待高潮成形后再定）。</p>
       </div>
     </section>`;
 }
@@ -344,8 +342,11 @@ function roChips(label, arr) {
 
 // 节点⑥⑦·爽点高潮
 function thrillNodeHTML(appState) {
-  const t = appState.project.thrill ?? {}; const pr = t.pressure ?? {}; const loading = !!t.loading; const has = Array.isArray(t.main_thrills) && t.main_thrills.length;
+  const t = appState.project.thrill ?? {}; const pr = t.pressure ?? {}; const an = t.anchors ?? {}; const loading = !!t.loading; const has = Array.isArray(t.main_thrills) && t.main_thrills.length;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("06+07 · 爽点引擎＋矛盾高潮", "爽点·高潮", "提炼主辅爽点+释放节奏，设计压力递进与反转、高潮落点")}${genBtn("ai-gen-thrill", loading, has, "✦ AI 设计爽点与高潮", "AI 设计中…")}${t.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(t.error)}</p>` : ""}</div>
+  <div class="summary-card" style="margin-top:12px"><p class="section-label">全剧记忆锚点（高潮成形后再定；随 AI 设计一并生成，也可手填）</p>
+    <div class="form-grid form-grid--compact" style="margin-top:8px">${mf("thrill", "全剧金句（可独立传播）", "anchors.line", an.line)}${mf("thrill", "高记忆点场面", "anchors.scene", an.scene)}${mf("thrill", "最强情感锚点", "anchors.emotion", an.emotion)}</div>
+  </div>
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">爽点体系</p>
     ${roCards("主爽点", t.main_thrills, [{ key: "desc", label: "机制" }, { key: "payoff", label: "情感回报" }], "layer")}
     ${roChips("辅助爽点", t.aux_thrills)}
