@@ -483,9 +483,13 @@ export function createCreationAI(deps) {
       console.warn("项目保存失败:", err.message);
     }
 
-    // 形态分流：微短剧进独立创作区(不跑电影式 autoEnrich)；其它进电影工作台并后台补全
-    if (appState.project?.project?.format === "micro_drama") {
+    // 形态分流：微短剧进独立创作区；连续剧走季-集模式直接进分集板；其它进电影工作台并后台补全
+    const fmt = appState.project?.project?.format;
+    if (fmt === "micro_drama") {
       setCurrentPage("micro");
+    } else if (fmt === "series") {
+      setCurrentPage("workflow");
+      setCurrentStep("episodes");
     } else {
       setCurrentPage("workflow");
       setCurrentStep("structure");

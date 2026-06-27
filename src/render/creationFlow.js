@@ -62,14 +62,18 @@ const FORMAT_TEMPLATES = {
 
 function renderStepper(creation) {
   const cur = creation.currentStep ?? 1;
-  const items = CREATION_STEPS.map((step, i) => {
+  // 连续剧走季-集模式：跳过电影式「情节大纲」(逐幕 step4)，时间线不展示该步
+  const isSeries = creation.draft?.format === "series";
+  const steps = CREATION_STEPS.filter((s) => !(isSeries && s.id === 4));
+  const pos = Math.max(1, steps.findIndex((s) => s.id === cur) + 1);
+  const items = steps.map((step, i) => {
     const isDone = step.id < cur;
     const isCurrent = step.id === cur;
     const cls = isDone ? "is-done" : isCurrent ? "is-current" : "";
     const inner = isDone
       ? `<button class="cf-tl-dot" type="button" data-action="goto-creation-step" data-step="${step.id}">✓</button>`
-      : `<div class="cf-tl-dot">${step.id}</div>`;
-    const sep = i < CREATION_STEPS.length - 1
+      : `<div class="cf-tl-dot">${i + 1}</div>`;
+    const sep = i < steps.length - 1
       ? `<div class="cf-tl-sep ${isDone ? "is-done" : ""}"></div>` : "";
     return `
       <div class="cf-tl-node ${cls}">${inner}<span class="cf-tl-label">${escapeHtml(step.label)}</span></div>${sep}`;
@@ -78,7 +82,7 @@ function renderStepper(creation) {
     <nav class="cf-timeline" aria-label="新建项目进度">
       <div class="cf-tl-meta">
         <span class="cf-tl-meta__label">新建项目 · 准备阶段</span>
-        <span class="cf-tl-meta__progress">第 ${cur} 步 / 共 ${CREATION_STEPS.length} 步</span>
+        <span class="cf-tl-meta__progress">第 ${pos} 步 / 共 ${steps.length} 步</span>
       </div>
       <div class="cf-tl-inner">${items.join("")}</div>
     </nav>`;

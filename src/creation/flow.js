@@ -58,9 +58,13 @@ export function createCreationFlow(deps) {
       appState.project = applyProjectDraftToProject(createEmptyProject(payload));
       appState.projectList = [summarizeProjectListItem(appState.project), ...appState.projectList];
     }
-    // 形态分流：微短剧进独立创作区，其它进电影工作台（与 open-project 路由一致）
-    if (appState.project?.project?.format === "micro_drama") {
+    // 形态分流：微短剧进独立创作区；连续剧季-集模式进分集板；其它进电影工作台结构步（与 open-project 一致）
+    const fmt = appState.project?.project?.format;
+    if (fmt === "micro_drama") {
       setCurrentPage("micro");
+    } else if (fmt === "series") {
+      setCurrentPage("workflow");
+      setCurrentStep("episodes");
     } else {
       setCurrentPage("workflow");
       setCurrentStep("structure");
@@ -301,6 +305,13 @@ export function createCreationFlow(deps) {
     }
 
     if (action === "cf-step3-next") {
+      // 连续剧走季-集模式：跳过电影式逐幕「情节大纲」(step4)，直接进审核完成 → 季-集分集板
+      if (c.draft?.format === "series") {
+        c.currentStep = 5;
+        c.aiError = "";
+        renderCreationPage();
+        return true;
+      }
       c.currentStep = 4;
       c.currentActIdx = 0;
       c.actResults = c.actResults ?? {};
