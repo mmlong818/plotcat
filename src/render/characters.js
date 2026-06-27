@@ -7,6 +7,8 @@ const ROLE_GROUPS = [
   { key: "antagonist",  label: "对手" },
   { key: "ally",        label: "盟友" },
   { key: "opponent_ally", label: "复杂盟友" },
+  { key: "mentor",      label: "导师" },
+  { key: "love_interest", label: "情感对象" },
   { key: "supporting",  label: "配角" },
 ];
 
