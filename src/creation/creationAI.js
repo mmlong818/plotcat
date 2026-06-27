@@ -441,35 +441,8 @@ export function createCreationAI(deps) {
       proj.character_hub = { characters: [], relationship_map: [] };
     }
 
-    // 人物确认后自动生成关系网（≥2 人才有关系可言）；失败不阻塞创建
-    if (chars.length >= 2) {
-      c.loadingStep = 5;
-      c.streamPreview = "";
-      renderCreationPage();
-      const relResult = await callGenerateAPIStream("relationships", {
-        characters: chars,
-        concept: { title: proj.project.title, hook: draft.logline ?? "" },
-        synopsis: { summary: draft.logline ?? "" }
-      }, {}, (text) => streamingOnChunk(c, text));
-      c.loadingStep = -1;
-      c.streamPreview = "";
-      if (!relResult.cancelled && !relResult.error) {
-        const nameToId = new Map(chars.map(ch => [ch.name, ch.id]));
-        const rels = (relResult.choices?.[0]?.data?.relationships ?? [])
-          .map(rel => ({
-            id: createId("rel"),
-            source_character_id: nameToId.get(rel.source_character_name) ?? "",
-            target_character_id: nameToId.get(rel.target_character_name) ?? "",
-            relationship_type: rel.relationship_type ?? "",
-            tension: rel.tension ?? "",
-            power_balance: rel.power_balance ?? "",
-            shared_history: rel.shared_history ?? "",
-            hidden_information: rel.hidden_information ?? ""
-          }))
-          .filter(rel => rel.source_character_id && rel.target_character_id);
-        if (rels.length > 0) proj.story_bible.relationships = rels;
-      }
-    }
+    // 关系网（≥2 人）不在此处阻塞生成——否则点「完成创建」后会先在创建页闪一屏
+    // 「生成关系网中」再跳工作台。改为导航后由 autoEnrichNewProject 后台生成（见下方分流）。
 
     // Set as current project and save to server
     appState.project = ensurePlotDrivenProject(proj);
@@ -491,12 +464,14 @@ export function createCreationAI(deps) {
       // 连续剧落在第一步「人物核心」：顺导航往右走(人物→关系→季弧→分集→…)即正确开发流程
       setCurrentPage("workflow");
       setCurrentStep("characters");
+      // 关系网后台生成（连续剧无剧情卡，autoEnrich 的场景规划会自动跳过）
+      autoEnrichNewProject({ withRelationships: true }).catch(() => {});
     } else {
       setCurrentPage("workflow");
       setCurrentStep("structure");
       // 兑现 step1「一气呵成产出场景全套」的承诺：进入工作台后后台续跑
-      // 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
-      autoEnrichNewProject().catch(() => {});
+      // 关系网 + 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
+      autoEnrichNewProject({ withRelationships: true }).catch(() => {});
     }
   }
 
