@@ -22,8 +22,8 @@ export const MICRO_STEPS = [
   { id: "world",     label: "世界观",   group: "设定", description: "背景三层+世界规则+冲突触发点。", done: true },
   { id: "characters",label: "人物",     group: "设定", description: "主角(欲望/缺陷/能力/成长)+配角(功能/记忆标签)+反派(动机/魅力)+关系图谱+个人爽点。", done: true },
   { id: "plotframe", label: "总框架",   group: "结构", description: "5-8句事件链+幕次划分+关键转折+悬念布局。", done: true },
-  { id: "episodes",  label: "分集设计", group: "结构", description: "每集：开场钩子/核心目标/障碍(外·内·时间)/戏剧转折/结尾钩子。", done: true },
-  { id: "rhythm",    label: "节奏·爽点·付费", group: "节奏", description: "全剧高潮/反转/爽点释放节奏 + 免费/首付费/深付费分区与付费节点（逐集爽点/卡点在分集设计里填）。", done: true },
+  { id: "rhythm",    label: "节奏·爽点·付费", group: "节奏", description: "全剧高潮/反转/爽点释放节奏 + 免费/首付费/深付费分区与付费节点——先定宏观节奏，分集照此铺。", done: true },
+  { id: "episodes",  label: "分集设计", group: "分集", description: "按总框架与节奏，逐集落地：开场钩子/本集爽点/集尾cliffhanger/付费卡点。", done: true },
   { id: "dialogue",  label: "对白打磨", group: "成稿", description: "场景级三段递进对话(挑衅→加压→反杀)+金句+动作。", done: true },
   { id: "script",    label: "剧本卷轴", group: "成稿", description: "整片连续脚本流：按集续写完整可拍剧本，前后衔接、集尾cliffhanger，支持手动编辑与整片导出。", done: true }
 ];
