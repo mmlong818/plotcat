@@ -62,6 +62,7 @@ export function episodeBoardHTML(appState) {
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
         ${isMicro ? `<button class="button button--primary button--small" type="button" data-action="ai-design-episodes" ${designing ? "disabled" : ""}>${designing ? `AI 设计中…（${appState.episodeDesignProgress || "0/" + eps.length} 集，分批生成）` : "✦ AI 设计分集（按总框架铺钩子/爽点/cliff）"}</button>` : ""}
+        ${withSeasons ? `<button class="button button--primary button--small" type="button" data-action="ai-design-season" ${designing ? "disabled" : ""}>${designing ? `AI 设计中…（${appState.episodeDesignProgress || "0/" + eps.length} 集）` : "✦ AI 设计本季分集（按季贯穿铺每集）"}</button>` : ""}
         <button class="button button--ghost button--tiny" type="button" data-action="add-episode">+ 新增一集</button>
       </div>
     </div>

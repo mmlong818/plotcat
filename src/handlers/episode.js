@@ -55,6 +55,7 @@ export function handleEpisodeClick(action, target, id, nodeId) {
     return true;
   }
   if (action === "select-season") { appState.selection.seasonNumber = Number(id) || 1; ctx.render(); return true; }
+  if (action === "ai-design-season") { ctx.aiDesignSeriesEpisodes(); return true; }  // 连续剧·AI设计本季分集
   if (action === "select-episode") { appState.selection.episodeId = id; ctx.render(); return true; }
   if (action === "toggle-episode-paywall") {
     const ep = getEpisode(id);
