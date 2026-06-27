@@ -582,7 +582,7 @@ export function createCreationAI(deps) {
     const result = await callGenerateAPIStream(
       "concept",
       {},
-      { genres: c.genres ?? [], conceptHint, era: "", count: 3 },
+      { genres: c.genres ?? [], conceptHint, era: "", count: 3, format: draft.format ?? "feature" },
       (text) => streamingOnChunk(c, text)
     );
 

@@ -93,17 +93,28 @@ ${selectedLogline || "（请基于项目概念）"}
   return { system, user };
 }
 
-// ── 长片新建流程 prompts ───────────────────────────────────────────────────
+// ── 新建流程 prompts（概念生成按形态立框：电影/连续剧/微短剧不同） ──────────────
+
+// 形态框架：三种作品的概念本质不同，概念生成必须按形态立框，不能一套套用。
+const CONCEPT_FRAMING = {
+  feature: "作品形态：电影长片。概念是一个闭合的单一故事弧——主角一段完整的转变旅程，钩子指向一个终将了结的核心问题。",
+  series: "作品形态：连续剧。概念必须是「可持续的剧集引擎」：一个能反复生成冲突的核心情境＋有牵引力的人物群＋经得起多季展开的世界，而非一次性闭合的故事。钩子要让人看见「为什么每集都有新故事、还想追下一季」。",
+  pilot: "作品形态：剧集试播。概念要立住剧集引擎与人物群，并能在首集抛出可长线展开的钩子。",
+  micro_drama: "作品形态：微短剧。概念要矛盾极致前置、强钩子强爽点，适合竖屏短平快与付费追更。",
+  short: "作品形态：短片。概念聚焦单一情境与一个有力的瞬间。"
+};
 
 export function buildConceptPrompt(options) {
-  const { genres = [], conceptHint = "", era = "", count = 3 } = options ?? {};
+  const { genres = [], conceptHint = "", era = "", count = 3, format = "feature" } = options ?? {};
   const genreStr = genres.join("、") || "不限";
   const blendContract = buildGenreBlendContract(genres, "full");
+  const framing = CONCEPT_FRAMING[format] ?? CONCEPT_FRAMING.feature;
 
-  const system = `你是一位专业故事开发顾问，擅长为长片项目提炼高概念、高差异化的故事点子。
+  const system = `你是一位专业故事开发顾问，擅长为影视项目提炼高概念、高差异化的故事点子。
 字符串内部禁止使用英文双引号，用书名号《》代替。`;
 
-  const user = `类型：${genreStr}
+  const user = `${framing}
+类型：${genreStr}
 年代/背景：${era || "不限"}
 创意方向：${conceptHint || "（开放，AI自由发挥）"}
 ${blendContract ? `\n${blendContract}\n（概念必须天然长在主导类型的观众承诺上；若是混合类型，钩子里要能同时听见两种类型的声音，而不是 A 类型故事贴 B 类型标签）\n` : ""}
