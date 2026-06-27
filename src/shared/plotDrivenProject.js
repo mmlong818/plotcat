@@ -614,7 +614,15 @@ function ensureEpisodeBoard(project) {
   const defaultSeasons = seasons.length ? seasons : [{ number: 1, throughline: "", season_hook: "" }];
   const existing = list(project.episode_board?.episodes);
   if (existing.length > 0) {
-    existing.forEach((e) => { if (e.season == null) e.season = 1; });
+    existing.forEach((e) => {
+      if (e.season == null) e.season = 1;
+      // 流式剧本卷轴：集级脚本字段。首次规范化时从挂载场景回填，保留已写内容、零丢失迁移。
+      if (e.script_full == null) {
+        const linked = list(project.scene_workbench?.scenes).filter((s) => list(e.scene_ids).includes(s.id));
+        e.script_full = linked.map((s) => (s.script_full || "").trim()).filter(Boolean).join("\n\n");
+      }
+      e.script_loading = false; // transient，不持久化
+    });
     project.episode_board = { episodes: existing, seasons: defaultSeasons };
     return;
   }
@@ -638,6 +646,8 @@ function ensureEpisodeBoard(project) {
     paywall_point: false,             // 付费卡点
     summary: s.beat_summary || "",
     status: (s.script_full || "").trim().length > 200 ? "scripted" : "draft",
+    script_full: s.script_full || "",
+    script_loading: false,
     scene_ids: [s.id]
   }));
   const epIdByScene = new Map(episodes.map((e) => [e.scene_ids[0], e.id]));

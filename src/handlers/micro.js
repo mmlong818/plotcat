@@ -35,5 +35,19 @@ export function handleMicroClick(action, target, id, nodeId) {
     ctx.markDirty(); ctx.render();
     return true;
   }
+  if (action === "ai-write-episode") { ctx.aiWriteEpisode(id); return true; }   // ✎卷轴·单集写本
+  if (action === "ai-continue-episode") { ctx.aiContinueEpisode(); return true; } // ✎卷轴·续写下一集
+  if (action === "export-micro-script") {                                       // ✎卷轴·导出整片
+    const eps = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const title = appState.project.project?.title || "微短剧";
+    const text = `《${title}》\n\n` + eps.map((e) => `══ 第 ${e.order_index ?? ""} 集 ══ ${e.title || ""}\n${(e.script_full || "").trim() || "（未写）"}`).join("\n\n\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `${title}-剧本.txt`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+    return true;
+  }
   return false;
 }

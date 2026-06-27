@@ -262,3 +262,40 @@ export function buildGenderTunePrompt(ctx, opts) {
   const user = `【上游输入】\n${microCtxLines(proj)}\n目标频向：${modeLabel}\n\n【原则】男频=能力/资源/尊严的快速满足、快节奏密集爽点、直接对抗；女频=情感/关系/成长的细腻递进、情感铺垫、心理博弈。诉求要落到场景与桥段而非抽象标签。\n\n仅输出 JSON：\n{\n  "demand_map": "受众核心诉求分析（落到具体桥段）",\n  "pace": "节奏控制方案",\n  "emotion": "情感处理方案",\n  "scenes": ["典型场景建议（×3）"],\n  "dialogue_style": "台词风格指引"\n}`;
   return { system, user };
 }
+
+// 流式剧本卷轴 · 单集写本/续写（节点⑤分集 + ⑥⑦爽点 + ⑩付费 落地为可拍剧本）
+export function buildEpisodeScriptPrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const num = opts?.episodeNumber ?? "";
+  const plan = opts?.plan ?? {};
+  const prevTail = (opts?.prevTail ?? "").trim();
+  const system = `你是微短剧剧本写手，把分集规划落地为可直接拍摄的竖屏短剧剧本（单集时长 1-2 分钟）。\n${NO_EN_QUOTE}`;
+  const user = `${COHERENCE}
+${hardAnchor(proj)}
+
+【已锁定设定】
+${lockedSettings(proj)}
+
+【本集规划·第 ${num} 集】
+- 黄金三秒钩子：${plan.hook_3s || "（开场即抓人，避免铺垫）"}
+- 本集要兑付的爽/虐点：${plan.payoff || "（按主线推进）"}
+- 集尾 cliffhanger：${plan.cliffhanger || "（结尾留强钩子逼追下一集）"}
+- 本集情节：${plan.summary || "（按事件链顺序推进）"}
+${prevTail ? `\n【上一集结尾（须无缝承接，不重复、不跳脱）】\n${prevTail.slice(-400)}` : "\n（这是开篇第一集，从黄金三秒钩子直接切入）"}
+
+【写本铁律】
+- 前 3 秒必须是钩子（冲突/反差/悬念），禁止环境铺垫开场。
+- 主角即锁定主角本人，身份口吻一致；不得引入与本剧无关的新人物开口。
+- 对白短句优先、含金量高、口语可表演；动作/表情提示精准。
+- 结尾落在 cliffhanger 上，制造追看冲动。
+- 标准剧本格式：场景头（内/外景 地点 时间）→ 动作描述 → 角色名+对白。
+
+【输出前自检·必做】先在 premise_lock 写明锁定主角姓名与本集要推进的主线一句话，再写剧本。
+
+仅输出 JSON：
+{
+  "premise_lock": "锁定主角（姓名+身份）+ 本集主线一句话",
+  "script": "完整单集剧本文本（含场景头/动作/对白，可直接拍摄）"
+}`;
+  return { system, user };
+}
