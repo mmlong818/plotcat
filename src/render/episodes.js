@@ -70,36 +70,39 @@ export function episodeBoardHTML(appState) {
   const rows = eps.map((ep, idx) => {
     const sel = appState.selection.episodeId === ep.id;
     const sc = sceneCountOf(ep);
+    const filled = (ep.hook_3s || ep.payoff || ep.cliffhanger || ep.summary || "").trim().length > 0;
     return `
-      <article class="summary-card episode-card ${sel ? "is-active" : ""}" data-action="select-episode" data-id="${escapeHtml(ep.id)}" style="margin-bottom:10px">
-        <div class="list-card__head" style="align-items:center">
-          <div style="display:flex;align-items:center;gap:8px;flex:1">
-            <span class="chip chip--soft" style="font-weight:700">${labelOf(ep, idx)}</span>
-            <input class="cf-input episode-title" type="text" style="font-weight:600;min-width:160px;flex:1"
-              data-action="episode-field" data-field="title" data-id="${escapeHtml(ep.id)}"
-              value="${escapeHtml(ep.title ?? "")}" placeholder="本集标题" />
-            <span class="chip chip--muted">${STATUS_LABEL[ep.status] ?? ep.status}</span>
-            ${sc > 0 ? `<span class="chip chip--muted">${sc} 场</span>` : `<span class="scene-row__orphan" title="本集尚未挂载任何场景">⚠ 无场</span>`}
-          </div>
-          <div class="episode-card__ops" style="display:flex;gap:4px">
+      <details class="ep-script" ${sel ? "open" : ""}>
+        <summary class="ep-script__sum">
+          <span class="ep-script__no">${labelOf(ep, idx)}</span>
+          <span class="ep-script__title">${escapeHtml(ep.title || "未命名")}</span>
+          <span class="ep-script__badge ${filled ? "ep-script__badge--ok" : ""}">${STATUS_LABEL[ep.status] ?? ep.status}</span>
+          ${sc > 0 ? `<span class="ep-script__badge">${sc}场</span>` : `<span class="ep-script__badge" style="color:#c0622a">⚠无场</span>`}
+          ${ep.paywall_point ? `<span class="ep-script__badge ep-script__badge--ok">💰付费卡点</span>` : ""}
+          ${ep.hook_3s ? `<span class="ep-script__preview">🎬 ${escapeHtml(ep.hook_3s)}</span>` : ""}
+        </summary>
+        <div class="ep-script__body">
+          <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:8px">
             <button class="button button--ghost button--tiny ${ep.paywall_point ? "is-active" : ""}" type="button"
               data-action="toggle-episode-paywall" data-id="${escapeHtml(ep.id)}" title="标记/取消付费卡点">${ep.paywall_point ? "💰付费卡点" : "设为付费卡点"}</button>
             <button class="button button--ghost button--tiny" type="button" data-action="move-episode-up" data-id="${escapeHtml(ep.id)}" ${idx === 0 ? "disabled" : ""} title="上移">↑</button>
             <button class="button button--ghost button--tiny" type="button" data-action="move-episode-down" data-id="${escapeHtml(ep.id)}" ${idx === eps.length - 1 ? "disabled" : ""} title="下移">↓</button>
             <button class="button button--ghost button--tiny" type="button" data-action="delete-episode" data-id="${escapeHtml(ep.id)}" title="删除本集">✕</button>
           </div>
+          <div class="form-grid form-grid--compact">
+            <label class="field field--full"><span>本集标题</span>
+              <input class="cf-input" type="text" data-action="episode-field" data-field="title" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.title ?? "")}" placeholder="本集标题" /></label>
+            <label class="field field--full"><span>黄金三秒钩子（开场抓人）</span>
+              <input class="cf-input" type="text" data-action="episode-field" data-field="hook_3s" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.hook_3s ?? "")}" placeholder="前3秒用什么钩住观众" /></label>
+            <label class="field field--full"><span>本集爽点</span>
+              <input class="cf-input" type="text" data-action="episode-field" data-field="payoff" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.payoff ?? "")}" placeholder="本集要兑付的爽/虐点" /></label>
+            <label class="field field--full"><span>集尾 cliffhanger</span>
+              <input class="cf-input" type="text" data-action="episode-field" data-field="cliffhanger" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.cliffhanger ?? "")}" placeholder="结尾留什么钩子逼观众追下一集" /></label>
+            <label class="field field--full"><span>本集梗概</span>
+              <textarea class="cf-textarea" rows="2" data-action="episode-field" data-field="summary" data-id="${escapeHtml(ep.id)}" placeholder="本集主要情节">${escapeHtml(ep.summary ?? "")}</textarea></label>
+          </div>
         </div>
-        <div class="form-grid form-grid--compact" style="margin-top:8px">
-          <label class="field field--full"><span>黄金三秒钩子（开场抓人）</span>
-            <input class="cf-input" type="text" data-action="episode-field" data-field="hook_3s" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.hook_3s ?? "")}" placeholder="前3秒用什么钩住观众" /></label>
-          <label class="field field--full"><span>本集爽点</span>
-            <input class="cf-input" type="text" data-action="episode-field" data-field="payoff" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.payoff ?? "")}" placeholder="本集要兑付的爽/虐点" /></label>
-          <label class="field field--full"><span>集尾 cliffhanger</span>
-            <input class="cf-input" type="text" data-action="episode-field" data-field="cliffhanger" data-id="${escapeHtml(ep.id)}" value="${escapeHtml(ep.cliffhanger ?? "")}" placeholder="结尾留什么钩子逼观众追下一集" /></label>
-          <label class="field field--full"><span>本集梗概</span>
-            <textarea class="cf-textarea" rows="2" data-action="episode-field" data-field="summary" data-id="${escapeHtml(ep.id)}" placeholder="本集主要情节">${escapeHtml(ep.summary ?? "")}</textarea></label>
-        </div>
-      </article>`;
+      </details>`;
   }).join("");
 
   return `
