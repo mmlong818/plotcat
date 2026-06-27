@@ -8850,6 +8850,11 @@ body[data-active-step] .char-card:hover {
 }
 .step-button.is-completed { opacity: 0.85; }
 /* 进入下一步降为 ghost，避免和"保存"两个橙色 primary 同屏 */
+/* 「进入下一步」CTA 固定槽：锚在右侧状态簇左缘，位置不随激活步标签宽度漂移 */
+.step-cta-slot { display: flex; align-items: center; flex-shrink: 0; margin-right: 6px; }
+.step-cta-slot:empty { display: none; }
+.step-cta-slot .step-next-cta { margin-left: 0; }
+
 .step-next-cta {
   margin-left: 12px;
   padding: 7px 14px;
