@@ -9603,3 +9603,20 @@ body[data-active-step] .char-card:hover {
 .ep-script__preview { flex: 1; min-width: 120px; color: var(--muted-2); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ep-script__body { padding: 0 14px 14px; }
 .ep-script__hook { font-size: 13px; color: var(--accent, #b5601d); margin: 2px 0 6px; }
+
+/* 微短剧只读结构化输出：表格 / 卡片 / 标签（取代 JSON 倾倒式密集列表） */
+.micro-block { margin-top: 14px; }
+.micro-block__label { display: block; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--muted, #999); margin-bottom: 6px; }
+.micro-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.micro-table th, .micro-table td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--border, #ece6dc); vertical-align: top; }
+.micro-table th { font-size: 12px; font-weight: 600; color: var(--muted, #999); background: rgba(0,0,0,0.025); white-space: nowrap; }
+.micro-table tr:last-child td { border-bottom: none; }
+.micro-table td:first-child, .micro-table th:first-child { white-space: nowrap; color: var(--accent, #b5601d); font-weight: 600; }
+.micro-cards { display: flex; flex-direction: column; gap: 8px; }
+.micro-card { border: 1px solid var(--border, #ece6dc); border-radius: 8px; padding: 10px 12px; background: var(--surface-1); position: relative; }
+.micro-card__badge { display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent, #b5601d); background: rgba(181,96,29,0.1); padding: 2px 8px; border-radius: 10px; margin-bottom: 6px; }
+.micro-card__row { display: flex; gap: 8px; line-height: 1.6; font-size: 13px; }
+.micro-card__row + .micro-card__row { margin-top: 3px; }
+.micro-card__k { flex: 0 0 56px; color: var(--muted, #999); font-size: 12px; }
+.micro-card__v { flex: 1; color: var(--ink); }
+.micro-chips { display: flex; flex-wrap: wrap; gap: 6px; }

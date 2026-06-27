@@ -308,19 +308,39 @@ function mt(key, label, df, val) { return `<label class="field field--full"><spa
 function genBtn(action, loading, has, idle, busy) { return `<div style="margin-top:10px"><button class="button button--primary button--small" type="button" data-action="${action}" ${loading ? "disabled" : ""}>${loading ? busy : has ? "↺ 重新生成" : idle}</button></div>`; }
 function nodeHead(_node, title, sub) { return `<h3 style="margin:0">${escapeHtml(title)}</h3>${sub ? `<p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(sub)}</p>` : ""}`; }
 function roList(label, arr, fmt) { const a = Array.isArray(arr) ? arr : []; if (!a.length) return ""; return `<div class="cf-field"><span class="cf-label">${label}</span><ul class="theme-list">${a.map((x) => `<li>${escapeHtml(fmt(x))}</li>`).join("")}</ul></div>`; }
+// 把 AI 结构化输出从"JSON 倾倒"改成可读呈现：表格(tabular)/卡片(narrative)/标签(string[])
+function roTable(label, arr, cols) {
+  const a = Array.isArray(arr) ? arr : []; if (!a.length) return "";
+  return `<div class="micro-block"><span class="micro-block__label">${escapeHtml(label)}</span>
+    <table class="micro-table"><thead><tr>${cols.map((c) => `<th>${escapeHtml(c.label)}</th>`).join("")}</tr></thead>
+    <tbody>${a.map((row) => `<tr>${cols.map((c) => `<td>${escapeHtml(String(row?.[c.key] ?? ""))}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+}
+function roCards(label, arr, fields, badgeKey) {
+  const a = Array.isArray(arr) ? arr : []; if (!a.length) return "";
+  return `<div class="micro-block"><span class="micro-block__label">${escapeHtml(label)}</span>
+    <div class="micro-cards">${a.map((item) => `<div class="micro-card">
+      ${badgeKey && item?.[badgeKey] ? `<span class="micro-card__badge">${escapeHtml(String(item[badgeKey]))}</span>` : ""}
+      ${fields.map((f) => { const v = item?.[f.key]; if (v == null || v === "") return ""; return `<div class="micro-card__row"><span class="micro-card__k">${escapeHtml(f.label)}</span><span class="micro-card__v">${escapeHtml(String(v))}</span></div>`; }).filter(Boolean).join("")}
+    </div>`).join("")}</div></div>`;
+}
+function roChips(label, arr) {
+  const a = (Array.isArray(arr) ? arr : []).filter(Boolean); if (!a.length) return "";
+  return `<div class="micro-block"><span class="micro-block__label">${escapeHtml(label)}</span>
+    <div class="micro-chips">${a.map((x) => `<span class="chip chip--soft">${escapeHtml(String(x))}</span>`).join("")}</div></div>`;
+}
 
 // 节点⑥⑦·爽点高潮
 function thrillNodeHTML(appState) {
   const t = appState.project.thrill ?? {}; const pr = t.pressure ?? {}; const loading = !!t.loading; const has = Array.isArray(t.main_thrills) && t.main_thrills.length;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("06+07 · 爽点引擎＋矛盾高潮", "爽点·高潮", "提炼主辅爽点+释放节奏，设计压力递进与反转、高潮落点")}${genBtn("ai-gen-thrill", loading, has, "✦ AI 设计爽点与高潮", "AI 设计中…")}${t.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(t.error)}</p>` : ""}</div>
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">爽点体系</p>
-    ${roList("主爽点", t.main_thrills, (x) => `[${x.layer}] ${x.desc} → ${x.payoff}`)}
-    ${roList("辅助爽点", t.aux_thrills, (x) => x)}
-    ${roList("释放节奏表", t.release_table, (x) => `${x.ep}｜${x.type}｜强度${x.strength}｜${x.note}`)}
+    ${roCards("主爽点", t.main_thrills, [{ key: "desc", label: "机制" }, { key: "payoff", label: "情感回报" }], "layer")}
+    ${roChips("辅助爽点", t.aux_thrills)}
+    ${roTable("释放节奏表", t.release_table, [{ key: "ep", label: "集数" }, { key: "type", label: "类型" }, { key: "strength", label: "强度" }, { key: "note", label: "备注" }])}
   </div>
   <div class="summary-card" style="margin-top:12px"><p class="section-label">压力递进 + 反转 + 高潮（可编辑）</p>
     <div class="form-grid form-grid--compact" style="margin-top:8px">${mt("thrill", "第1阶段·小摩擦", "pressure.s1", pr.s1)}${mt("thrill", "第2阶段·中冲突", "pressure.s2", pr.s2)}${mt("thrill", "第3阶段·大危机", "pressure.s3", pr.s3)}${mt("thrill", "高潮爆发点", "climax", t.climax)}</div>
-    ${roList("核心反转", t.reversals, (x) => `伏笔:${x.foreshadow} / 误导:${x.mislead} / 揭晓:${x.reveal} / 余波:${x.aftermath}`)}
+    ${roCards("核心反转", t.reversals, [{ key: "foreshadow", label: "伏笔" }, { key: "mislead", label: "误导" }, { key: "reveal", label: "揭晓" }, { key: "aftermath", label: "余波" }])}
   </div>` : ""}</section>`;
 }
 
@@ -328,7 +348,7 @@ function thrillNodeHTML(appState) {
 function pacePayNodeHTML(appState) {
   const p = appState.project.pace_pay ?? {}; const z = p.zones ?? {}; const loading = !!p.loading; const has = !!p.ep_template;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("10 · 分集节奏与付费设计 PacePay", "节奏·付费", "单集模板+全剧分区+付费节点，实现看完必点下一集")}${genBtn("ai-gen-pacepay", loading, has, "✦ AI 设计节奏与付费", "AI 编排中…")}${p.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(p.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">节奏与付费（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("pace_pay", "单集标准模板", "ep_template", p.ep_template)}${mt("pace_pay", "免费区", "zones.free", z.free)}${mt("pace_pay", "首付费区", "zones.paid1", z.paid1)}${mt("pace_pay", "深度付费区", "zones.paid2", z.paid2)}</div>${roList("付费节点", p.pay_nodes, (x) => `${x.at}｜机制:${x.mechanism}｜价值:${x.value}`)}</div>` : ""}</section>`;
+  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">节奏与付费（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("pace_pay", "单集标准模板", "ep_template", p.ep_template)}${mt("pace_pay", "免费区", "zones.free", z.free)}${mt("pace_pay", "首付费区", "zones.paid1", z.paid1)}${mt("pace_pay", "深度付费区", "zones.paid2", z.paid2)}</div>${roTable("付费节点", p.pay_nodes, [{ key: "at", label: "触发时机" }, { key: "mechanism", label: "心理机制" }, { key: "value", label: "付费价值" }])}</div>` : ""}</section>`;
 }
 
 // 节点⑧·分集写本（三段对话）
@@ -346,7 +366,7 @@ function dialogueNodeHTML(appState) {
 function themeLiftNodeHTML(appState) {
   const t = appState.project.theme_lift ?? {}; const ts = t.theme_statement ?? {}; const an = t.anchors ?? {}; const loading = !!t.loading; const has = !!(ts.core);
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("11 · 主题升华与观众代入 ThemeLift", "主题升华", "终局价值验证+情绪曲线+记忆锚点")}${genBtn("ai-gen-themelift", loading, has, "✦ AI 升华主题", "AI 升华中…")}${t.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(t.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">主题陈述 + 记忆锚点（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("theme_lift", "核心命题", "theme_statement.core", ts.core)}${mt("theme_lift", "表现形式", "theme_statement.form", ts.form)}${mt("theme_lift", "社会意义", "theme_statement.meaning", ts.meaning)}${mf("theme_lift", "金句锚点", "anchors.line", an.line)}${mf("theme_lift", "场面锚点", "anchors.scene", an.scene)}${mf("theme_lift", "情感锚点", "anchors.emotion", an.emotion)}${mt("theme_lift", "观众代入机制", "immersion", t.immersion)}</div>${roList("情绪曲线", t.emotion_curve, (x) => `${x.eps}｜${x.mood}｜强度${x.strength}｜${x.turn}`)}</div>` : ""}</section>`;
+  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">主题陈述 + 记忆锚点（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("theme_lift", "核心命题", "theme_statement.core", ts.core)}${mt("theme_lift", "表现形式", "theme_statement.form", ts.form)}${mt("theme_lift", "社会意义", "theme_statement.meaning", ts.meaning)}${mf("theme_lift", "金句锚点", "anchors.line", an.line)}${mf("theme_lift", "场面锚点", "anchors.scene", an.scene)}${mf("theme_lift", "情感锚点", "anchors.emotion", an.emotion)}${mt("theme_lift", "观众代入机制", "immersion", t.immersion)}</div>${roTable("情绪曲线", t.emotion_curve, [{ key: "eps", label: "集段" }, { key: "mood", label: "情绪" }, { key: "strength", label: "强度" }, { key: "turn", label: "转折" }])}</div>` : ""}</section>`;
 }
 
 // 节点⑨·性别向（全局调优）
@@ -356,7 +376,7 @@ function genderNodeHTML(appState) {
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("09 · 性别向差异化调优 GenderTune", "性别向", "选定频向后注入所有 AI 生成，优化诉求/节奏/场景/台词")}
     <div style="margin-top:10px;display:flex;gap:6px">${modeBtn("male", "男频")}${modeBtn("female", "女频")}${modeBtn("mixed", "混频")}</div>
     ${genBtn("ai-gen-gender", loading, has, "✦ AI 生成频向调优方案", "AI 调优中…")}${g.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(g.error)}</p>` : ""}</div>
-  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">调优方案（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("gender_tune", "受众诉求映射", "demand_map", g.demand_map)}${mt("gender_tune", "节奏控制", "pace", g.pace)}${mt("gender_tune", "情感处理", "emotion", g.emotion)}${mt("gender_tune", "台词风格", "dialogue_style", g.dialogue_style)}</div>${roList("典型场景建议", g.scenes, (x) => x)}</div>` : ""}</section>`;
+  ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">调优方案（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("gender_tune", "受众诉求映射", "demand_map", g.demand_map)}${mt("gender_tune", "节奏控制", "pace", g.pace)}${mt("gender_tune", "情感处理", "emotion", g.emotion)}${mt("gender_tune", "台词风格", "dialogue_style", g.dialogue_style)}</div>${roChips("典型场景建议", g.scenes)}</div>` : ""}</section>`;
 }
 
 // 流式剧本卷轴：整片连续脚本流（集为分隔），按集续写/编辑完整剧本。
