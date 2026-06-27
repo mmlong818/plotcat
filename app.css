@@ -9547,16 +9547,25 @@ body[data-active-step] .char-card:hover {
 .micro-nav {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 4px 16px;
+  align-items: flex-start;
+  gap: 8px 18px;
+  padding: 12px 4px 16px;
   margin-bottom: 6px;
 }
+.micro-group { display: flex; flex-direction: column; gap: 6px; }
+.micro-group__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--muted, #999);
+  padding-left: 2px;
+}
+.micro-group__steps { display: flex; flex-wrap: wrap; gap: 5px; }
 .micro-step {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 5px;
+  padding: 7px 12px;
   border: 1px solid var(--muted-2);
   border-radius: var(--radius-md, 10px);
   background: var(--surface-1);
@@ -9573,16 +9582,24 @@ body[data-active-step] .char-card:hover {
   color: #fff;
   font-weight: 600;
 }
-.micro-step.is-todo { opacity: 0.72; }
-.micro-step__no {
-  font-size: 11px;
-  font-weight: 700;
-  opacity: 0.7;
-  background: rgba(0,0,0,0.06);
-  padding: 1px 5px;
-  border-radius: 6px;
+.micro-step__dot { color: #3f9d5a; font-size: 9px; }
+.micro-step.is-active .micro-step__dot { color: rgba(255,255,255,0.85); }
+
+/* 流式剧本卷轴 · 折叠集块 */
+.ep-script-list { display: flex; flex-direction: column; gap: 8px; }
+.ep-script { border: 1px solid var(--border, #e6e0d6); border-radius: var(--radius-md, 10px); background: var(--surface-1); overflow: hidden; }
+.ep-script[open] { border-color: var(--accent, #b5601d); }
+.ep-script__sum {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 14px; cursor: pointer; list-style: none; user-select: none;
 }
-.micro-step.is-active .micro-step__no { background: rgba(255,255,255,0.22); opacity: 0.95; }
-.micro-step__dot { color: #3f9d5a; font-size: 10px; }
-.micro-step__todo { font-size: 10px; opacity: 0.6; }
-.micro-step__arrow { color: var(--muted-2); margin: 0 1px; font-size: 12px; }
+.ep-script__sum::-webkit-details-marker { display: none; }
+.ep-script__sum::before { content: "▸"; color: var(--muted); font-size: 12px; transition: transform 150ms ease; }
+.ep-script[open] .ep-script__sum::before { transform: rotate(90deg); }
+.ep-script__no { font-weight: 700; white-space: nowrap; }
+.ep-script__title { flex: 0 1 auto; color: var(--ink); }
+.ep-script__badge { font-size: 11px; padding: 1px 8px; border-radius: 10px; background: rgba(0,0,0,0.06); color: var(--muted); white-space: nowrap; }
+.ep-script__badge--ok { background: rgba(63,157,90,0.14); color: #3f9d5a; }
+.ep-script__preview { flex: 1; min-width: 120px; color: var(--muted-2); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ep-script__body { padding: 0 14px 14px; }
+.ep-script__hook { font-size: 13px; color: var(--accent, #b5601d); margin: 2px 0 6px; }

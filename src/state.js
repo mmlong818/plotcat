@@ -16,17 +16,19 @@ export const workflowSteps = [
 
 // 微短剧创作区·节点流水线（独立于电影 6 步）。依据《2025版微短剧AI辅助编剧系统》11节点。
 // phase 标注该节点实现阶段；done=已实现可用。
+// 微短剧创作区节点。group=语义分组(按创作流程连续切分，消除散乱编号)；step=组内可选序号。
 export const MICRO_STEPS = [
-  { id: "theme",     label: "主题定位", node: "01", description: "锁定一句话故事/赛道/受众/价值边界/差异化/风险。", phase: "A-P4", done: true },
-  { id: "world",     label: "世界观",   node: "02", description: "背景三层+世界规则+冲突触发点。", phase: "A-P4", done: true },
-  { id: "characters",label: "人物",     node: "03", description: "主角(欲望/缺陷/能力/成长)+配角(功能/记忆标签)+反派(动机/魅力)+关系图谱+个人爽点。", phase: "A-P4", done: true },
-  { id: "plotframe", label: "总框架",   node: "04", description: "5-8句事件链+幕次划分+关键转折+悬念布局。", phase: "A-P4", done: true },
-  { id: "episodes",  label: "分集设计", node: "05", description: "每集：开场钩子/核心目标/障碍(外·内·时间)/戏剧转折/结尾钩子。", phase: "A-P3", done: true },
-  { id: "thrill",    label: "爽点·高潮", node: "06+07", description: "主/辅爽点+释放节奏表+压力递进+核心反转+高潮落点。", phase: "A-P5", done: true },
-  { id: "pacepay",   label: "节奏·付费", node: "10", description: "单集模板+全剧分区(免费/首付费/深付费)+付费节点。", phase: "A-P5", done: true },
-  { id: "dialogue",  label: "分集写本", node: "08", description: "场景级三段递进对话(挑衅→加压→反杀)+金句+动作。", phase: "A-P6", done: true },
-  { id: "themelift", label: "主题升华", node: "11", description: "主题陈述+情绪曲线+记忆锚点+观众代入。", phase: "A-P6", done: true },
-  { id: "gender",    label: "性别向", node: "09", description: "男频/女频/混频诉求映射+节奏/场景/台词调优(全局注入)。", phase: "A-P6", done: true }
+  { id: "theme",     label: "主题定位", group: "设定", description: "锁定一句话故事/赛道/受众/价值边界/差异化/风险。", done: true },
+  { id: "world",     label: "世界观",   group: "设定", description: "背景三层+世界规则+冲突触发点。", done: true },
+  { id: "characters",label: "人物",     group: "设定", description: "主角(欲望/缺陷/能力/成长)+配角(功能/记忆标签)+反派(动机/魅力)+关系图谱+个人爽点。", done: true },
+  { id: "plotframe", label: "总框架",   group: "结构", description: "5-8句事件链+幕次划分+关键转折+悬念布局。", done: true },
+  { id: "episodes",  label: "分集设计", group: "结构", description: "每集：开场钩子/核心目标/障碍(外·内·时间)/戏剧转折/结尾钩子。", done: true },
+  { id: "thrill",    label: "爽点·高潮", group: "节奏", description: "主/辅爽点+释放节奏表+压力递进+核心反转+高潮落点。", done: true },
+  { id: "pacepay",   label: "节奏·付费", group: "节奏", description: "单集模板+全剧分区(免费/首付费/深付费)+付费节点。", done: true },
+  { id: "dialogue",  label: "对白打磨", group: "打磨", description: "场景级三段递进对话(挑衅→加压→反杀)+金句+动作。", done: true },
+  { id: "themelift", label: "主题升华", group: "打磨", description: "主题陈述+情绪曲线+记忆锚点+观众代入。", done: true },
+  { id: "gender",    label: "性别向",   group: "打磨", description: "男频/女频/混频诉求映射+节奏/场景/台词调优(全局注入)。", done: true },
+  { id: "script",    label: "剧本卷轴", group: "成稿", description: "整片连续脚本流：按集续写完整可拍剧本，前后衔接、集尾cliffhanger，支持手动编辑与整片导出。", done: true }
 ];
 
 export const projectCreateStepsCurrent = [
