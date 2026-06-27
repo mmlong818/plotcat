@@ -83,6 +83,7 @@ const dom = {
   seriesContent: document.querySelector("#series-content"),
   openSettingsButton: document.querySelector("#open-settings-button"),
   stepperNav: document.querySelector("#stepper-nav"),
+  workflowStepFooter: document.querySelector("#workflow-step-footer"),
   projectList: document.querySelector("#project-list"),
   projectCreateDialog: document.querySelector("#project-create-dialog"),
   projectCreateEyebrow: document.querySelector("#project-create-eyebrow"),
@@ -1223,6 +1224,17 @@ function renderStepperNav() {
     : "";
   dom.stepperNav.innerHTML = stepButtons + nextCta;
   dom.stepperNav.hidden = appState.currentPage !== "workflow";
+
+  // 步骤底部导航：跟随内容的「← 上一步 / 下一步：X →」，比顶部 tab 更明确
+  if (dom.workflowStepFooter) {
+    const onWorkflow = appState.currentPage === "workflow";
+    dom.workflowStepFooter.hidden = !onWorkflow;
+    const prevStep = steps[activeIdx - 1];
+    dom.workflowStepFooter.innerHTML = onWorkflow
+      ? `${prevStep ? `<button class="button button--ghost" type="button" data-action="go-step" data-id="${escapeHtml(prevStep.id)}">← ${escapeHtml(prevStep.label)}</button>` : "<span></span>"}`
+        + `${nextStep ? `<button class="step-next-cta" type="button" data-action="go-step" data-id="${escapeHtml(nextStep.id)}">下一步：${escapeHtml(nextStep.label)} →</button>` : "<span></span>"}`
+      : "";
+  }
 }
 
 function renderHero() {
