@@ -52,6 +52,11 @@ export function handleMicroClick(action, target, id, nodeId) {
     ctx.markDirty(); ctx.render();
     return true;
   }
+  if (action === "ai-cascade-from") {                                            // 一键级联：本节点及之后全部重生成
+    const ok = window.confirm("将按顺序重新生成【本节点】及其后所有节点（到分集设计），覆盖它们现有内容——前置节点不动。\n\n这会逐节点调用 AI，耗时较长。继续？");
+    if (ok) ctx.aiCascadeFrom(id);
+    return true;
+  }
   if (action === "ai-design-episodes") { ctx.aiDesignEpisodes(); return true; }  // ⑤分集设计·AI铺大纲
   if (action === "ai-write-episode") { ctx.aiWriteEpisode(id); return true; }   // ✎卷轴·单集写本
   if (action === "ai-continue-episode") { ctx.aiContinueEpisode(); return true; } // ✎卷轴·续写下一集

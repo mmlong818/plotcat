@@ -258,9 +258,34 @@ export function createMicroGen({ render, markDirty }) {
     if (target) await aiWriteEpisode(target.id);
   }
 
+  // 一键级联：从指定节点起，按策划链顺序依次重生成本节点及其后全部（每步 await 保证上游已新）。
+  // 跳过对白(单场样例)与剧本卷轴(整片写本)；边走边把当前页导航到正在生成的节点。
+  const CASCADE = [
+    { id: "theme", run: () => aiGenTheme() },
+    { id: "world", run: () => aiGenWorld() },
+    { id: "characters", run: () => aiGenChars() },
+    { id: "plotframe", run: () => aiGenPlotFrame() },
+    { id: "rhythm", run: async () => { await aiGenThrill(); await aiGenPacePay(); } },
+    { id: "episodes", run: () => aiDesignEpisodes() }
+  ];
+  const CASCADE_IDS = CASCADE.map((c) => c.id);
+  async function aiCascadeFrom(nodeId) {
+    const start = CASCADE.findIndex((c) => c.id === nodeId);
+    if (start < 0) return;
+    appState.microCascadeBusy = true;
+    for (let i = start; i < CASCADE.length; i++) {
+      appState.microStep = CASCADE[i].id;
+      render();
+      try { await CASCADE[i].run(); } catch { /* 单节点失败已各自记 error，级联继续 */ }
+    }
+    appState.microCascadeBusy = false;
+    render();
+  }
+
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
     aiGenThrill, aiGenPacePay, aiGenDialogue,
-    aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode
+    aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode,
+    aiCascadeFrom, CASCADE_IDS
   };
 }

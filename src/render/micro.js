@@ -66,12 +66,18 @@ export function renderMicroPage(dom, appState) {
       <p class="scene-summary-hint" style="margin-top:6px">${escapeHtml(step.description)}</p>
     </div></section>`;
   }
-  // 流程导航：按编辑页面顺序的「上一步 / 下一步」
+  // 流程导航：按编辑页面顺序的「上一步 / 下一步」+ 一键级联重生成
   const idx = MICRO_STEPS.findIndex((s) => s.id === cur);
   const prev = idx > 0 ? MICRO_STEPS[idx - 1] : null;
   const next = idx >= 0 && idx < MICRO_STEPS.length - 1 ? MICRO_STEPS[idx + 1] : null;
+  const CASCADE_NODES = ["theme", "world", "characters", "plotframe", "rhythm", "episodes"];
+  const cascading = !!appState.microCascadeBusy;
+  const cascadeBtn = CASCADE_NODES.includes(cur)
+    ? `<button class="button button--ghost button--small" type="button" data-action="ai-cascade-from" data-id="${escapeHtml(cur)}" ${cascading ? "disabled" : ""} title="改了前置后，从本节点起按顺序重生成到分集设计（覆盖后续，不动前置）">${cascading ? "⟳ 级联重生成中…" : "⟳ 本节点及之后全部重生成"}</button>`
+    : "<span></span>";
   const footer = `<div class="micro-flow-nav">
     ${prev ? `<button class="button button--ghost button--small" type="button" data-action="micro-step" data-id="${escapeHtml(prev.id)}">← ${escapeHtml(prev.label)}</button>` : "<span></span>"}
+    ${cascadeBtn}
     ${next ? `<button class="button button--primary button--small" type="button" data-action="micro-step" data-id="${escapeHtml(next.id)}">${escapeHtml(next.label)} →</button>` : "<span></span>"}
   </div>`;
   dom.microContent.innerHTML = body + footer;
