@@ -270,6 +270,33 @@ export function buildGenderTunePrompt(ctx, opts) {
   return { system, user };
 }
 
+// 节点⑤ · 分集设计：把总框架(事件链/幕次/转折)铺成逐集大纲(钩子/爽点/集尾cliffhanger/情节)
+export function buildEpisodeDesignPrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const count = opts?.count || 60;
+  const user = `${COHERENCE}
+${hardAnchor(proj)}
+
+【已锁定设定】
+${lockedSettings(proj)}
+
+【任务】把上述总框架/事件链铺排成 ${count} 集的分集大纲。要求：
+- 黄金三秒钩子：每集开场前3秒就抓人（冲突/反差/悬念），禁止铺垫开场
+- 本集爽点：逐集兑付递进，强度有起伏不疲劳
+- 集尾 cliffhanger：每集结尾留强钩子逼追下一集（最后一集为大结局回收）
+- 本集情节：一句话概括，承接上一集、推进主线，整体覆盖完整事件链
+- 严格沿用锁定的主角/世界观/题材，按频向基调；正好输出 ${count} 集，ep 从 1 连续编号
+
+仅输出 JSON（不要解释/代码块）：
+{
+  "episodes": [
+    {"ep": 1, "title": "本集标题", "hook_3s": "黄金三秒钩子", "payoff": "本集爽/虐点", "cliffhanger": "集尾钩子", "summary": "本集情节一句话"}
+  ]
+}`;
+  const system = `你是微短剧分集编剧（节点⑤分集设计器），把总框架拆成强钩子、快节奏、每集必留 cliffhanger 的逐集大纲。\n${NO_EN_QUOTE}`;
+  return { system, user };
+}
+
 // 流式剧本卷轴 · 单集写本/续写（节点⑤分集 + ⑥⑦爽点 + ⑩付费 落地为可拍剧本）
 export function buildEpisodeScriptPrompt(ctx, opts) {
   const proj = resolveProjectDoc(ctx);
