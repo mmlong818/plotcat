@@ -128,11 +128,22 @@ function themeNodeHTML(appState) {
             <input class="cf-input" type="text" data-action="theme-field" data-field="track" value="${tag(ta.track)}" /></label>
           <label class="field field--full"><span>目标受众</span>
             <input class="cf-input" type="text" data-action="theme-field" data-field="audience_out" value="${tag(ta.audience_out)}" /></label>
-          <label class="field field--full"><span>主题陈述 · 价值底色（本剧到底要说什么——升华落点在此奠定）</span>
+          <label class="field field--full"><span>价值底色（一句话主旨 / 不可逾线点）</span>
             <textarea class="cf-textarea" rows="2" data-action="theme-field" data-field="values">${tag(ta.values)}</textarea></label>
         </div>
         ${listBlock("差异化要素", ta.diff)}
         ${listBlock("风险预警", ta.risks)}
+      </div>
+      <div class="summary-card" style="margin-top:12px">
+        <p class="section-label">主题升华 · 开局即定的价值与记忆落点（反向指导每一集，不是写完才升华）</p>
+        <div class="form-grid form-grid--compact" style="margin-top:8px">
+          ${mt("theme_anchor", "核心命题（本剧到底要说什么）", "theme_statement.core", ta.theme_statement?.core)}
+          ${mt("theme_anchor", "如何体现（情节/人物转变）", "theme_statement.form", ta.theme_statement?.form)}
+          ${mt("theme_anchor", "对受众的意义", "theme_statement.meaning", ta.theme_statement?.meaning)}
+          ${mf("theme_anchor", "全剧金句", "anchors.line", ta.anchors?.line)}
+          ${mf("theme_anchor", "高记忆点场面", "anchors.scene", ta.anchors?.scene)}
+          ${mf("theme_anchor", "最强情感锚点", "anchors.emotion", ta.anchors?.emotion)}
+        </div>
       </div>` : ""}
     </section>`;
 }
