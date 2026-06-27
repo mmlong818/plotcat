@@ -50,6 +50,9 @@ export function episodeBoardHTML(appState) {
   const hintText = withSeasons
     ? "连续剧按季管理：每集黄金三秒钩子 → 爽点 → 集尾 cliffhanger，并衔接本季贯穿线。"
     : "每集统一四件套：黄金三秒钩子 → 爽点兑付 → 集尾 cliffhanger，付费卡点标记追更付费位。";
+  const isMicro = appState.project.project?.format === "micro_drama";
+  const designing = appState.microGenBusy === "episode_design";
+  const designErr = appState.episodeDesignError;
   const header = `
     <div class="list-card__head" style="align-items:flex-start">
       <div>
@@ -57,8 +60,12 @@ export function episodeBoardHTML(appState) {
         <h3>${eps.length} 集 · 已写 ${scriptedCount} · 付费卡点 ${paywallCount}</h3>
         <p class="scene-summary-hint" style="margin-top:4px">${hintText}</p>
       </div>
-      <button class="button button--primary button--tiny" type="button" data-action="add-episode">+ 新增一集</button>
-    </div>`;
+      <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+        ${isMicro ? `<button class="button button--primary button--small" type="button" data-action="ai-design-episodes" ${designing ? "disabled" : ""}>${designing ? "AI 设计中…（约 30-60 秒）" : "✦ AI 设计分集（按总框架铺钩子/爽点/cliff）"}</button>` : ""}
+        <button class="button button--ghost button--tiny" type="button" data-action="add-episode">+ 新增一集</button>
+      </div>
+    </div>
+    ${designErr ? `<p class="cf-error" style="margin-top:6px">${escapeHtml(designErr)}</p>` : ""}`;
 
   if (eps.length === 0) {
     return `

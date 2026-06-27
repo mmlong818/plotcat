@@ -157,6 +157,42 @@ export function createMicroGen({ render, markDirty }) {
     (d) => Array.isArray(d.rounds) && d.rounds.length,
     (s, d) => { s.setting = d.setting ?? ""; s.rounds = d.rounds; s.golden_line = d.golden_line ?? ""; s.action = d.action ?? ""; });
 
+  // 节点⑤分集设计 · AI 一键铺分集大纲：依据总框架把每集的钩子/爽点/cliffhanger/情节填上。
+  async function aiDesignEpisodes() {
+    const n0 = (appState.project.episode_board?.episodes ?? []).length;
+    if (n0 === 0) return;
+    appState.microGenBusy = "episode_design"; render();
+    let result;
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ step: "episode_design", projectContext: appState.project, options: { count: n0 } })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      result = await res.json();
+    } catch (e) { result = { error: "生成失败：" + e.message }; }
+    appState.microGenBusy = "";
+    const designs = result.choices?.[0]?.data?.episodes;
+    // live-ref：await 后重取当前 episodes，按顺序写入 AI 设计（保留 id/scene_ids/script_full）
+    const live = (appState.project.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    if (result.error || !Array.isArray(designs) || designs.length === 0) {
+      appState.episodeDesignError = result.error || "AI 未返回分集大纲，请重试";
+    } else {
+      appState.episodeDesignError = "";
+      designs.forEach((d, i) => {
+        const ep = live[i];
+        if (!ep) return;
+        if (d.title) ep.title = String(d.title);
+        ep.hook_3s = d.hook_3s ?? ep.hook_3s ?? "";
+        ep.payoff = d.payoff ?? ep.payoff ?? "";
+        ep.cliffhanger = d.cliffhanger ?? ep.cliffhanger ?? "";
+        ep.summary = d.summary ?? ep.summary ?? "";
+      });
+      markDirty();
+    }
+    render();
+  }
+
   // 流式剧本卷轴 · 单集写本（live-ref 防 autosave 孤立）。承接上一集结尾续写。
   async function aiWriteEpisode(epId) {
     const eps0 = appState.project.episode_board?.episodes ?? [];
@@ -207,6 +243,6 @@ export function createMicroGen({ render, markDirty }) {
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
     aiGenThrill, aiGenPacePay, aiGenDialogue,
-    aiWriteEpisode, aiContinueEpisode
+    aiDesignEpisodes, aiWriteEpisode, aiContinueEpisode
   };
 }
