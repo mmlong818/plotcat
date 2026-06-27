@@ -7,7 +7,7 @@ export function createMicroGen({ render, markDirty }) {
   // 微短剧节点①·主题定位：AI 生成 theme_anchor（节点01）。直接 fetch /api/generate，try/finally 保证状态复位。
   async function aiGenTheme() {
     const t0 = appState.project.theme_anchor ?? (appState.project.theme_anchor = {});
-    t0.loading = true; t0.error = ""; render();
+    t0.loading = true; t0.error = ""; appState.microGenBusy = "theme_anchor"; render();
     const opts = { concept: t0.input_concept || "", platform: t0.input_platform || "", audience: t0.input_audience || "" };
     let result;
     try {
@@ -23,7 +23,7 @@ export function createMicroGen({ render, markDirty }) {
     }
     // autosave 可能在 await 期间用新对象替换 appState.project，故重新取 live 引用再写回
     const ta = appState.project.theme_anchor ?? (appState.project.theme_anchor = {});
-    ta.loading = false;
+    appState.microGenBusy = ""; ta.loading = false;
     const d = result.choices?.[0]?.data ?? {};
     if (result.error || !d.logline) {
       ta.error = result.error || "AI 未返回有效定位，请重试";
@@ -42,7 +42,7 @@ export function createMicroGen({ render, markDirty }) {
   // 微短剧节点②·世界观：AI 生成 world_forge（节点02）。同样 await 后重取 live 引用防 autosave 孤立。
   async function aiGenWorld() {
     const w0 = appState.project.world_forge ?? (appState.project.world_forge = {});
-    w0.loading = true; w0.error = ""; render();
+    w0.loading = true; w0.error = ""; appState.microGenBusy = "world_forge"; render();
     const opts = { era: w0.input_era || "", place: w0.input_place || "", conflict_type: w0.input_conflict || "" };
     let result;
     try {
@@ -54,7 +54,7 @@ export function createMicroGen({ render, markDirty }) {
       result = await res.json();
     } catch (e) { result = { error: "生成失败：" + e.message }; }
     const w = appState.project.world_forge ?? (appState.project.world_forge = {});
-    w.loading = false;
+    appState.microGenBusy = ""; w.loading = false;
     const d = result.choices?.[0]?.data ?? {};
     if (result.error || !d.summary) {
       w.error = result.error || "AI 未返回有效世界观，请重试";
@@ -70,7 +70,7 @@ export function createMicroGen({ render, markDirty }) {
   // 微短剧节点③·人物：AI 生成 char_smith（节点03）。live-ref 防孤立。
   async function aiGenChars() {
     const c0 = appState.project.char_smith ?? (appState.project.char_smith = {});
-    c0.loading = true; c0.error = ""; render();
+    c0.loading = true; c0.error = ""; appState.microGenBusy = "char_smith"; render();
     const opts = { note: c0.input_note || "" };
     let result;
     try {
@@ -82,7 +82,7 @@ export function createMicroGen({ render, markDirty }) {
       result = await res.json();
     } catch (e) { result = { error: "生成失败：" + e.message }; }
     const c = appState.project.char_smith ?? (appState.project.char_smith = {});
-    c.loading = false;
+    appState.microGenBusy = ""; c.loading = false;
     const d = result.choices?.[0]?.data ?? {};
     if (result.error || !d.protagonist) {
       c.error = result.error || "AI 未返回有效人物，请重试";
@@ -99,7 +99,7 @@ export function createMicroGen({ render, markDirty }) {
   // 微短剧节点④·总框架：AI 生成 plot_frame（节点04）。live-ref 防孤立。
   async function aiGenPlotFrame() {
     const f0 = appState.project.plot_frame ?? (appState.project.plot_frame = {});
-    f0.loading = true; f0.error = ""; render();
+    f0.loading = true; f0.error = ""; appState.microGenBusy = "plot_frame"; render();
     const opts = { episodes: f0.input_episodes || "", length: f0.input_length || "" };
     let result;
     try {
@@ -111,7 +111,7 @@ export function createMicroGen({ render, markDirty }) {
       result = await res.json();
     } catch (e) { result = { error: "生成失败：" + e.message }; }
     const f = appState.project.plot_frame ?? (appState.project.plot_frame = {});
-    f.loading = false;
+    appState.microGenBusy = ""; f.loading = false;
     const d = result.choices?.[0]?.data ?? {};
     if (result.error || !Array.isArray(d.event_chain) || d.event_chain.length === 0) {
       f.error = result.error || "AI 未返回有效框架，请重试";
@@ -128,7 +128,7 @@ export function createMicroGen({ render, markDirty }) {
   // 微短剧节点⑥⑦/⑩/⑧/⑪/⑨ 的 AI 生成（统一 live-ref 防孤立模式）
   async function _microGen(key, step, optsFn, validateFn, applyFn) {
     const s0 = appState.project[key] ?? (appState.project[key] = {});
-    s0.loading = true; s0.error = ""; render();
+    s0.loading = true; s0.error = ""; appState.microGenBusy = key; render();
     let result;
     try {
       const res = await fetch("/api/generate", {
@@ -139,7 +139,7 @@ export function createMicroGen({ render, markDirty }) {
       result = await res.json();
     } catch (e) { result = { error: "生成失败：" + e.message }; }
     const s = appState.project[key] ?? (appState.project[key] = {});
-    s.loading = false;
+    appState.microGenBusy = ""; s.loading = false;
     const d = result.choices?.[0]?.data ?? {};
     if (result.error || !validateFn(d)) {
       s.error = result.error || "AI 未返回有效内容，请重试";

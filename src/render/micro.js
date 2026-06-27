@@ -117,7 +117,7 @@ function nodeFilled(id, appState) {
 // 节点①·主题定位（ThemeAnchor）：输入 → AI 生成 → 可编辑输出
 function themeNodeHTML(appState) {
   const ta = appState.project.theme_anchor ?? {};
-  const loading = !!ta.loading;
+  const loading = !!ta.loading || appState.microGenBusy === "theme_anchor";
   const has = !!(ta.logline || ta.track || ta.values);
   const tag = (v) => escapeHtml(v ?? "");
   const listBlock = (label, arr) => {
@@ -184,7 +184,7 @@ function themeNodeHTML(appState) {
 function worldNodeHTML(appState) {
   const w = appState.project.world_forge ?? {};
   const r = w.rules ?? {};
-  const loading = !!w.loading;
+  const loading = !!w.loading || appState.microGenBusy === "world_forge";
   const has = !!(w.summary || r.identity);
   const tag = (v) => escapeHtml(v ?? "");
   return `
@@ -234,7 +234,7 @@ function charsNodeHTML(appState) {
   const pr = c.protagonist ?? {};
   const an = c.antagonist ?? {};
   const sup = Array.isArray(c.supporting) ? c.supporting : [];
-  const loading = !!c.loading;
+  const loading = !!c.loading || appState.microGenBusy === "char_smith";
   const has = !!(pr.identity || pr.desire || sup.length);
   const tag = (v) => escapeHtml(v ?? "");
   const fld = (label, df, val, full = true) => `<label class="field ${full ? "field--full" : ""}"><span>${label}</span><input class="cf-input" type="text" data-action="chars-field" data-field="${df}" value="${tag(val)}" /></label>`;
@@ -295,7 +295,7 @@ function charsNodeHTML(appState) {
 function plotFrameNodeHTML(appState) {
   const f = appState.project.plot_frame ?? {};
   const acts = f.acts ?? {}, turns = f.turns ?? {};
-  const loading = !!f.loading;
+  const loading = !!f.loading || appState.microGenBusy === "plot_frame";
   const has = !!(Array.isArray(f.event_chain) && f.event_chain.length);
   const tag = (v) => escapeHtml(v ?? "");
   const tfld = (label, df, val) => `<label class="field field--full"><span>${label}</span><textarea class="cf-textarea" rows="2" data-action="plotframe-field" data-field="${df}">${tag(val)}</textarea></label>`;
@@ -376,7 +376,7 @@ function roChips(label, arr) {
 
 // 节点⑥⑦·爽点高潮
 function thrillNodeHTML(appState) {
-  const t = appState.project.thrill ?? {}; const pr = t.pressure ?? {}; const an = t.anchors ?? {}; const loading = !!t.loading; const has = Array.isArray(t.main_thrills) && t.main_thrills.length;
+  const t = appState.project.thrill ?? {}; const pr = t.pressure ?? {}; const an = t.anchors ?? {}; const loading = !!t.loading || appState.microGenBusy === "thrill"; const has = Array.isArray(t.main_thrills) && t.main_thrills.length;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("06+07 · 爽点引擎＋矛盾高潮", "爽点·高潮", "提炼主辅爽点+释放节奏，设计压力递进与反转、高潮落点")}${genBtn("ai-gen-thrill", loading, has, "✦ AI 设计爽点与高潮", "AI 设计中…")}${t.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(t.error)}</p>` : ""}</div>
   <div class="summary-card" style="margin-top:12px"><p class="section-label">全剧记忆锚点（高潮成形后再定；随 AI 设计一并生成，也可手填）</p>
     <div class="form-grid form-grid--compact" style="margin-top:8px">${mf("thrill", "全剧金句（可独立传播）", "anchors.line", an.line)}${mf("thrill", "高记忆点场面", "anchors.scene", an.scene)}${mf("thrill", "最强情感锚点", "anchors.emotion", an.emotion)}</div>
@@ -394,14 +394,14 @@ function thrillNodeHTML(appState) {
 
 // 节点⑩·节奏付费
 function pacePayNodeHTML(appState) {
-  const p = appState.project.pace_pay ?? {}; const z = p.zones ?? {}; const loading = !!p.loading; const has = !!p.ep_template;
+  const p = appState.project.pace_pay ?? {}; const z = p.zones ?? {}; const loading = !!p.loading || appState.microGenBusy === "pace_pay"; const has = !!p.ep_template;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("10 · 分集节奏与付费设计 PacePay", "节奏·付费", "单集模板+全剧分区+付费节点，实现看完必点下一集")}${genBtn("ai-gen-pacepay", loading, has, "✦ AI 设计节奏与付费", "AI 编排中…")}${p.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(p.error)}</p>` : ""}</div>
   ${has ? `<div class="summary-card" style="margin-top:12px"><p class="section-label">节奏与付费（可编辑）</p><div class="form-grid form-grid--compact" style="margin-top:8px">${mt("pace_pay", "单集标准模板", "ep_template", p.ep_template)}${mt("pace_pay", "免费区", "zones.free", z.free)}${mt("pace_pay", "首付费区", "zones.paid1", z.paid1)}${mt("pace_pay", "深度付费区", "zones.paid2", z.paid2)}</div>${roTable("付费节点", p.pay_nodes, [{ key: "at", label: "触发时机" }, { key: "mechanism", label: "心理机制" }, { key: "value", label: "付费价值" }])}</div>` : ""}</section>`;
 }
 
 // 节点⑧·分集写本（三段对话）
 function dialogueNodeHTML(appState) {
-  const d = appState.project.micro_dialogue ?? {}; const loading = !!d.loading; const has = Array.isArray(d.rounds) && d.rounds.length;
+  const d = appState.project.micro_dialogue ?? {}; const loading = !!d.loading || appState.microGenBusy === "micro_dialogue"; const has = Array.isArray(d.rounds) && d.rounds.length;
   return `<section class="panel-inner"><div class="summary-card">${nodeHead("08 · 对话冲突生成器 DialogueForge", "分集写本", "把冲突落地为挑衅→加压→反杀三段递进对白+金句")}
     ${mf("micro_dialogue", "本场冲突描述", "input_scene", d.input_scene, "留空让AI据主线选高张力对峙场景")}
     ${genBtn("ai-gen-dialogue", loading, has, "✦ AI 生成三段对话", "AI 写本中…")}${d.error ? `<p class="cf-error" style="margin-top:8px">${escapeHtml(d.error)}</p>` : ""}</div>
