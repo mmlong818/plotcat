@@ -9623,3 +9623,8 @@ body[data-active-step] .char-card:hover {
 
 /* 微短剧节点流程导航：上一步 / 下一步（按编辑页面顺序） */
 .micro-flow-nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 18px 4px 8px; }
+
+/* 微短剧创作区布局：内容收窄居中(不撑满,约 70%)；文本框随内容高度自适应(短框小、长框大) */
+#panel-micro #micro-nav,
+#panel-micro #micro-content { max-width: 1040px; margin-left: auto; margin-right: auto; }
+#micro-content .cf-textarea { field-sizing: content; min-height: 2.4em; }
