@@ -76,8 +76,9 @@ export const structureTemplateLabels = {
   three_act: "三幕（好莱坞标准）",
   four_act: "四幕（电视试播常用）",
   feature_film: "五幕长片（救猫咪节拍）",
-  pilot_episode: "试播集模板",
-  series_season: "连续剧季结构",
+  pilot_episode: "试播集",
+  series_season: "季播剧（按季）",
+  long_series: "长连续剧（长篇连载）",
   short_form: "短片模板",
   micro_drama_serial: "微短剧模板",
   custom: "自定义"
@@ -98,7 +99,7 @@ export const formatStructureOptions = {
   feature: ["three_act", "four_act", "feature_film", "custom"],
   feature_or_pilot: ["three_act", "four_act", "feature_film", "pilot_episode", "custom"],
   pilot: ["three_act", "four_act", "pilot_episode", "custom"],
-  series: ["three_act", "four_act", "series_season", "custom"],
+  series: ["series_season", "long_series", "pilot_episode", "custom"],
   short: ["three_act", "short_form", "custom"],
   micro_drama: ["three_act", "micro_drama_serial", "custom"]
 };
@@ -235,6 +236,23 @@ export const structurePresets = {
       ["endgame_push", "act_4", "终局推进", true],
       ["season_climax", "act_5", "季终高潮", true],
       ["next_season_hook", "act_5", "下一季钩子", false]
+    ]
+  },
+  long_series: {
+    acts: [
+      { key: "act_1", title: "开篇立人", purpose: "建立主线人物与核心悬念，抛出长线钩子", range_label: "0% - 15%" },
+      { key: "act_2", title: "多线铺陈", purpose: "并行展开多条人物线与支线冲突，扩张世界", range_label: "15% - 45%" },
+      { key: "act_3", title: "纠葛升级", purpose: "线索交汇、矛盾层层加码、关系反复", range_label: "45% - 75%" },
+      { key: "act_4", title: "高潮收束", purpose: "主线决战与多条线索集中回收", range_label: "75% - 95%" },
+      { key: "act_5", title: "余韵留扣", purpose: "结局落定，为续季/番外留钩", range_label: "95% - 100%" }
+    ],
+    nodes: [
+      ["series_premise", "act_1", "主线前提建立", true],
+      ["ensemble_setup", "act_2", "群像与支线铺陈", true],
+      ["midpoint_escalation", "act_3", "中段矛盾升级", true],
+      ["convergence", "act_3", "多线交汇", true],
+      ["finale_battle", "act_4", "主线决战", true],
+      ["resolution_hook", "act_5", "收束与留扣", true]
     ]
   },
   short_form: {

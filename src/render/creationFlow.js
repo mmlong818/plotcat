@@ -33,7 +33,7 @@ const FORMAT_DISPLAY_LABELS = {
 const TEMPLATE_RECS = {
   feature:     { template: "three_act", reason: "好莱坞行业标准 — 建置 / 对抗 / 解决，最普适的故事结构" },
   pilot:       { template: "three_act", reason: "三幕剧适配试播集 — 第一幕立人物，第二幕推升级，第三幕留续看钩子" },
-  series:      { template: "series_season", reason: "连续剧季结构 — 季引擎/多线展开/季中转向/季终高潮/下一季钩子，配套季-集分集管理" },
+  series:      { template: "series_season", reason: "季播剧结构 — 季引擎/多线展开/季中转向/季终高潮/下一季钩子，配套季-集分集管理。连续剧不套电影三幕" },
   short:       { template: "three_act", reason: "三幕剧浓缩版，适合短片的紧凑节奏" },
   micro_drama: { template: "three_act", reason: "三幕剧浓缩版，每幕留强钩子" }
 };
@@ -42,8 +42,9 @@ const TEMPLATE_LABELS = {
   three_act:          "三幕（好莱坞标准）",
   four_act:           "四幕（电视试播常用）",
   feature_film:       "五幕长片（救猫咪节拍）",
-  pilot_episode:      "试播集模板",
-  series_season:      "连续剧季",
+  pilot_episode:      "试播集",
+  series_season:      "季播剧（按季）",
+  long_series:        "长连续剧（长篇连载）",
   short_form:         "短片模板",
   micro_drama_serial: "微短剧模板",
   custom:             "自定义"
@@ -52,7 +53,7 @@ const TEMPLATE_LABELS = {
 const FORMAT_TEMPLATES = {
   feature:     ["three_act", "four_act", "feature_film"],
   pilot:       ["four_act", "three_act", "pilot_episode"],
-  series:      ["series_season", "three_act", "four_act"],
+  series:      ["series_season", "long_series", "pilot_episode"],
   short:       ["three_act", "short_form"],
   micro_drama: ["three_act", "micro_drama_serial"]
 };

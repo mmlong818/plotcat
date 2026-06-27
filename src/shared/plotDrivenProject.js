@@ -62,6 +62,23 @@ const STRUCTURES = {
       ["next_season_hook", "act_5", "下一季钩子", false]
     ]
   },
+  long_series: {
+    acts: [
+      ["act_1", "开篇立人", "建立主线人物与核心悬念，抛出长线钩子", "0% - 15%"],
+      ["act_2", "多线铺陈", "并行展开多条人物线与支线冲突，扩张世界", "15% - 45%"],
+      ["act_3", "纠葛升级", "线索交汇、矛盾层层加码、关系反复", "45% - 75%"],
+      ["act_4", "高潮收束", "主线决战与多条线索集中回收", "75% - 95%"],
+      ["act_5", "余韵留扣", "结局落定，为续季/番外留钩", "95% - 100%"]
+    ],
+    nodes: [
+      ["series_premise", "act_1", "主线前提建立", true],
+      ["ensemble_setup", "act_2", "群像与支线铺陈", true],
+      ["midpoint_escalation", "act_3", "中段矛盾升级", true],
+      ["convergence", "act_3", "多线交汇", true],
+      ["finale_battle", "act_4", "主线决战", true],
+      ["resolution_hook", "act_5", "收束与留扣", true]
+    ]
+  },
   short_form: {
     acts: [
       ["act_1", "起", "快速立人立题", "0% - 40%"],
