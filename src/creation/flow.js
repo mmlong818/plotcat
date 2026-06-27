@@ -58,8 +58,13 @@ export function createCreationFlow(deps) {
       appState.project = applyProjectDraftToProject(createEmptyProject(payload));
       appState.projectList = [summarizeProjectListItem(appState.project), ...appState.projectList];
     }
-    setCurrentPage("workflow");
-    setCurrentStep("structure");
+    // 形态分流：微短剧进独立创作区，其它进电影工作台（与 open-project 路由一致）
+    if (appState.project?.project?.format === "micro_drama") {
+      setCurrentPage("micro");
+    } else {
+      setCurrentPage("workflow");
+      setCurrentStep("structure");
+    }
   }
 
   // ── Creation action handlers ──────────────────────────────────────────────────
@@ -84,6 +89,14 @@ export function createCreationFlow(deps) {
     if (action === "open-quick-creation") {
       const pickedFormat = appState.createModeFormat ?? "feature";
       appState.createModePickerOpen = false;
+      // 微短剧没有电影式「概念→分幕→角色→逐幕」5步流程——直接建项目进独立创作区，
+      // 微短剧的创作在节点流水线(主题→世界→人物→框架→分集→…→剧本卷轴)里完成。
+      if (pickedFormat === "micro_drama") {
+        appState.proCreation.active = false;
+        appState.creation = null;
+        handleCreateBlankProjectThenStructure().catch((err) => console.error("[micro quick] failed:", err));
+        return true;
+      }
       appState.proCreation.active = false;
       appState.currentPage = "creation";
       appState.createDialogOpen = false;

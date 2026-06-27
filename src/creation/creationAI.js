@@ -93,11 +93,15 @@ export function createCreationAI(deps) {
       if (data.projectId) {
         appState.proCreation.active = false;
         await loadProjectFromServer(data.projectId);
-        setCurrentPage("workflow");
-        setCurrentStep("structure");
-        // 精品创作组装产出较薄（人物少/节点空/无关系/无场景表）——
-        // 进工作台后后台续跑补全链
-        autoEnrichNewProject({ withRelationships: true, withNodes: true }).catch(() => {});
+        // 形态分流：微短剧进独立创作区(不跑电影式补全链)；其它进电影工作台
+        if (appState.project?.project?.format === "micro_drama") {
+          setCurrentPage("micro");
+        } else {
+          setCurrentPage("workflow");
+          setCurrentStep("structure");
+          // 精品创作组装产出较薄（人物少/节点空/无关系/无场景表）——进工作台后后台续跑补全链
+          autoEnrichNewProject({ withRelationships: true, withNodes: true }).catch(() => {});
+        }
       }
     } catch (err) {
       pc.step = "workbenches";
@@ -479,11 +483,16 @@ export function createCreationAI(deps) {
       console.warn("项目保存失败:", err.message);
     }
 
-    setCurrentPage("workflow");
-    setCurrentStep("structure");
-    // 兑现 step1「一气呵成产出场景全套」的承诺：进入工作台后后台续跑
-    // 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
-    autoEnrichNewProject().catch(() => {});
+    // 形态分流：微短剧进独立创作区(不跑电影式 autoEnrich)；其它进电影工作台并后台补全
+    if (appState.project?.project?.format === "micro_drama") {
+      setCurrentPage("micro");
+    } else {
+      setCurrentPage("workflow");
+      setCurrentStep("structure");
+      // 兑现 step1「一气呵成产出场景全套」的承诺：进入工作台后后台续跑
+      // 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
+      autoEnrichNewProject().catch(() => {});
+    }
   }
 
   // ── 创建后自动补全：故事核心四件套 / 关系网 / 节点填写 / 场景规划 ──────────
