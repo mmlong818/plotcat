@@ -1,13 +1,9 @@
 import { escapeHtml, list } from "../utils.js";
-import { structureTemplateLabels } from "../state.js";
+import { structureTemplateLabels, storyRoleLabels } from "../state.js";
 
 // 项目总览（常驻主页）：把准备三步成果(故事核心/结构/人物)合起来呈现，并作为各步入口。
 // 连续剧落地与打开项目时先到这里——给"我做出了什么"的收口 + launchpad。
 
-const ROLE_LABELS = {
-  protagonist: "主角", antagonist: "对手", ally: "盟友",
-  opponent_ally: "复杂盟友", supporting: "配角"
-};
 const FORMAT_LABELS = { series: "连续剧", feature: "电影", micro_drama: "微短剧", short: "短片", pilot: "试播" };
 
 function coreLine(label, value) {
@@ -40,7 +36,10 @@ export function renderOverviewPage(dom, appState) {
     (acc[r] = acc[r] ?? []).push(c);
     return acc;
   }, {});
-  const roleOrder = ["protagonist", "antagonist", "ally", "opponent_ally", "supporting"];
+  // 用 state 的权威角色顺序，未知 role 排末尾——保证所有角色都呈现，不漏
+  const roleRank = Object.keys(storyRoleLabels);
+  const roleOrder = Object.keys(charsByRole)
+    .sort((a, b) => ((roleRank.indexOf(a) + 1 || 999) - (roleRank.indexOf(b) + 1 || 999)));
 
   const coreBody = [
     coreLine("故事前提", core.premise),
@@ -79,9 +78,9 @@ export function renderOverviewPage(dom, appState) {
         <div class="summary-card ov-card ov-card--wide">
           <div class="list-card__head"><p class="section-label">人物 · ${chars.length} 位</p>${editBtn("characters")}</div>
           ${chars.length
-            ? `<div class="ov-roles">${roleOrder.filter((r) => charsByRole[r]).map((r) => `
+            ? `<div class="ov-roles">${roleOrder.map((r) => `
                 <div class="ov-role-group">
-                  <span class="ov-role-label">${ROLE_LABELS[r] ?? r}</span>
+                  <span class="ov-role-label">${escapeHtml(storyRoleLabels[r] ?? r)}</span>
                   <span class="ov-role-names">${charsByRole[r].map((c) => escapeHtml(c.name || "未命名")).join("、")}</span>
                 </div>`).join("")}</div>`
             : `<p class="ov-empty">还没有人物。</p>`}
