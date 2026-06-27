@@ -78,11 +78,20 @@ export function renderOverviewPage(dom, appState) {
         <div class="summary-card ov-card ov-card--wide">
           <div class="list-card__head"><p class="section-label">人物 · ${chars.length} 位</p>${editBtn("characters")}</div>
           ${chars.length
-            ? `<div class="ov-roles">${roleOrder.map((r) => `
-                <div class="ov-role-group">
-                  <span class="ov-role-label">${escapeHtml(storyRoleLabels[r] ?? r)}</span>
-                  <span class="ov-role-names">${charsByRole[r].map((c) => escapeHtml(c.name || "未命名")).join("、")}</span>
-                </div>`).join("")}</div>`
+            ? `<div class="ov-char-grid">${roleOrder.flatMap((r) => charsByRole[r].map((c) => {
+                const arc = (c.arc_start || c.arc_end) ? `${escapeHtml(c.arc_start || "?")} → ${escapeHtml(c.arc_end || "?")}` : "";
+                return `
+                <div class="ov-char-card">
+                  <div class="ov-char-head">
+                    <span class="ov-char-name">${escapeHtml(c.name || "未命名")}</span>
+                    <span class="ov-char-role-badge">${escapeHtml(storyRoleLabels[r] ?? r)}</span>
+                    ${c.archetype ? `<span class="ov-char-arch">${escapeHtml(c.archetype)}</span>` : ""}
+                  </div>
+                  ${c.external_goal ? `<p class="ov-char-line"><span class="ov-char-k">想要</span>${escapeHtml(c.external_goal)}</p>` : ""}
+                  ${c.dramatic_need ? `<p class="ov-char-line"><span class="ov-char-k">需要</span>${escapeHtml(c.dramatic_need)}</p>` : ""}
+                  ${arc ? `<p class="ov-char-line"><span class="ov-char-k">弧光</span>${arc}</p>` : ""}
+                </div>`;
+              })).join("")}</div>`
             : `<p class="ov-empty">还没有人物。</p>`}
         </div>
 
