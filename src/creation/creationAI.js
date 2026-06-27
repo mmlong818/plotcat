@@ -7,6 +7,7 @@ import { createId, createEmptyProject } from "../shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { renderCharactersPage } from "../render/characters.js";
 import { SCENE_TARGETS_BY_FORMAT } from "../ai/sceneGeneration.js";
+import { getMode } from "../modes/registry.js";
 import { getLivePlotCards } from "../logic/getters.js";
 
 export function createCreationAI(deps) {
@@ -464,21 +465,14 @@ export function createCreationAI(deps) {
       console.warn("项目保存失败:", err.message);
     }
 
-    // 形态分流：微短剧进独立创作区；连续剧走季-集模式直接进分集板；其它进电影工作台并后台补全
+    // 落点由模式注册表声明(微短剧→独立区；连续剧→总览；电影→结构步)
     const fmt = appState.project?.project?.format;
-    if (fmt === "micro_drama") {
-      setCurrentPage("micro");
-    } else if (fmt === "series") {
-      // 连续剧落在「总览」主页：先呈现准备三步成果(故事核心/结构/人物)，再由用户进各步细化。
-      // 不在此后台跑 autoEnrich——它每完成一步就整页 render，落地后会连闪数次；
-      // 关系网/故事核心由用户在对应步骤主动生成。
-      setCurrentPage("workflow");
-      setCurrentStep("overview");
-    } else {
-      setCurrentPage("workflow");
-      setCurrentStep("structure");
-      // 兑现 step1「一气呵成产出场景全套」的承诺：进入工作台后后台续跑
-      // 关系网 + 故事核心反推 + 场景规划，每步完成即保存，失败不打扰
+    const landing = getMode(fmt).landing;
+    setCurrentPage(landing.page);
+    if (landing.step) setCurrentStep(landing.step);
+    // 仅电影系(非微短剧/非连续剧)落地后后台补全关系网+故事核心+场景；
+    // 连续剧按步骤走、微短剧走独立区，均不在此抢跑(否则整页 render 会连闪)。
+    if (fmt !== "micro_drama" && fmt !== "series") {
       autoEnrichNewProject({ withRelationships: true }).catch(() => {});
     }
   }

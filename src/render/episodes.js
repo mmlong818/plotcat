@@ -1,4 +1,5 @@
 import { escapeHtml, list } from "../utils.js";
+import { getEpisodeConfig } from "../modes/registry.js";
 
 // 短剧分集板：集为一等公民。每集 = 黄金三秒钩子 / 爽点 / 集尾cliffhanger / 付费卡点 / 关联场。
 const STATUS_LABEL = { draft: "草拟", outline: "大纲", scripted: "已写", locked: "锁定" };
@@ -50,22 +51,19 @@ export function episodeBoardHTML(appState) {
   const hintText = withSeasons
     ? "连续剧按季管理：每集开场钩子 → 主线推进 → 集尾钩子，并衔接本季贯穿线。"
     : "每集统一四件套：黄金三秒钩子 → 爽点兑付 → 集尾 cliffhanger，付费卡点标记追更付费位。";
-  const isMicro = appState.project.project?.format === "micro_drama";
-  // 形态感知：微短剧用短剧打法(黄金三秒/爽点/付费卡点)；连续剧用剧集标准(开场钩子/主线推进/集尾钩子，无付费卡点)
-  const EP = withSeasons
-    ? { hook: "开场钩子（冷开场 / 抓人开场）", hookPh: "本集如何开场、迅速抓住观众",
-        payoff: "本集主线推进（核心事件）", payoffPh: "本集主线发生了什么、推进到哪",
-        cliff: "集尾钩子（引向下一集）", cliffPh: "结尾留什么悬念勾住下一集" }
-    : { hook: "黄金三秒钩子（开场抓人）", hookPh: "前3秒用什么钩住观众",
-        payoff: "本集爽点", payoffPh: "本集要兑付的爽/虐点",
-        cliff: "集尾 cliffhanger", cliffPh: "结尾留什么钩子逼观众追下一集" };
+  const format = appState.project.project?.format;
+  const isMicro = format === "micro_drama";
+  // 分集标准(字段口径/是否有付费卡点)由模式注册表声明，不在此判断形态
+  const epCfg = getEpisodeConfig(format);
+  const EP = epCfg.labels;
+  const showPaywall = epCfg.paywall;
   const designing = appState.microGenBusy === "episode_design";
   const designErr = appState.episodeDesignError;
   const header = `
     <div class="list-card__head" style="align-items:flex-start">
       <div>
         <p class="section-label">${labelText}</p>
-        <h3>${eps.length} 集 · 已写 ${scriptedCount}${isMicro ? ` · 付费卡点 ${paywallCount}` : ""}</h3>
+        <h3>${eps.length} 集 · 已写 ${scriptedCount}${showPaywall ? ` · 付费卡点 ${paywallCount}` : ""}</h3>
         <p class="scene-summary-hint" style="margin-top:4px">${hintText}</p>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
@@ -111,12 +109,12 @@ export function episodeBoardHTML(appState) {
           <span class="ep-script__title">${escapeHtml(ep.title || "未命名")}</span>
           <span class="ep-script__badge ${filled ? "ep-script__badge--ok" : ""}">${STATUS_LABEL[ep.status] ?? ep.status}</span>
           ${sc > 0 ? `<span class="ep-script__badge">${sc}场</span>` : `<span class="ep-script__badge" style="color:#c0622a">⚠无场</span>`}
-          ${isMicro && ep.paywall_point ? `<span class="ep-script__badge ep-script__badge--ok">💰付费卡点</span>` : ""}
+          ${showPaywall && ep.paywall_point ? `<span class="ep-script__badge ep-script__badge--ok">💰付费卡点</span>` : ""}
           ${ep.hook_3s ? `<span class="ep-script__preview">🎬 ${escapeHtml(ep.hook_3s)}</span>` : ""}
         </summary>
         <div class="ep-script__body">
           <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:8px">
-            ${isMicro ? `<button class="button button--ghost button--tiny ${ep.paywall_point ? "is-active" : ""}" type="button"
+            ${showPaywall ? `<button class="button button--ghost button--tiny ${ep.paywall_point ? "is-active" : ""}" type="button"
               data-action="toggle-episode-paywall" data-id="${escapeHtml(ep.id)}" title="标记/取消付费卡点">${ep.paywall_point ? "💰付费卡点" : "设为付费卡点"}</button>` : ""}
             <button class="button button--ghost button--tiny" type="button" data-action="move-episode-up" data-id="${escapeHtml(ep.id)}" ${idx === 0 ? "disabled" : ""} title="上移">↑</button>
             <button class="button button--ghost button--tiny" type="button" data-action="move-episode-down" data-id="${escapeHtml(ep.id)}" ${idx === eps.length - 1 ? "disabled" : ""} title="下移">↓</button>

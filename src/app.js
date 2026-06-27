@@ -22,6 +22,7 @@ import {
   isBrokenPlaceholderText
 } from "./utils.js";
 
+import { getMode } from "./modes/registry.js";
 import { renderOverviewPage } from "./render/overview.js";
 import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
@@ -66,7 +67,7 @@ workflowSteps.splice(0, workflowSteps.length, ...[
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
   // 连续剧·分集大纲：定义每集是什么(钩子/爽点/cliffhanger/梗概)，非写剧本本身(那在「剧本撰写」)
-  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集黄金三秒钩子、爽点、集尾 cliffhanger、贯穿线、本集梗概，挂载场景。", seriesOnly: true },
+  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集开场钩子、主线推进、集尾钩子、季贯穿线，挂载场景。", seriesOnly: true },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
   { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
   { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
@@ -1186,16 +1187,10 @@ function stepHasContent(stepId) {
 }
 
 function renderStepperNav() {
-  // 形态感知：seriesOnly 步骤（分集大纲·季-集）仅连续剧 series 显示
-  // （micro_drama 走独立创作区，分集在其 ⑤分集 节点，不经此工作台）
-  const isSeries = appState.project.project?.format === "series";
-  let steps = workflowSteps.filter((s) => !s.seriesOnly || isSeries);
-  if (isSeries) {
-    // 连续剧是人物/关系驱动的(可再生冲突引擎)：基础(人物→关系)先立，季弧(结构骨架)从人物长出来，
-    // 再据季弧拆分集→细化剧情→拆场→成稿。电影保持结构优先，不受此重排影响。
-    const order = ["overview", "characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"];
-    steps = order.map((id) => steps.find((s) => s.id === id)).filter(Boolean);
-  }
+  // 步骤集与顺序由模式注册表声明(电影/连续剧/微短剧各一份)，组件不再自行判断形态。
+  const stepDefs = new Map(workflowSteps.map((s) => [s.id, s]));
+  const steps = getMode(appState.project.project?.format).steps
+    .map((id) => stepDefs.get(id)).filter(Boolean);
   const activeIdx = steps.findIndex((s) => s.id === appState.currentStepId);
   const nextStep = steps[activeIdx + 1];
   const stepButtons = steps

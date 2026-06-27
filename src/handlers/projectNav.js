@@ -4,21 +4,15 @@ import { list } from "../utils.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { cloneDefaultProject } from "../data/defaultProject.js";
 import { renderAiSettingsDialog } from "../render/project.js";
+import { getMode } from "../modes/registry.js";
 
 export function handleProjectNavClick(action, target, id, nodeId) {
   if (action === "open-project") {
-    // 形态分流：微短剧进独立创作区；连续剧进工作台「总览」主页(再进各步)；其它进结构步
+    // 落点由模式注册表声明(微短剧→独立区；连续剧→总览；电影→结构步)
     const enter = () => {
-      const fmt = appState.project.project?.format;
-      if (fmt === "micro_drama") {
-        ctx.setCurrentPage("micro");
-      } else if (fmt === "series") {
-        ctx.setCurrentPage("workflow");
-        ctx.setCurrentStep("overview");
-      } else {
-        ctx.setCurrentPage("workflow");
-        ctx.setCurrentStep("structure");
-      }
+      const landing = getMode(appState.project.project?.format).landing;
+      ctx.setCurrentPage(landing.page);
+      if (landing.step) ctx.setCurrentStep(landing.step);
     };
     ctx.loadProjectFromServer(id)
       .then(enter)
