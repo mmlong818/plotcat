@@ -22,14 +22,13 @@ import {
   isBrokenPlaceholderText
 } from "./utils.js";
 
-import { getMode } from "./modes/registry.js";
-import { renderOverviewPage } from "./render/overview.js";
+import { getMode, getFormatPlugins } from "./modes/registry.js";
+import "./formats/index.js"; // 触发各形态向注册表注册页面/处理器（core 不点名形态）
 import { renderStructurePage } from "./render/structure.js";
 import { renderCharactersPage } from "./render/characters.js";
 import { renderRelationshipsPage } from "./render/relationships.js";
 import { renderScenesPage } from "./render/scenes.js";
 import { renderEpisodesPage } from "./render/episodes.js";
-import { renderMicroPage } from "./render/micro.js";
 import { renderScreenplayPage } from "./render/screenplay.js";
 import { initContext } from "./handlers/context.js";
 import { handleCharacterClick } from "./handlers/character.js";
@@ -44,10 +43,7 @@ import { handleScreenplayClick } from "./handlers/screenplay.js";
 import { handleProjectNavClick } from "./handlers/projectNav.js";
 import { handleAiConfigClick } from "./handlers/aiConfig.js";
 import { handleProjectDraftClick } from "./handlers/projectDraft.js";
-import { handleEpisodeClick } from "./handlers/episode.js";
-import { handleMicroClick } from "./handlers/micro.js";
 import { renderLocksPage } from "./render/locks.js";
-import { renderSeriesLibraryPage } from "./render/seriesLibrary.js";
 import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
 import { renderStructureLibraryDialog } from "./render/structureLibrary.js";
@@ -1472,17 +1468,16 @@ function render() {
   renderProjectList(dom, appState, projectGetters);
   _renderProjectCreateForm();
   renderAiSettingsDialog(dom, appState, aiGetters);
-  renderOverviewPage(dom, appState);
   renderStructurePage(dom, appState, structureGetters);
   renderPlotsPage(dom, appState, plotGetters);
   renderCharactersPage(dom, appState, characterGetters);
   renderRelationshipsPage(dom, appState, relationshipGetters);
   renderLocksPage(dom, appState, lockGetters);
-  renderSeriesLibraryPage(dom, appState);
   renderScenesPage(dom, appState, sceneGetters);
   renderEpisodesPage(dom, appState);
-  renderMicroPage(dom, appState);
   renderScreenplayPage(dom, appState);
+  // 形态专属页面（总览/系列库/微短剧创作区）遍历注册表分发——core 不点名形态
+  getFormatPlugins().forEach((plugin) => plugin.pages?.forEach((renderPage) => renderPage(dom, appState)));
   if (appState.creation) renderCreationPage();
   renderPageVisibility();
   schedulePlotInspectorLeadSync();
@@ -1519,8 +1514,10 @@ function handleClick(event) {
   if (handleCharacterClick(action, target, id, nodeId)) return;
   if (handlePlotClick(action, target, id, nodeId)) return;
   if (handleSceneClick(action, target, id, nodeId)) return;
-  if (handleEpisodeClick(action, target, id, nodeId)) return;
-  if (handleMicroClick(action, target, id, nodeId)) return;
+  // 形态专属点击处理器（分集/微短剧节点）遍历注册表分发——core 不点名形态
+  for (const formatHandler of getFormatPlugins().flatMap((plugin) => plugin.clickHandlers ?? [])) {
+    if (formatHandler(action, target, id, nodeId)) return;
+  }
   if (handleStructureClick(action, target, id, nodeId)) return;
   if (handleRelationshipClick(action, target, id, nodeId)) return;
   if (handleStoryBibleClick(action, target, id, nodeId)) return;
@@ -1998,10 +1995,7 @@ const creationFlow = createCreationFlow({
 });
 const {
   renderCreationPage, handleCreationClick, handleCreationInput,
-  handleRefineCharacter, handleGenStructureNotes, handleGenNodeNote,
-  aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-  aiGenThrill, aiGenPacePay,
-  aiDesignEpisodes, aiDesignSeriesEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
+  handleRefineCharacter, handleGenStructureNotes, handleGenNodeNote
 } = creationFlow;
 
 // 系列库（跨项目世界观）数据流——依赖 renderCreationPage，故在创作流程簇之后创建
@@ -2020,11 +2014,12 @@ initContext({
   aiRateScene, aiRateScreenplayFull, aiReviseFullScreenplayWithRater, aiReviseSceneWithRater,
   aiGenreAudit, aiCharacterAudit, aiGenreRemedy, aiExtractContinuity,
   handleRefineCharacter, globalFindReplace, auditScriptSpeakers, patchCreationCardFields,
-  handleGenStructureNotes, handleGenNodeNote,
-  aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
-  aiGenThrill, aiGenPacePay,
-  aiDesignEpisodes, aiDesignSeriesEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode, aiCascadeFrom
+  handleGenStructureNotes, handleGenNodeNote
 });
+
+// 形态自接线：各形态用核心依赖创建并注入自己的 AI 生成簇（微短剧节点生成 / 连续剧分集设计）。
+// core 不再 import microGen——形态专属生成逻辑由形态自己拥有。
+getFormatPlugins().forEach((plugin) => plugin.wire?.({ render, markDirty }));
 
 // ── Patch event delegation to include creation actions ────────────────────────
 

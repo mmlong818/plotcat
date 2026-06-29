@@ -1,7 +1,7 @@
 // 微短剧创作区各节点的 AI 生成簇（主题定位/世界观/人物/总框架/爽点高潮/节奏付费/分集写本/主题升华/性别向）。
 // 从 app.js 外提；运行期依赖（render / markDirty）经工厂注入，appState 直接 import。
 // 统一 live-ref 模式：await 期间 autosave 可能用新对象替换 appState.project，故 await 后重取 live 引用再写回，防孤立。
-import { appState } from "../state.js";
+import { appState } from "../../state.js";
 
 export function createMicroGen({ render, markDirty }) {
   // 微短剧节点①·主题定位：AI 生成 theme_anchor（节点01）。直接 fetch /api/generate，try/finally 保证状态复位。
@@ -208,59 +208,6 @@ export function createMicroGen({ render, markDirty }) {
     render();
   }
 
-  // 连续剧 · AI 设计本季分集（季感知，分批+进度+单批超时）。按 故事核心/季结构/季贯穿 铺本季逐集。
-  async function aiDesignSeriesEpisodes() {
-    const board = appState.project.episode_board;
-    const season = appState.selection?.seasonNumber ?? 1;
-    const seasonEps = () => (appState.project.episode_board?.episodes ?? []).filter((e) => (e.season ?? 1) === season).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
-    const total = seasonEps().length;
-    if (total === 0) return;
-    const throughline = (board?.seasons ?? []).find((s) => s.number === season)?.throughline || "";
-    const BATCH = 12, PER_BATCH_TIMEOUT = 90000;
-    appState.microGenBusy = "episode_design";
-    appState.episodeDesignError = "";
-    for (let start = 0; start < total; start += BATCH) {
-      const from = start + 1, to = Math.min(start + BATCH, total);
-      appState.episodeDesignProgress = `${start}/${total}`;
-      render();
-      const liveBefore = seasonEps();
-      const prev = start > 0 ? liveBefore[start - 1] : null;
-      const priorTail = prev ? `《${prev.title || ""}》${prev.cliffhanger || prev.summary || ""}` : "";
-      let result;
-      const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), PER_BATCH_TIMEOUT);
-      try {
-        const res = await fetch("/api/generate", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ step: "series_episode_design", projectContext: appState.project, options: { season, from, to, count: total, throughline, priorTail } }),
-          signal: ctrl.signal
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        result = await res.json();
-      } catch (e) { result = { error: e.name === "AbortError" ? `第 ${from}-${to} 集生成超时` : "生成失败：" + e.message }; }
-      finally { clearTimeout(timer); }
-      const designs = result.choices?.[0]?.data?.episodes;
-      if (result.error || !Array.isArray(designs) || designs.length === 0) {
-        appState.episodeDesignError = `${result.error || "AI 未返回分集大纲"}（已完成 ${start}/${total} 集，可重试续铺）`;
-        break;
-      }
-      const live = seasonEps();
-      designs.forEach((d, i) => {
-        const ep = live[start + i];
-        if (!ep || start + i >= to) return;
-        if (d.title) ep.title = String(d.title);
-        ep.hook_3s = d.hook_3s ?? ep.hook_3s ?? "";
-        ep.payoff = d.payoff ?? ep.payoff ?? "";
-        ep.cliffhanger = d.cliffhanger ?? ep.cliffhanger ?? "";
-        ep.summary = d.summary ?? ep.summary ?? "";
-      });
-      markDirty();
-    }
-    appState.microGenBusy = "";
-    appState.episodeDesignProgress = "";
-    render();
-  }
-
   // 流式剧本卷轴 · 单集写本（live-ref 防 autosave 孤立）。承接上一集结尾续写。
   async function aiWriteEpisode(epId) {
     const eps0 = appState.project.episode_board?.episodes ?? [];
@@ -377,7 +324,7 @@ export function createMicroGen({ render, markDirty }) {
   return {
     aiGenTheme, aiGenWorld, aiGenChars, aiGenPlotFrame,
     aiGenThrill, aiGenPacePay,
-    aiDesignEpisodes, aiDesignSeriesEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode,
+    aiDesignEpisodes, aiWriteEpisode, aiRewriteEpisode, aiContinueEpisode,
     aiCascadeFrom, CASCADE_IDS
   };
 }

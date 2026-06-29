@@ -1,6 +1,6 @@
-import { escapeHtml } from "../utils.js";
-import { MICRO_STEPS } from "../state.js";
-import { episodeBoardHTML } from "./episodes.js";
+import { escapeHtml } from "../../utils.js";
+import { MICRO_STEPS } from "../../state.js";
+import { episodeBoardHTML } from "../../render/episodes.js";
 
 // 微短剧创作区（独立于电影工作台）：节点流水线导航 + 激活节点内容。
 // 后端/数据/AI 全复用；这里只是短剧专属前端外壳。
