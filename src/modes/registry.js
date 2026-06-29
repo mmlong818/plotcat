@@ -56,7 +56,8 @@ export function defaultTemplateFor(format) {
 
 // 形态插件注册表：各形态(src/formats/*)把自己的页面渲染器 / 点击处理器注册进来，
 // orchestrator(app.js) 遍历分发——core 不再静态 import 任何形态文件，从根上断「改A坏B」。
-// plugin 形状：{ pages?: [(dom, appState) => void], clickHandlers?: [(action, target, id, nodeId) => boolean] }
+// plugin 形状：{ pages?: [(dom, appState) => void], clickHandlers?: [(action, target, id, nodeId) => boolean],
+//   wire?: (coreApi) => void }  // wire 在 core 启动后被调用，让形态用核心依赖创建并注入自己的 AI 生成簇
 const formatPlugins = [];
 export function registerFormatPlugin(plugin) {
   formatPlugins.push(plugin);
