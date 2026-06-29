@@ -53,3 +53,14 @@ export function getEpisodeConfig(format) {
 export function defaultTemplateFor(format) {
   return formatDefaultTemplates[format] ?? "three_act";
 }
+
+// 形态插件注册表：各形态(src/formats/*)把自己的页面渲染器 / 点击处理器注册进来，
+// orchestrator(app.js) 遍历分发——core 不再静态 import 任何形态文件，从根上断「改A坏B」。
+// plugin 形状：{ pages?: [(dom, appState) => void], clickHandlers?: [(action, target, id, nodeId) => boolean] }
+const formatPlugins = [];
+export function registerFormatPlugin(plugin) {
+  formatPlugins.push(plugin);
+}
+export function getFormatPlugins() {
+  return formatPlugins;
+}
