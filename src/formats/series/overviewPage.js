@@ -1,5 +1,5 @@
-import { escapeHtml, list } from "../utils.js";
-import { structureTemplateLabels, storyRoleLabels } from "../state.js";
+import { escapeHtml, list } from "../../utils.js";
+import { structureTemplateLabels, storyRoleLabels } from "../../state.js";
 
 // 项目总览（常驻主页）：把准备三步成果(故事核心/结构/人物)合起来呈现，并作为各步入口。
 // 连续剧落地与打开项目时先到这里——给"我做出了什么"的收口 + launchpad。
