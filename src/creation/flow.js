@@ -7,7 +7,6 @@ import { createEmptyProject } from "../shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { renderProCreationPage } from "../render/proCreationFlow.js";
 import { renderCreationFlowPage } from "../render/creationFlow.js";
-import { createMicroGen } from "./microGen.js";
 import { createCreationAI } from "./creationAI.js";
 
 export function createCreationFlow(deps) {
@@ -31,7 +30,6 @@ export function createCreationFlow(deps) {
     if (scrollY > 0) window.scrollTo(0, scrollY);
   }
 
-  const micro = createMicroGen({ render, markDirty });
   const ai = createCreationAI({ ...deps, renderCreationPage });
   const {
     handleProAnalyzeAnchor, handleProGenQuestions, handleProAssemble,
@@ -484,6 +482,6 @@ export function createCreationFlow(deps) {
 
   return {
     renderCreationPage, handleCreationClick, handleCreationInput,
-    ...micro, ...ai
+    ...ai
   };
 }
