@@ -1,6 +1,6 @@
-import { ctx } from "./context.js";
-import { appState } from "../state.js";
-import { createId } from "../shared/projectFactory.js";
+import { ctx } from "../../handlers/context.js";
+import { appState } from "../../state.js";
+import { createId } from "../../shared/projectFactory.js";
 
 // 微短剧创作区交互（节点流水线导航等）。
 export function handleMicroClick(action, target, id, nodeId) {

@@ -1,4 +1,4 @@
-import { escapeHtml, list } from "../utils.js";
+import { escapeHtml, list } from "../../utils.js";
 
 // 系列库管理页：跨项目共享的世界观资产（世界规则 / 系列时间线 / 常驻人物）。
 // 从项目中心顶栏「资料库」进入；项目内的资料库仍是项目级（可挂载系列）。
