@@ -2,7 +2,7 @@
 // 组合微短剧生成簇（microGen）与创作 AI 异步簇（creationAI）。
 // 从 app.js 外提；运行期依赖经 createCreationFlow 注入。
 import { appState, structurePresets } from "../state.js";
-import { defaultTemplateFor } from "../modes/registry.js";
+import { defaultTemplateFor, getCreationConfig } from "../modes/registry.js";
 import { createEmptyProject } from "../shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { renderProCreationPage } from "../render/proCreationFlow.js";
@@ -305,8 +305,8 @@ export function createCreationFlow(deps) {
     }
 
     if (action === "cf-step3-next") {
-      // 连续剧走季-集模式：跳过电影式逐幕(step4)与审核(step5)，确认人物即建项目，进季-集分集板做季集设置
-      if (c.draft?.format === "series") {
+      // 人物步即完成的形态（连续剧季-集模式，见 modes/registry creation）：确认人物即建项目
+      if (getCreationConfig(c.draft?.format).finishAfterCharacters) {
         c.aiError = "";
         handleFinalizeNewCreation();
         return true;

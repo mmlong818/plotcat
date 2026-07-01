@@ -17,6 +17,8 @@ const MICRO_EP = {
 
 // steps：该形态在工作台步骤条里的有序步骤(id 对应 workflowSteps 定义)。
 // landing：建项目/打开项目后的落点。episode：分集标准(null=该形态无分集)。
+// creation：新建向导差异。finishAfterCharacters=true 的形态在人物步(step3)直接完成创建，
+// 跳过电影式逐幕大纲(step4)与审核(step5)；finishLabel 为该场景的下一步文案。
 export const MODES = {
   feature: {
     label: "电影",
@@ -30,7 +32,8 @@ export const MODES = {
     steps: ["overview", "characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"],
     landing: { page: "workflow", step: "overview" },
     episode: { paywall: false, labels: SERIES_EP },
-    structure: { numbering: "phase", unitWord: "阶段" }  // 季阶段(①②③ + 阶段名)，无电影"幕"语言
+    structure: { numbering: "phase", unitWord: "阶段" },  // 季阶段(①②③ + 阶段名)，无电影"幕"语言
+    creation: { finishAfterCharacters: true, finishLabel: "完成创建 · 进入季-集分集" }
   },
   micro_drama: {
     label: "微短剧",
@@ -48,6 +51,11 @@ export function getMode(format) {
 // 分集标准：无显式 episode 配置的形态兜底用短剧口径(保持历史默认)。
 export function getEpisodeConfig(format) {
   return getMode(format).episode ?? { paywall: true, labels: MICRO_EP };
+}
+
+// 新建向导差异：无显式 creation 配置的形态走完整五步向导。
+export function getCreationConfig(format) {
+  return getMode(format).creation ?? { finishAfterCharacters: false };
 }
 
 export function defaultTemplateFor(format) {

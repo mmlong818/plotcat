@@ -4,11 +4,16 @@ import { ensurePlotDrivenProject } from "./shared/plotDrivenProject.js";
 export const STORAGE_KEY = "yuandian-plot-driven-workspace";
 export const AUTOSAVE_DELAY = 800;
 
+// 工作台步骤定义字典（唯一真源）。各形态展示哪些步骤、顺序如何，由模式注册表
+// MODE.steps 决定——这里只放步骤的 id/文案，不放形态过滤标记。
 export const workflowSteps = [
+  // 总览：连续剧的常驻主页(落地与打开项目先到这)，合呈现 故事核心/结构/人物 并作各步入口。
+  { id: "overview",      label: "总览", description: "项目总览：故事核心、结构、人物一览，从这里进入各步细化。" },
   { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
-  { id: "episodes",      label: "分集脚本", description: "短剧按集创作：每集黄金三秒钩子、爽点、集尾 cliffhanger、付费卡点，挂载场景。", microOnly: true },
   { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
   { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
+  // 连续剧·分集大纲：定义每集是什么(钩子/爽点/cliffhanger/梗概)，非写剧本本身(那在「剧本撰写」)
+  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集开场钩子、主线推进、集尾钩子、季贯穿线，挂载场景。" },
   { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
   { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
   { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
@@ -412,7 +417,8 @@ export const appState = {
   project: ensurePlotDrivenProject(cloneDefaultProject()),
   projectList: [],
   currentPage: "project",
-  currentStepId: workflowSteps[0].id,
+  // 初始步固定 structure（历史默认）；实际落点由 modes/registry 的 landing 按形态决定
+  currentStepId: "structure",
   microStep: "episodes",
   toolbarMode: "compact",
   createDialogOpen: false,
