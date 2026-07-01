@@ -11,7 +11,7 @@ export function createSeriesGen({ render, markDirty }) {
     const total = seasonEps().length;
     if (total === 0) return;
     const throughline = (board?.seasons ?? []).find((s) => s.number === season)?.throughline || "";
-    const BATCH = 12, PER_BATCH_TIMEOUT = 90000;
+    const BATCH = 8, PER_BATCH_TIMEOUT = 150000;
     appState.microGenBusy = "episode_design";
     appState.episodeDesignError = "";
     for (let start = 0; start < total; start += BATCH) {
