@@ -49,3 +49,6 @@ tests/e2e/refactor-smoke.mjs
 tests/e2e/.actions_baseline_DONOTCOMMIT.txt
 tests/e2e/refactor-gate.mjs
 tests/e2e/refactor-probe.mjs
+tests/e2e/mode-gate.mjs
+tests/e2e/.mode_baseline_DONOTCOMMIT.txt
+tests/e2e/_realcheck/

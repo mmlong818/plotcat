@@ -1,5 +1,5 @@
 import { json, readJsonBody } from "../httpUtils.js";
-import { createId } from "../../shared/projectFactory.js";
+import { createId, structureProfileFromPreset } from "../../shared/projectFactory.js";
 import { structurePresets } from "../../state.js";
 import { createProject, saveProject } from "../repository.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "../../ai/proPrompts.js";
@@ -107,20 +107,12 @@ export async function handleCreationFlowApi(request, response, pathname) {
       // 6. 填充 structure_profile（acts + nodes）— 把 scenes 按 act_position/序号分配给节点的 note
       const _preset1 = structurePresets[primaryStructure];
       if (_preset1) {
-        const _acts1 = (_preset1.acts ?? []).map((a, i) => ({
-          id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
-          range_label: a.range_label, order_index: i
-        }));
-        const _actMap1 = new Map(_acts1.map(a => [a.key, a.id]));
-        const _nodes1 = (_preset1.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
-          id: createId("node"), node_type: nodeType, title: nodeTitle, required,
-          act_id: _actMap1.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
-        }));
+        const profile = structureProfileFromPreset(_preset1, primaryStructure);
         // 按 scenes 顺序均匀分布到 nodes（最稳）：12 个 scenes / 11 个 nodes ≈ 每节点 1 个
         const sceneList = Array.isArray(scenes) ? scenes : [];
-        if (sceneList.length > 0 && _nodes1.length > 0) {
-          for (let idx = 0; idx < _nodes1.length; idx++) {
-            const sceneIdx = Math.min(Math.floor(idx * sceneList.length / _nodes1.length), sceneList.length - 1);
+        if (sceneList.length > 0 && profile.nodes.length > 0) {
+          for (let idx = 0; idx < profile.nodes.length; idx++) {
+            const sceneIdx = Math.min(Math.floor(idx * sceneList.length / profile.nodes.length), sceneList.length - 1);
             const s = sceneList[sceneIdx];
             if (!s) continue;
             const noteParts = [];
@@ -128,10 +120,10 @@ export async function handleCreationFlowApi(request, response, pathname) {
             if (s.core_event) noteParts.push(`核心：${s.core_event}`);
             if (s.character_change) noteParts.push(`变化：${s.character_change}`);
             if (s.dramatic_function) noteParts.push(`功能：${s.dramatic_function}`);
-            _nodes1[idx].note = noteParts.join("\n");
+            profile.nodes[idx].note = noteParts.join("\n");
           }
         }
-        projectData.structure_profile = { template: primaryStructure, acts: _acts1, nodes: _nodes1 };
+        projectData.structure_profile = profile;
       } else {
         projectData.structure_profile = { template: primaryStructure };
       }
@@ -334,16 +326,7 @@ export async function handleCreationFlowApi(request, response, pathname) {
       // 填充 structure_profile（acts + nodes）和 character_hub
       const _preset2 = structurePresets["three_act"];
       if (_preset2) {
-        const _acts2 = (_preset2.acts ?? []).map((a, i) => ({
-          id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
-          range_label: a.range_label, order_index: i
-        }));
-        const _actMap2 = new Map(_acts2.map(a => [a.key, a.id]));
-        const _nodes2 = (_preset2.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
-          id: createId("node"), node_type: nodeType, title: nodeTitle, required,
-          act_id: _actMap2.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
-        }));
-        projectData.structure_profile = { template: "three_act", acts: _acts2, nodes: _nodes2 };
+        projectData.structure_profile = structureProfileFromPreset(_preset2, "three_act");
       } else {
         projectData.structure_profile = { template: "three_act" };
       }
