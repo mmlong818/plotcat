@@ -17,6 +17,9 @@ const runtimeConfig = {
 };
 const defaultModels = { openai: "gpt-5.4-mini", gemini: "gemini-2.5-flash" };
 
+// 模型列表请求超时：无 signal 的 fetch 在网络卡顿时会挂死 /api/ai/models
+const LIST_TIMEOUT_MS = 15_000;
+
 function normalizeProvider(value) {
   const v = String(value ?? "").trim();
   return ["claude_cli", "anthropic", "openai", "gemini", "custom"].includes(v) ? v : "openai";
@@ -54,7 +57,8 @@ async function listOpenAiModels(apiKey) {
     method: "GET",
     headers: {
       Authorization: `Bearer ${apiKey}`
-    }
+    },
+    signal: AbortSignal.timeout(LIST_TIMEOUT_MS)
   });
 
   if (!response.ok) {
@@ -109,7 +113,8 @@ async function listGeminiModels(apiKey) {
       query.set("pageToken", pageToken);
     }
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?${query.toString()}`, {
-      method: "GET"
+      method: "GET",
+      signal: AbortSignal.timeout(LIST_TIMEOUT_MS)
     });
 
     if (!response.ok) {
@@ -161,7 +166,8 @@ function resolvePreferredModel(provider, models = []) {
 
 async function listAnthropicModels(apiKey) {
   const response = await fetch("https://api.anthropic.com/v1/models?limit=100", {
-    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" }
+    headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01" },
+    signal: AbortSignal.timeout(LIST_TIMEOUT_MS)
   });
   if (!response.ok) throw new Error(`Anthropic 模型列表失败：${response.status} ${(await response.text()).slice(0, 200)}`);
   const payload = await response.json();
@@ -171,7 +177,8 @@ async function listAnthropicModels(apiKey) {
 async function listCustomModels(apiKey, baseUrl) {
   const base = (baseUrl || "https://api.deepseek.com/v1").replace(/\/+$/, "");
   const response = await fetch(`${base}/models`, {
-    headers: { authorization: `Bearer ${apiKey}` }
+    headers: { authorization: `Bearer ${apiKey}` },
+    signal: AbortSignal.timeout(LIST_TIMEOUT_MS)
   });
   if (!response.ok) throw new Error(`兼容端点模型列表失败：${response.status} ${(await response.text()).slice(0, 200)}`);
   const payload = await response.json();
