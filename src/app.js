@@ -3,10 +3,9 @@ import { createEmptyProject, createId } from "./shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "./shared/plotDrivenProject.js";
 
 import {
-  STORAGE_KEY, AUTOSAVE_DELAY, workflowSteps, projectCreateStepsCurrent,
+  workflowSteps, projectCreateStepsCurrent,
   formatLabels, projectFormatChoices,
   structureTemplateLabels, formatStructureOptions, formatDefaultTemplates,
-  structurePresets, buildCustomStructurePreset,
   appState, createDefaultProjectDraft,
   RELATIONSHIP_TYPE_OPTIONS
 } from "./state.js";
@@ -46,8 +45,6 @@ import { handleProjectDraftClick } from "./handlers/projectDraft.js";
 import { renderLocksPage } from "./render/locks.js";
 import { renderPlotsPage } from "./render/plots.js";
 import { renderProjectList, renderProjectCreateForm, renderAiSettingsDialog } from "./render/project.js";
-import { renderStructureLibraryDialog } from "./render/structureLibrary.js";
-import { STORY_STRUCTURE_LIBRARY } from "./data/storyStructureLibrary.js";
 import { renderCreationFlowPage, renderFormatFieldInner, renderGenreFieldInner } from "./render/creationFlow.js";
 import { renderProCreationPage } from "./render/proCreationFlow.js";
 import { createSeriesLibrary } from "./series/seriesLibrary.js";
@@ -55,20 +52,14 @@ import { createScriptTools } from "./editing/scriptTools.js";
 import { createSceneGeneration, SCENE_TARGETS_BY_FORMAT } from "./ai/sceneGeneration.js";
 import { createCreationWorkbench } from "./ai/creationWorkbench.js";
 import { createCreationFlow } from "./creation/flow.js";
-
-workflowSteps.splice(0, workflowSteps.length, ...[
-  // 总览：连续剧的常驻主页(落地与打开项目先到这)，合呈现 故事核心/结构/人物 并作各步入口。
-  // 各形态展示哪些步骤、顺序如何，由模式注册表 MODE.steps 决定(不再用 seriesOnly 标记)。
-  { id: "overview",      label: "总览", description: "项目总览：故事核心、结构、人物一览，从这里进入各步细化。" },
-  { id: "structure",     label: "结构骨架", description: "选定结构模板，划出各幕比例，标记必要的叙事节点。" },
-  { id: "characters",    label: "人物核心", description: "建立主配角档案，确认各自的目标、缺口和弧光方向。" },
-  { id: "relationships", label: "关系张力", description: "梳理人物之间的权力差、情感债和共同过去，找到冲突来源。" },
-  // 连续剧·分集大纲：定义每集是什么(钩子/爽点/cliffhanger/梗概)，非写剧本本身(那在「剧本撰写」)
-  { id: "episodes",      label: "分集大纲", description: "连续剧按季-集设计：分季管理，每集开场钩子、主线推进、集尾钩子、季贯穿线，挂载场景。" },
-  { id: "plots",         label: "剧情开发", description: "把故事事件写成剧情卡，挂入对应的幕与节点，排出主次线。" },
-  { id: "scenes",        label: "场景拆解", description: "把锁定后的剧情卡拆成逐场可写的场景序列；时间线/世界规则/伏笔/类型约束已移至顶部「资料库」。" },
-  { id: "screenplay",    label: "剧本撰写", description: "按场景顺序撰写完整剧本，支持逐场 AI 生成与 fountain 导出。" }
-]);
+import { schedulePlotInspectorLeadSync, stopDragAutoScroll, updateDragAutoScroll } from "./ui/dragAutoScroll.js";
+import { createStructureTemplate } from "./logic/structureTemplate.js";
+import {
+  summarizeProjectListItem,
+  applyProjectDraftPatch as applyProjectDraftPatchImpl,
+  applyProjectDraftToProject
+} from "./shared/projectDraft.js";
+import { createPersistence } from "./persistence.js";
 
 const dom = {
   hero: document.querySelector(".hero"),
@@ -344,110 +335,16 @@ function deserializeCreation(raw) {
   };
 }
 
-function saveLocalSnapshot() {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({
-      project: appState.project,
-      projectList: appState.projectList,
-      creation: serializeCreation(appState.creation),
-      // 精品创作的问答是用户手打的——刷新丢失等于白答一轮
-      proCreation: appState.proCreation?.active ? appState.proCreation : null,
-      currentPage: appState.currentPage,
-    })
-  );
-}
-
-function loadLocalSnapshot() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    return null;
-  }
-}
-
-async function fetchJson(url, options = {}) {
-  const response = await fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options
-  });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    throw new Error(payload.error || `请求失败：${response.status}`);
-  }
-  return response.json();
-}
-
-async function loadProjectsFromServer() {
-  const payload = await fetchJson("/api/projects");
-  appState.projectList = payload.projects ?? [];
-}
-
-async function loadProjectFromServer(projectId) {
-  const payload = await fetchJson(`/api/projects/${encodeURIComponent(projectId)}`);
-  appState.project = ensurePlotDrivenProject(payload.project);
-  appState.projectList = payload.projects ?? appState.projectList;
-  normalizeProject();
-  const firstChar = list(appState.project.character_hub?.characters)[0];
-  if (firstChar && !appState.selection.characterId) {
-    appState.selection.characterId = firstChar.id;
-  }
-}
-
-async function saveProjectToServer() {
-  appState.runtime.saving = true;
-  // 标记 PUT 期间用户是否新增了改动；若有则 PUT 返回后不可覆盖本地最新状态
-  appState.runtime.dirty = false;
-  renderRuntimeStatus();
-  const payload = await fetchJson(`/api/projects/${encodeURIComponent(appState.project.project.id)}`, {
-    method: "PUT",
-    body: JSON.stringify({ project: appState.project })
-  });
-  // 关键：PUT 完成时若 dirty 已被新编辑置 true，说明本地有 PUT 之外的新数据，
-  // 不要用 server 返回值覆盖 appState.project，否则会丢失这段时间内用户的输入。
-  if (!appState.runtime.dirty) {
-    appState.project = ensurePlotDrivenProject(payload.project);
-  }
-  appState.projectList = payload.projects ?? appState.projectList;
-  appState.runtime.serverAvailable = true;
-  appState.runtime.saving = false;
-  appState.runtime.lastSavedAt = new Date().toISOString();
-  normalizeProject();
-  saveLocalSnapshot();
-  render();
-  // 若期间有 dirty，再排一次 autosave 把最新状态推上去
-  if (appState.runtime.dirty) scheduleAutosave();
-}
-
-function scheduleAutosave() {
-  window.clearTimeout(appState.saveTimer);
-  appState.saveTimer = window.setTimeout(async () => {
-    if (!appState.runtime.dirty) return;
-    saveLocalSnapshot();
-    if (!appState.runtime.serverAvailable) {
-      appState.runtime.lastSavedAt = "仅本地保存";
-      renderRuntimeStatus();
-      return;
-    }
-    try {
-      await saveProjectToServer();
-    } catch (error) {
-      appState.runtime.serverAvailable = false;
-      appState.runtime.saving = false;
-      appState.runtime.lastSavedAt = "仅本地保存";
-      renderRuntimeStatus();
-    }
-  }, AUTOSAVE_DELAY);
-}
-
-function markDirty() {
-  appState.runtime.dirty = true;
-  saveLocalSnapshot();
-  renderRuntimeStatus();
-  scheduleAutosave();
-}
+const {
+  saveLocalSnapshot,
+  loadLocalSnapshot,
+  fetchJson,
+  loadProjectsFromServer,
+  loadProjectFromServer,
+  saveProjectToServer,
+  scheduleAutosave,
+  markDirty
+} = createPersistence({ normalizeProject, renderRuntimeStatus, serializeCreation, render });
 
 function setCurrentPage(pageId) {
   appState.currentPage = pageId;
@@ -482,127 +379,14 @@ function setCurrentStep(stepId) {
 
 // ── Structure template ───────────────────────────────────────────────────────
 
-function createStructureProfile(template, rhythmOverlay, customActCount = 2) {
-  const definition =
-    template === "custom"
-      ? buildCustomStructurePreset(customActCount)
-      : structurePresets[template] ?? structurePresets.three_act;
-  const actIds = new Map();
-  const acts = definition.acts.map((act, index) => {
-    const id = createId("act");
-    actIds.set(act.key, id);
-    return { id, ...act, order_index: index + 1 };
-  });
-  const nodes = definition.nodes.map(([key, actKey, title, required], index) => ({
-    id: createId("node"),
-    key,
-    act_id: actIds.get(actKey) ?? acts[0]?.id ?? "",
-    title,
-    node_type: key,
-    required,
-    order_index: index + 1,
-    note: "",
-    card_ids: []
-  }));
-  return {
-    template,
-    rhythm_overlay: rhythmOverlay,
-    custom_act_count: template === "custom" ? Number(definition.custom_act_count ?? customActCount) : acts.length,
-    acts,
-    nodes
-  };
-}
-
-function applyStructureTemplate(template, customActCount = null) {
-  const currentCards = list(appState.project.plot_board?.cards);
-  const currentNodes = list(appState.project.structure_profile?.nodes);
-  const currentNodeMap = new Map(currentNodes.map((node) => [node.id, node]));
-  const nextStructure = createStructureProfile(
-    template,
-    appState.project.structure_profile?.rhythm_overlay ?? "save_the_cat",
-    customActCount ?? appState.project.structure_profile?.custom_act_count ?? list(appState.project.structure_profile?.acts).length ?? 2
-  );
-  const nextNodesByType = new Map(nextStructure.nodes.map((node) => [node.node_type, node]));
-  appState.project.structure_profile = nextStructure;
-  appState.project.plot_board.cards = currentCards.map((card, index) => {
-    const oldNode = currentNodeMap.get(card.node_id);
-    const targetNode =
-      (oldNode && nextNodesByType.get(oldNode.node_type)) ||
-      nextStructure.nodes[Math.min(index, nextStructure.nodes.length - 1)] ||
-      nextStructure.nodes[0];
-    return { ...card, node_id: targetNode?.id ?? "", act_id: targetNode?.act_id ?? nextStructure.acts[0]?.id ?? "" };
-  });
-  normalizeProject();
-  markDirty();
-  render();
-}
-
-let libraryFilterTag = "all";
-
-function openStructureLibrary() {
-  dom.structureLibraryContent.innerHTML = renderStructureLibraryDialog(libraryFilterTag);
-  dom.structureLibraryDialog.hidden = false;
-}
-
-function closeStructureLibrary() {
-  dom.structureLibraryDialog.hidden = true;
-}
-
-function applyLibraryStructure(structureId) {
-  const struct = STORY_STRUCTURE_LIBRARY.find((s) => s.id === structureId);
-  if (!struct) return;
-  if (struct.builtInKey) {
-    applyStructureTemplate(struct.builtInKey);
-    appState.project.structure_profile.library_id = struct.id;
-    appState.project.structure_profile.library_name = struct.name;
-    markDirty();
-    closeStructureLibrary();
-    return;
-  }
-  const currentCards = list(appState.project.plot_board?.cards);
-  const currentNodes = list(appState.project.structure_profile?.nodes);
-  const currentNodeMap = new Map(currentNodes.map((node) => [node.id, node]));
-  const actIds = new Map();
-  const acts = struct.acts.map((act, index) => {
-    const id = createId("act");
-    actIds.set(act.key, id);
-    return { id, key: act.key, title: act.title, purpose: act.purpose, range_label: act.range_label, order_index: index + 1 };
-  });
-  const nodes = struct.nodes.map(([key, actKey, title, required], index) => ({
-    id: createId("node"),
-    key,
-    act_id: actIds.get(actKey) ?? acts[0]?.id ?? "",
-    title,
-    node_type: key,
-    required,
-    order_index: index + 1,
-    note: "",
-    card_ids: []
-  }));
-  const nextStructure = {
-    template: "custom",
-    library_id: struct.id,
-    library_name: struct.name,
-    rhythm_overlay: appState.project.structure_profile?.rhythm_overlay ?? "none",
-    custom_act_count: acts.length,
-    acts,
-    nodes
-  };
-  const nextNodesByType = new Map(nodes.map((node) => [node.node_type, node]));
-  appState.project.structure_profile = nextStructure;
-  appState.project.plot_board.cards = currentCards.map((card, index) => {
-    const oldNode = currentNodeMap.get(card.node_id);
-    const targetNode =
-      (oldNode && nextNodesByType.get(oldNode.node_type)) ||
-      nextStructure.nodes[Math.min(index, nextStructure.nodes.length - 1)] ||
-      nextStructure.nodes[0];
-    return { ...card, node_id: targetNode?.id ?? "", act_id: targetNode?.act_id ?? nextStructure.acts[0]?.id ?? "" };
-  });
-  normalizeProject();
-  markDirty();
-  closeStructureLibrary();
-  render();
-}
+const {
+  applyStructureTemplate,
+  openStructureLibrary,
+  closeStructureLibrary,
+  applyLibraryStructure,
+  setLibraryFilterTag,
+  getLibraryFilterTag
+} = createStructureTemplate({ normalizeProject, markDirty, render, dom });
 
 function insertSceneFromPlotCard(cardId) {
   const card = getPlotCard(cardId);
@@ -632,108 +416,8 @@ function insertSceneFromPlotCard(cardId) {
   render();
 }
 
-function summarizeProjectListItem(project) {
-  return {
-    id: project.project.id,
-    title: project.project.title,
-    format: project.project.format,
-    status: project.project.status,
-    genre: project.project.genre,
-    logline: project.project.logline,
-    character_count: list(project.character_hub?.characters).length,
-    scene_count: list(project.scene_workbench?.scenes).length,
-    version_count: 0,
-    last_opened_at: new Date().toISOString()
-  };
-}
-
 function applyProjectDraftPatch(patch = {}) {
-  const nextDraft = { ...appState.projectDraft };
-  Object.entries(patch ?? {}).forEach(([key, value]) => {
-    if (value == null) return;
-    if (Array.isArray(value)) {
-      nextDraft[key] = value;
-      return;
-    }
-    if (typeof value === "string") {
-      const trimmed = value.trim();
-      if (!trimmed) return;
-      nextDraft[key] = trimmed;
-      return;
-    }
-    nextDraft[key] = String(value);
-  });
-  const nextFormat = projectFormatChoices.includes(nextDraft.format) ? nextDraft.format : "feature";
-  nextDraft.format = nextFormat;
-  const validTemplates = getStructureOptionsForFormat(nextFormat, nextDraft.structure_template).map(([v]) => v);
-  if (!validTemplates.includes(nextDraft.structure_template)) {
-    nextDraft.structure_template = getDefaultTemplateForFormat(nextFormat);
-  }
-  if (nextDraft.structure_template === "custom") {
-    nextDraft.custom_act_count = String(Math.max(1, Math.min(6, Number(nextDraft.custom_act_count) || 2)));
-  } else if (!nextDraft.custom_act_count) {
-    nextDraft.custom_act_count = "2";
-  }
-  appState.projectDraft = nextDraft;
-}
-
-function applyProjectDraftToProject(sourceProject) {
-  const project = ensurePlotDrivenProject(sourceProject);
-  const genreTags = splitTags(appState.projectDraft.genre);
-  project.project.title = appState.projectDraft.title.trim() || project.project.title;
-  project.project.format = appState.projectDraft.format;
-  project.project.genre = genreTags;
-  project.project.logline = appState.projectDraft.logline.trim();
-  project.project.theme_question = appState.projectDraft.theme_question.trim();
-  project.project.tone = appState.projectDraft.tone.trim();
-  project.intent_anchor.core_idea = appState.projectDraft.logline.trim();
-  project.intent_anchor.theme = appState.projectDraft.theme.trim();
-  project.intent_anchor.protagonist = appState.projectDraft.protagonist.trim();
-  project.intent_anchor.arc = unique([appState.projectDraft.arc_start, appState.projectDraft.arc_end]).join(" -> ");
-  project.intent_anchor.motif = appState.projectDraft.motif.trim();
-  project.intent_anchor.genre = genreTags;
-  project.story_core.premise = appState.projectDraft.logline.trim();
-  project.story_core.core_conflict = appState.projectDraft.core_conflict.trim();
-  project.story_core.central_question = appState.projectDraft.theme_question.trim();
-  project.story_core.theme_statement = appState.projectDraft.theme.trim();
-  project.story_core.emotional_promise = appState.projectDraft.tone.trim();
-  project.story_core.setting_overview = appState.projectDraft.setting.trim();
-  project.genre_profile.primary_genre = genreTags[0] ?? "";
-  project.genre_profile.secondary_genres = genreTags.slice(1);
-  project.genre_profile.audience_promise = appState.projectDraft.audience_promise.trim();
-  project.genre_profile.tone_words = splitTags(appState.projectDraft.tone);
-  project.structure_profile = createStructureProfile(
-    appState.projectDraft.structure_template,
-    project.structure_profile?.rhythm_overlay ?? "save_the_cat",
-    Number(appState.projectDraft.custom_act_count) || 2
-  );
-  const orderedNodes = list(project.structure_profile?.nodes);
-  list(project.plot_board?.cards).forEach((card, index) => {
-    const targetNode =
-      orderedNodes.find((node) => node.node_type === (index === 0 ? "catalyst" : "setup")) ??
-      orderedNodes[Math.min(index, Math.max(orderedNodes.length - 1, 0))] ??
-      orderedNodes[0];
-    card.node_id = targetNode?.id ?? "";
-    card.act_id = targetNode?.act_id ?? "";
-  });
-  const protagonist = list(project.character_hub?.characters)[0];
-  if (protagonist) {
-    protagonist.name = appState.projectDraft.protagonist.trim() || protagonist.name || "主角";
-    protagonist.story_role = "protagonist";
-    protagonist.external_goal = appState.projectDraft.external_goal.trim();
-    protagonist.dramatic_need = appState.projectDraft.internal_need.trim();
-    protagonist.arc_start = appState.projectDraft.arc_start.trim();
-    protagonist.arc_end = appState.projectDraft.arc_end.trim();
-    protagonist.notes = appState.projectDraft.setting.trim();
-  }
-  const firstScene = list(project.scene_workbench?.scenes)[0];
-  if (firstScene) {
-    firstScene.title = firstScene.title || "开场场景";
-    firstScene.purpose = appState.projectDraft.logline.trim();
-    firstScene.act_id = list(project.plot_board?.cards).find((card) => !card.deleted_at)?.act_id ?? firstScene.act_id;
-    firstScene.pov_character_id = protagonist?.id ?? firstScene.pov_character_id;
-  }
-  return ensurePlotDrivenProject(project);
+  applyProjectDraftPatchImpl(patch, { getStructureOptionsForFormat, getDefaultTemplateForFormat });
 }
 
 // ── Create wizard ────────────────────────────────────────────────────────────
@@ -1361,103 +1045,6 @@ function _renderProjectCreateForm() {
   if (appState.settingsDialogOpen) renderAiSettingsDialog(dom, appState, aiGetters);
 }
 
-// ── Drag / scroll infrastructure ─────────────────────────────────────────────
-
-const dragAutoScrollState = { rafId: 0, deltaX: 0, deltaY: 0 };
-const plotInspectorFollowState = { rafId: 0 };
-
-function getRehearsalBoardElement() {
-  return document.querySelector("#plots-content .plot-rehearsal-board");
-}
-
-function getPlotInspectorPaneElement() {
-  return document.querySelector("#plots-content .workbench-pane--context");
-}
-
-function getPlotInspectorLeadElement() {
-  return document.querySelector("#plots-content .plot-inspector__lead");
-}
-
-function getSelectedPlotBoardCardElement() {
-  return Array.from(document.querySelectorAll("#plots-content .plot-board-panel [data-action='select-plot-card'][data-id]")).find(
-    (element) => element.dataset.id === appState.selection.plotCardId
-  ) ?? null;
-}
-
-function syncPlotInspectorLeadPosition() {
-  const lead = getPlotInspectorLeadElement();
-  const pane = getPlotInspectorPaneElement();
-  if (!lead || !pane) return;
-  lead.style.removeProperty("--plot-inspector-offset");
-  if (appState.currentPage !== "workflow" || appState.currentStepId !== "plots" || !appState.plotContextVisible) return;
-  const card = getSelectedPlotBoardCardElement();
-  if (!card) return;
-  const paneRect = pane.getBoundingClientRect();
-  const cardRect = card.getBoundingClientRect();
-  const rawOffset = cardRect.top - paneRect.top - 6;
-  const maxOffset = Math.max(0, Math.min(260, pane.clientHeight - lead.offsetHeight - 24));
-  const offset = Math.max(0, Math.min(rawOffset, maxOffset));
-  lead.style.setProperty("--plot-inspector-offset", `${Math.round(offset)}px`);
-}
-
-function schedulePlotInspectorLeadSync() {
-  if (plotInspectorFollowState.rafId) return;
-  plotInspectorFollowState.rafId = requestAnimationFrame(() => {
-    plotInspectorFollowState.rafId = 0;
-    syncPlotInspectorLeadPosition();
-  });
-}
-
-function stopDragAutoScroll() {
-  if (dragAutoScrollState.rafId) {
-    cancelAnimationFrame(dragAutoScrollState.rafId);
-    dragAutoScrollState.rafId = 0;
-  }
-  dragAutoScrollState.deltaX = 0;
-  dragAutoScrollState.deltaY = 0;
-}
-
-function runDragAutoScroll() {
-  if (!appState.draggedPlotCardId) { stopDragAutoScroll(); return; }
-  const pageScroller = document.scrollingElement || document.documentElement;
-  if (dragAutoScrollState.deltaY) pageScroller.scrollBy(0, dragAutoScrollState.deltaY);
-  const rehearsalBoard = getRehearsalBoardElement();
-  if (rehearsalBoard && dragAutoScrollState.deltaX) rehearsalBoard.scrollLeft += dragAutoScrollState.deltaX;
-  if (!dragAutoScrollState.deltaX && !dragAutoScrollState.deltaY) { dragAutoScrollState.rafId = 0; return; }
-  dragAutoScrollState.rafId = requestAnimationFrame(runDragAutoScroll);
-}
-
-function updateDragAutoScroll(clientX = 0, clientY = 0) {
-  const viewportMarginY = 120;
-  const viewportMarginX = 120;
-  let deltaY = 0;
-  let deltaX = 0;
-  if (clientY < viewportMarginY) {
-    deltaY = -Math.max(10, Math.round((viewportMarginY - clientY) / 4));
-  } else if (window.innerHeight - clientY < viewportMarginY) {
-    deltaY = Math.max(10, Math.round((viewportMarginY - (window.innerHeight - clientY)) / 4));
-  }
-  const rehearsalBoard = getRehearsalBoardElement();
-  if (rehearsalBoard && appState.plotBoardView === "rehearsal") {
-    const rect = rehearsalBoard.getBoundingClientRect();
-    const insideHorizontalBand = clientY >= rect.top && clientY <= rect.bottom;
-    if (insideHorizontalBand && clientX >= rect.left && clientX <= rect.right) {
-      if (clientX - rect.left < viewportMarginX) {
-        deltaX = -Math.max(10, Math.round((viewportMarginX - (clientX - rect.left)) / 4));
-      } else if (rect.right - clientX < viewportMarginX) {
-        deltaX = Math.max(10, Math.round((viewportMarginX - (rect.right - clientX)) / 4));
-      }
-    }
-  }
-  dragAutoScrollState.deltaX = deltaX;
-  dragAutoScrollState.deltaY = deltaY;
-  if ((deltaX || deltaY) && !dragAutoScrollState.rafId) {
-    dragAutoScrollState.rafId = requestAnimationFrame(runDragAutoScroll);
-    return;
-  }
-  if (!deltaX && !deltaY) stopDragAutoScroll();
-}
-
 // ── render() ─────────────────────────────────────────────────────────────────
 
 function render() {
@@ -1496,8 +1083,7 @@ initContext({
   disconnectAiConfigDraftCurrentV2, defaultModelForProvider, applyConceptOptionCurrent,
   PROVIDER_LABELS, getProjectCreateStep,
   dom, aiGetters,
-  setLibraryFilterTag: (tag) => { libraryFilterTag = tag; },
-  getLibraryFilterTag: () => libraryFilterTag
+  setLibraryFilterTag, getLibraryFilterTag
 });
 
 // ── Event handlers ────────────────────────────────────────────────────────────
