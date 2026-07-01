@@ -5,8 +5,9 @@ import { DatabaseSync } from "node:sqlite";
 
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(moduleDir, "../..");
-const dataDir = path.join(rootDir, "data");
-const dbPath = path.join(dataDir, "yuandian.db");
+// 测试注入：设置 YUANDIAN_DB_PATH 可指向临时库，避免单测污染真实数据
+const dbPath = process.env.YUANDIAN_DB_PATH || path.join(rootDir, "data", "yuandian.db");
+const dataDir = path.dirname(dbPath);
 
 let database;
 

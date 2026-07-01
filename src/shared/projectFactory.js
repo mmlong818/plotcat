@@ -15,6 +15,21 @@ export function createId(prefix = "id") {
   return `${prefix}_${Date.now().toString(36)}_${randomSegment()}`;
 }
 
+// 结构 preset(state.js structurePresets 条目) → structure_profile 的 acts/nodes 实体。
+// 三处组装共用(快速创建客户端 finalize / 服务端 finalize / 精品组装)，勿再各自复制。
+export function structureProfileFromPreset(preset, template) {
+  const acts = (preset.acts ?? []).map((a, i) => ({
+    id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
+    range_label: a.range_label, order_index: i
+  }));
+  const actMap = new Map(acts.map(a => [a.key, a.id]));
+  const nodes = (preset.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
+    id: createId("node"), node_type: nodeType, title: nodeTitle, required,
+    act_id: actMap.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
+  }));
+  return { template, acts, nodes };
+}
+
 function buildStarterCharacter(id, name = "主角") {
   return {
     id,

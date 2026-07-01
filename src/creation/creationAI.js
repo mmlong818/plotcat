@@ -3,7 +3,7 @@
 // 从 app.js 外提；运行期依赖经工厂注入，renderCreationPage 由 flow.js 定义后传入。
 import { appState, structurePresets, buildCustomStructurePreset } from "../state.js";
 import { list } from "../utils.js";
-import { createId, createEmptyProject } from "../shared/projectFactory.js";
+import { createId, createEmptyProject, structureProfileFromPreset } from "../shared/projectFactory.js";
 import { ensurePlotDrivenProject } from "../shared/plotDrivenProject.js";
 import { renderCharactersPage } from "../render/characters.js";
 import { SCENE_TARGETS_BY_FORMAT } from "../ai/sceneGeneration.js";
@@ -94,12 +94,13 @@ export function createCreationAI(deps) {
       if (data.projectId) {
         appState.proCreation.active = false;
         await loadProjectFromServer(data.projectId);
-        // 形态分流：微短剧进独立创作区(不跑电影式补全链)；其它进电影工作台
-        if (appState.project?.project?.format === "micro_drama") {
+        // 形态分流：按注册表 landing 落点走——独立创作区形态(微短剧)不跑电影式补全链
+        const landing = getMode(appState.project?.project?.format).landing;
+        if (landing.page === "micro") {
           setCurrentPage("micro");
         } else {
-          setCurrentPage("workflow");
-          setCurrentStep("structure");
+          setCurrentPage(landing.page);
+          if (landing.step) setCurrentStep(landing.step);
           // 精品创作组装产出较薄（人物少/节点空/无关系/无场景表）——进工作台后后台续跑补全链
           autoEnrichNewProject({ withRelationships: true, withNodes: true }).catch(() => {});
         }
@@ -380,15 +381,7 @@ export function createCreationAI(deps) {
     proj.intent_anchor = proj.intent_anchor ?? {};
     proj.intent_anchor.protagonist = draft.protagonist ?? "";
 
-    const acts = (preset.acts ?? []).map((a, i) => ({
-      id: createId("act"), key: a.key, title: a.title, purpose: a.purpose,
-      range_label: a.range_label, order_index: i
-    }));
-    const actMap = new Map(acts.map(a => [a.key, a.id]));
-    const nodes = (preset.nodes ?? []).map(([nodeType, actKey, nodeTitle, required], i) => ({
-      id: createId("node"), node_type: nodeType, title: nodeTitle, required,
-      act_id: actMap.get(actKey) ?? null, order_index: i, card_ids: [], note: ""
-    }));
+    const { acts, nodes } = structureProfileFromPreset(preset, template);
     proj.structure_profile = { template, acts, nodes };
 
     const actResults = c.actResults ?? {};
