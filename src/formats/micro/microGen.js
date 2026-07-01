@@ -158,10 +158,11 @@ export function createMicroGen({ render, markDirty }) {
 
   // 节点⑤分集设计 · AI 一键铺分集大纲：依据总框架把每集的钩子/爽点/cliffhanger/情节填上。
   // 分批生成(每批 BATCH 集)——一次性让 GLM 生成几十集会极慢/挂起，分批可见进度且单批可超时。
+  // BATCH 调小到 8 + 单批超时放宽到 150s：glm-5.2 下每批 12 集常 >90s 触发整体 break、一集不落地（真检发现）。
   async function aiDesignEpisodes() {
     const total = (appState.project.episode_board?.episodes ?? []).length;
     if (total === 0) return;
-    const BATCH = 12, PER_BATCH_TIMEOUT = 90000;
+    const BATCH = 8, PER_BATCH_TIMEOUT = 150000;
     appState.microGenBusy = "episode_design";
     appState.episodeDesignError = "";
     for (let start = 0; start < total; start += BATCH) {
@@ -226,7 +227,7 @@ export function createMicroGen({ render, markDirty }) {
     };
     let result;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 150000);
+    const timer = setTimeout(() => ctrl.abort(), 240000);
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -263,7 +264,7 @@ export function createMicroGen({ render, markDirty }) {
     ep0.script_loading = true; ep0.error = ""; render();
     let result;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 150000);
+    const timer = setTimeout(() => ctrl.abort(), 240000);
     try {
       const res = await fetch("/api/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
