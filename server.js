@@ -29,7 +29,7 @@ import { handleSeriesApi, handleProjectsApi } from "./src/server/routes/projects
 import { handleCreationFlowApi } from "./src/server/routes/creationFlow.js";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
-const port = 4173;
+const port = Number(process.env.PORT) || 4173;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -431,12 +431,29 @@ async function handleApi(request, response, pathname) {
 }
 
 const server = http.createServer(async (request, response) => {
-  const url = new URL(request.url || "/", `http://${request.headers.host}`);
+  let url;
+  try {
+    url = new URL(request.url || "/", `http://${request.headers.host}`);
+  } catch {
+    json(response, 400, { error: "Bad Request" });
+    return;
+  }
 
   if (url.pathname.startsWith("/api/")) {
-    const handled = await handleApi(request, response, url.pathname);
-    if (!handled) {
-      json(response, 404, { error: "Not Found" });
+    // 最外层兜底：路由分支若漏了 try/catch，异常在此收口，避免 unhandledRejection
+    // 打挂进程或让请求永久挂起。
+    try {
+      const handled = await handleApi(request, response, url.pathname);
+      if (!handled) {
+        json(response, 404, { error: "Not Found" });
+      }
+    } catch (error) {
+      console.error(`[api] ${request.method} ${url.pathname} 未捕获异常：`, error);
+      if (!response.headersSent) {
+        json(response, 500, { error: error?.message || "Internal Server Error" });
+      } else {
+        response.end();
+      }
     }
     return;
   }
@@ -462,6 +479,20 @@ const server = http.createServer(async (request, response) => {
     });
     response.end(content);
   });
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("[fatal] uncaughtException：", error);
+  process.exit(1);
+});
+process.on("unhandledRejection", (reason) => {
+  // 只记录不退出：单个请求的漏网 rejection 不应拖垮本地单机服务
+  console.error("[fatal] unhandledRejection：", reason);
+});
+
+server.on("error", (error) => {
+  console.error(`[fatal] 服务启动失败（端口 ${port}）：`, error.message);
+  process.exit(1);
 });
 
 server.listen(port, "127.0.0.1", () => {

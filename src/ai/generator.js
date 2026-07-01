@@ -1,4 +1,5 @@
 import { completeText } from '../server/llm.js';
+import { extractJsonCandidate, repairUnescapedQuotes } from '../server/ai/jsonRepair.js';
 import {
   buildLoglinePrompt,
   buildTreatmentPrompt,
@@ -91,9 +92,19 @@ export function parseJsonFromText(text) {
     return JSON.parse(trimmed);
   } catch {
     try {
-      return JSON.parse(repairLLMJsonQuotes(trimmed));
+      return JSON.parse(repairUnescapedQuotes(trimmed));
     } catch {
-      return { raw: text };
+      // 截断兜底：输出被截断时 brace 不平衡，改用「截到最后一个 }」的候选再修复
+      try {
+        const candidate = extractJsonCandidate(text).trim();
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          return JSON.parse(repairUnescapedQuotes(candidate));
+        }
+      } catch {
+        return { raw: text };
+      }
     }
   }
 }
@@ -115,32 +126,6 @@ function extractFirstBalancedJson(text) {
     else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
   }
   return null;
-}
-
-// 修复 LLM 返回的 JSON 中，字符串值内嵌未转义的英文双引号
-// 状态机：遇到 string 中的 "，若后续非空白非 : , } ] 则视为内嵌引号转义
-function repairLLMJsonQuotes(text) {
-  let result = "";
-  let inString = false;
-  let escapeNext = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (escapeNext) { result += ch; escapeNext = false; continue; }
-    if (ch === "\\") { result += ch; escapeNext = true; continue; }
-    if (ch !== '"') { result += ch; continue; }
-    if (!inString) { inString = true; result += ch; continue; }
-    // 在 string 内遇到 "：看下一个非空白字符判断是否为字符串结束
-    let j = i + 1;
-    while (j < text.length && /\s/.test(text[j])) j++;
-    const next = text[j];
-    if (next === "," || next === "}" || next === "]" || next === ":" || next === undefined) {
-      inString = false;
-      result += ch;
-    } else {
-      result += '\\"';
-    }
-  }
-  return result;
 }
 
 function formatLoglineChoices(parsed) {
