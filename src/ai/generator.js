@@ -68,15 +68,25 @@ function getBeatData(template) {
   return BEAT_SHEET_LIBRARY[template] ?? null;
 }
 
-async function callClaude(system, user) {
+async function callClaude(system, user, timeoutMs) {
   const fullPrompt = `${system}
 
 ---
 
 ${user}`;
-  const text = await completeText(fullPrompt);
+  const text = await completeText(fullPrompt, timeoutMs ? { timeoutMs } : {});
   return parseJsonFromText(text);
 }
+
+// 个别单次生成量大的步骤，默认 300s 超时下 glm-5.2 等模型实测经常不够（真检发现，
+// 全片场景表一次性展开十几张剧情卡耗时 380s+；单场完整剧本撰写 scene_script 实测也达 420s+；
+// 且同一请求重复采样 164s/292s/420s+，思考型模型时延方差极大，预算要给足）。
+// 仅放宽这些步骤，其余步骤维持默认超时，避免用一刀切的更长超时掩盖其他步骤真正的卡死。
+// 注意上限：server.requestTimeout 与 undici dispatcher 均为 600s，此处必须留出重试余量。
+const STEP_TIMEOUT_OVERRIDES_MS = {
+  scene_expansion: 540_000,
+  scene_script: 540_000
+};
 
 export function parseJsonFromText(text) {
   const codeBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
@@ -407,7 +417,7 @@ export async function generateContent(step, projectContext, options, apiKey) {
   const beatData = options?.template ? getBeatData(options.template) : null;
 
   const { system, user } = builder(projectContext, options, null, beatData);
-  const parsed = await callClaude(system, user);
+  const parsed = await callClaude(system, user, STEP_TIMEOUT_OVERRIDES_MS[step]);
 
   const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);
   const choices = formatter(parsed);

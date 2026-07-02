@@ -495,6 +495,15 @@ server.on("error", (error) => {
   process.exit(1);
 });
 
+// Node 18+ http.Server 默认 requestTimeout=300000ms（5分钟），到点无条件销毁连接——
+// 与请求耗时无关，即使 handler 仍在正常等待LLM响应也会被砍断（真检发现：客户端表现为
+// "fetch failed"，此时服务端日志/LLM调用可能仍在跑，只是连接已被Node底层强制断开）。
+// src/ai/generator.js 的 STEP_TIMEOUT_OVERRIDES_MS 已放宽 scene_expansion(420s)/
+// scene_script(480s) 两步的LLM侧超时，此处必须同步放宽HTTP层超时，否则底层连接会在
+// LLM侧超时生效之前就被砍断，放宽LLM超时形同虚设。取最长步骤(480s)+余量。
+server.requestTimeout = 600_000;
+server.headersTimeout = 600_000;
+
 server.listen(port, "127.0.0.1", () => {
   console.log(`原点编剧系统 MVP 已启动：http://127.0.0.1:${port}`);
 });
