@@ -228,17 +228,21 @@ function microCtxLines(proj) {
 // 节点 ⑥⑦ · 爽点引擎 ThrillEngine + 矛盾递进高潮 ClimaxLadder（合并）
 export function buildThrillPrompt(ctx) {
   const proj = resolveProjectDoc(ctx);
+  const epCount = (proj.episode_board?.episodes ?? []).length;
+  const epLine = epCount ? `\n【全剧实际集数】共 ${epCount} 集——release_table 的集数/区间必须全部落在 第1至第${epCount}集 之内，禁止出现超过 ${epCount} 的集号。` : "";
   const system = `你是微短剧爽点与冲突设计专家（爽点引擎 ThrillEngine ＋ 矛盾递进高潮 ClimaxLadder），提炼主/辅爽点并规划全剧释放节奏，同时设计压力递进与重量级反转、高潮落点。\n${NO_EN_QUOTE}`;
-  const user = `【上游输入】\n${microCtxLines(proj)}\n\n【框架】三层爽点（本能/社会/智慧）＋复合化（叠加/升级/反转）；多重压力叠加（外压+内压+时间压）；反转=埋伏笔→误导→揭晓→余波。\n【要求】主爽点与主线紧绑；强度分级与间隔合理避疲劳；反转伏笔可回溯非生造巧合；高潮兼顾情绪峰值与信息价值。\n\n仅输出 JSON：\n{\n  "main_thrills": [{"layer":"本能/社会/智慧层","desc":"触发机制+表现形式","payoff":"情感回报"}],\n  "aux_thrills": ["辅助爽点（过渡/铺垫/变奏）"],\n  "release_table": [{"ep":"集数/区间","type":"爽点类型","strength":"强度1-10","note":"与悬念/付费关系"}],\n  "pressure": {"s1":"第1阶段·小摩擦","s2":"第2阶段·中冲突","s3":"第3阶段·大危机"},\n  "reversals": [{"foreshadow":"伏笔布局","mislead":"误导方向","reveal":"真相揭示","aftermath":"后果波及"}],\n  "climax": "高潮爆发点：触发时机/爆发形式/情感峰值/价值确认",\n  "anchors": {"line":"全剧金句（可独立传播）","scene":"最高记忆点的场面","emotion":"最强情感锚点"}\n}`;
+  const user = `【上游输入】\n${microCtxLines(proj)}${epLine}\n\n【框架】三层爽点（本能/社会/智慧）＋复合化（叠加/升级/反转）；多重压力叠加（外压+内压+时间压）；反转=埋伏笔→误导→揭晓→余波。\n【要求】主爽点与主线紧绑；强度分级与间隔合理避疲劳；反转伏笔可回溯非生造巧合；高潮兼顾情绪峰值与信息价值。\n\n仅输出 JSON：\n{\n  "main_thrills": [{"layer":"本能/社会/智慧层","desc":"触发机制+表现形式","payoff":"情感回报"}],\n  "aux_thrills": ["辅助爽点（过渡/铺垫/变奏）"],\n  "release_table": [{"ep":"集数/区间","type":"爽点类型","strength":"强度1-10","note":"与悬念/付费关系"}],\n  "pressure": {"s1":"第1阶段·小摩擦","s2":"第2阶段·中冲突","s3":"第3阶段·大危机"},\n  "reversals": [{"foreshadow":"伏笔布局","mislead":"误导方向","reveal":"真相揭示","aftermath":"后果波及"}],\n  "climax": "高潮爆发点：触发时机/爆发形式/情感峰值/价值确认",\n  "anchors": {"line":"全剧金句（可独立传播）","scene":"最高记忆点的场面","emotion":"最强情感锚点"}\n}`;
   return { system, user };
 }
 
 // 节点 ⑩ · 分集节奏与付费设计 PacePay
 export function buildPacePayPrompt(ctx) {
   const proj = resolveProjectDoc(ctx);
-  const eps = proj.plot_frame?.input_episodes || "";
+  // 实际集数以分集板为准（开篇设定/分集增删后的真实集数）；plot_frame.input_episodes 已废弃，不再作为来源。
+  const epCount = (proj.episode_board?.episodes ?? []).length;
+  const eps = epCount ? `${epCount} 集` : "";
   const system = `你是微短剧分集节奏设计师（PacePay），提供单集节奏模板与全剧付费节点布局，实现"看完这集必须点下一集"。\n${NO_EN_QUOTE}`;
-  const user = `【上游输入】\n${microCtxLines(proj)}\n预期总集数：${eps || "（按短剧常见量级）"}\n\n【原则】单集模板：开场钩子(15s)→冲突(60s)→小反转(25s)→悬念钩(20s)；付费节点落在"最想看的瞬间之前"，付费后强度与信息密度显著提升。\n\n仅输出 JSON：\n{\n  "ep_template": "单集标准模板（钩-战-反-钩，标注各时间段任务与情感目标）",\n  "zones": {"free":"免费区（建立人物+核心冲突，第几集）","paid1":"首付费区（矛盾升级+局部高潮，第几集）","paid2":"深度付费区（终极对决+主题升华，第几集）"},\n  "pay_nodes": [{"at":"触发时机（第X集悬念点前）","mechanism":"心理机制","value":"付费后独特体验/信息"}]\n}`;
+  const user = `【上游输入】\n${microCtxLines(proj)}\n【全剧实际集数】${eps || "（按短剧常见量级）"}${epCount ? `——免费区/首付费区/深度付费区的集区间与每一个付费节点的集号，都必须落在 第1至第${epCount}集 之内，禁止出现超过 ${epCount} 的集号（本剧只有 ${epCount} 集）。` : ""}\n\n【原则】单集模板：开场钩子(15s)→冲突(60s)→小反转(25s)→悬念钩(20s)；付费节点落在"最想看的瞬间之前"，付费后强度与信息密度显著提升；付费卡点须卡在悬念/反转/危机的情绪顶点，不得随意放在平缓中段。\n\n仅输出 JSON：\n{\n  "ep_template": "单集标准模板（钩-战-反-钩，标注各时间段任务与情感目标）",\n  "zones": {"free":"免费区（建立人物+核心冲突，第几集）","paid1":"首付费区（矛盾升级+局部高潮，第几集）","paid2":"深度付费区（终极对决+主题升华，第几集）"},\n  "pay_nodes": [{"at":"触发时机（第X集悬念点前）","mechanism":"心理机制","value":"付费后独特体验/信息"}]\n}`;
   return { system, user };
 }
 
@@ -312,11 +316,18 @@ export function buildEpisodeDesignPrompt(ctx, opts) {
   const from = opts?.from || 1;
   const to = opts?.to || count;
   const priorTail = (opts?.priorTail || "").trim();
+  // ⑤节奏·付费 已算好的付费节点/分区，作为上游注入——让分集设计与付费策略咬合，
+  // 在付费卡点所在集把集尾钩子卡在情绪顶点，并标记 paywall。
+  const pp = proj.pace_pay ?? {};
+  const payNodes = (Array.isArray(pp.pay_nodes) ? pp.pay_nodes : []).map((n) => `第${(String(n.at || "").match(/第?\s*(\d+)\s*集/) || [])[1] || "?"}集（${n.mechanism || ""}）`).filter((s) => !s.startsWith("第?集"));
+  const payLine = payNodes.length
+    ? `\n【付费卡点（来自⑤节奏·付费，必须落到本批次覆盖的集上）】${payNodes.join("；")}\n——若上述付费卡点落在本批次 第${from}至${to}集 内，对应集必须把 paywall 设为 true，且该集的集尾 cliffhanger 要卡在悬念/反转/危机的情绪顶点（不是平缓中段）。其余集 paywall 为 false。`
+    : "\n（尚未设计付费卡点：请在每次矛盾顶点/重大揭晓的集把 paywall 设为 true，作为追更付费位。）";
   const user = `${COHERENCE}
 ${hardAnchor(proj)}
 
 【已锁定设定】
-${lockedSettings(proj)}
+${lockedSettings(proj)}${payLine}
 
 【任务】本剧共 ${count} 集，把总框架/事件链铺成逐集大纲。本次只设计【第 ${from} 到 ${to} 集】（共 ${to - from + 1} 集，其余批次另行处理）。
 ${priorTail ? `上一集（第 ${from - 1} 集）结尾：${priorTail}\n须无缝承接，不重复、不跳脱。` : "这是开篇批次，从第 1 集黄金三秒钩子直接切入。"}
@@ -325,13 +336,14 @@ ${priorTail ? `上一集（第 ${from - 1} 集）结尾：${priorTail}\n须无�
 - 本集爽点：逐集兑付递进，强度有起伏不疲劳
 - 集尾 cliffhanger：每集结尾留强钩子逼追下一集（第 ${count} 集为大结局回收）
 - 本集情节：一句话概括，承接上一集、推进主线
+- 付费卡点：按上方【付费卡点】把对应集的 paywall 设为 true，卡在情绪顶点
 - 严格沿用锁定的主角/世界观/题材，按频向基调
 - 正好输出第 ${from} 到 ${to} 集，ep 用真实集号（${from}…${to}）
 
 仅输出 JSON（不要解释/代码块）：
 {
   "episodes": [
-    {"ep": ${from}, "title": "本集标题", "hook_3s": "黄金三秒钩子", "payoff": "本集爽/虐点", "cliffhanger": "集尾钩子", "summary": "本集情节一句话"}
+    {"ep": ${from}, "title": "本集标题", "hook_3s": "黄金三秒钩子", "payoff": "本集爽/虐点", "cliffhanger": "集尾钩子", "summary": "本集情节一句话", "paywall": false}
   ]
 }`;
   const system = `你是微短剧分集编剧（节点⑤分集设计器），把总框架拆成强钩子、快节奏、每集必留 cliffhanger 的逐集大纲。\n${NO_EN_QUOTE}`;

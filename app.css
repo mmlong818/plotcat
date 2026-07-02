@@ -168,6 +168,14 @@ a { color: var(--accent); text-decoration: none; }
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* .panel 专用：不落 transform，避免动画结束后残留的 matrix(1,0,0,1,0,0)
+   给子级 position:fixed 弹层（如 mode-picker-backdrop）建立错误的包含块，
+   导致全屏遮罩被裁进面板盒子里，点不到实际按钮 */
+@keyframes fadeUpNoTransform {
+  from { opacity: 0; margin-top: 6px; }
+  to { opacity: 1; margin-top: 0; }
+}
+
 /* ── App Shell ─────────────────────────────────────────────── */
 
 .app-shell {
@@ -473,7 +481,7 @@ a { color: var(--accent); text-decoration: none; }
   padding: 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   overflow: hidden;
-  animation: fadeUp 280ms ease both;
+  animation: fadeUpNoTransform 280ms ease both;
 }
 
 .panel--workflow,
@@ -3131,6 +3139,7 @@ a { color: var(--accent); text-decoration: none; }
   left: 6px;
   right: 6px;
   bottom: 6px;
+  z-index: 1;
   display: flex;
   gap: 4px;
   padding: 4px;

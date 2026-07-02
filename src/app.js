@@ -1117,6 +1117,8 @@ function handleClick(event) {
 function handleInput(event) {
   const action = event.target.dataset.action;
   const fieldName = event.target.dataset.field;
+  // 微短剧开篇集数：不受控 input，存瞬态 state，否则选频向触发 render 会把用户输入冲回默认值。
+  if (event.target.id === "micro-ep-count") { appState.microSetupEps = event.target.value; return; }
   // KB tab：搜索输入 / 源切换不需要 fieldName
   if (action === "kb-search-input") {
     appState.knowledge.query = event.target.value;
@@ -1535,6 +1537,14 @@ document.addEventListener("drop", (event) => {
 });
 window.addEventListener("scroll", schedulePlotInspectorLeadSync, { passive: true, capture: true });
 window.addEventListener("resize", schedulePlotInspectorLeadSync, { passive: true });
+// 未保存守护：autosave 有 800ms 防抖 + POST 在飞窗口，此时关页/刷新会静默丢刚生成的内容
+// （真检实测：AI 写完一场剧本立刻 reload，剧本丢失）。dirty 或保存在飞时触发浏览器原生确认。
+window.addEventListener("beforeunload", (event) => {
+  if (appState.runtime?.dirty || appState.runtime?.saving) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
 dom.projectCreateDialog.addEventListener("click", (event) => {
   if (event.target === dom.projectCreateDialog) { appState.createDialogOpen = false; render(); }
 });
