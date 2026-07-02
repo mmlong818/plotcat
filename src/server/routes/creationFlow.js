@@ -1,6 +1,7 @@
 import { json, readJsonBody } from "../httpUtils.js";
 import { createId, structureProfileFromPreset } from "../../shared/projectFactory.js";
 import { structurePresets } from "../../state.js";
+import { defaultTemplateFor } from "../../modes/registry.js";
 import { createProject, saveProject } from "../repository.js";
 import { buildAnalyzeAnchorPrompt, buildWorkbenchQuestionsPrompt, buildAssemblePrompt } from "../../ai/proPrompts.js";
 import { parseJsonFromText } from "../../ai/generator.js";
@@ -263,6 +264,9 @@ export async function handleCreationFlowApi(request, response, pathname) {
       const stamp = new Date().toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
       const title = aiTitle || `未命名项目（${stamp}）`;
       const genreList = Array.isArray(genres) ? genres : [];
+      // 结构模板按形态取默认(连续剧→series_season 季阶段，电影→three_act)，不再硬编码——
+      // 否则精品组装的连续剧会拿到电影"第一幕/第二幕"结构，与 series numbering=phase 串味
+      const structureTemplate = defaultTemplateFor(format);
 
       const projectData = createProject({ title, format, genre: genreList, logline });
       projectData.story_core = { ...assembled.story_core };
@@ -316,19 +320,19 @@ export async function handleCreationFlowApi(request, response, pathname) {
         projectData.story_bible.scene_cards = sceneCards;
         projectData.story_bible.beats = assembled.scenes.map((s, i) => ({
           id: createId("beat"),
-          framework: "three_act",
+          framework: structureTemplate,
           slot: s.act_position ?? "setup",
           purpose: s.title ?? "",
           linked_scene_ids: [sceneCards[i].id]
         }));
       }
 
-      // 填充 structure_profile（acts + nodes）和 character_hub
-      const _preset2 = structurePresets["three_act"];
+      // 填充 structure_profile（acts + nodes）和 character_hub —— 按形态默认模板，非硬编码 three_act
+      const _preset2 = structurePresets[structureTemplate];
       if (_preset2) {
-        projectData.structure_profile = structureProfileFromPreset(_preset2, "three_act");
+        projectData.structure_profile = structureProfileFromPreset(_preset2, structureTemplate);
       } else {
-        projectData.structure_profile = { template: "three_act" };
+        projectData.structure_profile = { template: structureTemplate };
       }
       projectData.character_hub = Array.isArray(assembled.characters) && assembled.characters.length > 0 ? {
         characters: projectData.story_bible.characters ?? []

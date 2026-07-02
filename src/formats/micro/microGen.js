@@ -201,6 +201,7 @@ export function createMicroGen({ render, markDirty }) {
         ep.payoff = d.payoff ?? ep.payoff ?? "";
         ep.cliffhanger = d.cliffhanger ?? ep.cliffhanger ?? "";
         ep.summary = d.summary ?? ep.summary ?? "";
+        if (typeof d.paywall === "boolean") ep.paywall_point = d.paywall; // 付费卡点与⑤付费设计咬合
       });
       markDirty();
     }

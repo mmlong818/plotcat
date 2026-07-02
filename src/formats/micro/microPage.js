@@ -92,7 +92,7 @@ function microSetupHTML(appState) {
       <div style="display:flex;gap:6px;margin-top:6px">${b("male", "男频")}${b("female", "女频")}${b("mixed", "混频")}</div></div>
     <div class="cf-field" style="margin-top:16px"><span class="cf-label">② 计划集数</span>
       <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
-        <input id="micro-ep-count" class="cf-input" type="number" min="1" max="200" value="60" style="max-width:120px" />
+        <input id="micro-ep-count" class="cf-input" type="number" min="1" max="200" value="${appState.microSetupEps ?? 60}" style="max-width:120px" />
         <span class="scene-summary-hint">竖屏微短剧常见 60–100 集；先建占位，后续可增删</span></div></div>
     <div style="margin-top:18px"><button class="button button--primary" type="button" data-action="micro-setup-init">开始创作 · 生成分集骨架 →</button></div>
   </div></section>`;

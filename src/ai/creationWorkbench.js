@@ -135,6 +135,8 @@ export function createCreationWorkbench({ render, markDirty, normalizeProject, c
       });
       if (result.error) throw new Error(result.error);
       const data = result.choices?.[0]?.data ?? {};
+      // 空响应/解析失败会落成 {raw:""}——不能当成功静默展示空面板（真检发现）
+      if (!data.scorecard && !data.overall) throw new Error("幕评师返回为空或格式异常，请重试");
       appState.raterResult = { sceneId, data };
     } catch (err) {
       alert("幕评师评分失败：" + err.message);
@@ -163,6 +165,7 @@ export function createCreationWorkbench({ render, markDirty, normalizeProject, c
       });
       if (result.error) throw new Error(result.error);
       const data = result.choices?.[0]?.data ?? {};
+      if (!data.scorecard && !data.overall) throw new Error("幕评师返回为空或格式异常，请重试");
       appState.raterResult = { mode: "full", data };
     } catch (err) {
       alert("全片幕评师评分失败：" + err.message);

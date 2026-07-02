@@ -75,6 +75,10 @@ export function createStructureTemplate({ normalizeProject, markDirty, render, d
   function applyLibraryStructure(structureId) {
     const struct = STORY_STRUCTURE_LIBRARY.find((s) => s.id === structureId);
     if (!struct) return;
+    const hasExistingNotes = list(appState.project.structure_profile?.nodes).some((n) => (n.note || "").trim());
+    if (hasExistingNotes && !confirm("切换结构模板会清空当前所有节点笔记（剧情卡会尽量保留并重新挂载，但节点文字内容不可恢复）。\n\n确定要套用「" + struct.name + "」吗？")) {
+      return;
+    }
     if (struct.builtInKey) {
       applyStructureTemplate(struct.builtInKey);
       appState.project.structure_profile.library_id = struct.id;
