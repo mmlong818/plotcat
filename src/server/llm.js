@@ -8,18 +8,26 @@
 // 模型默认值依据 E:\CC\ai-models.md（2026-06-14）。
 import { spawnClaude } from "./spawnClaude.js";
 import { getDb } from "./db.js";
-import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
+import { Agent, EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
+
+// undici 默认 headersTimeout/bodyTimeout=300s：非流式 LLM 请求在模型出全量结果前
+// 不回响应头，重型步骤（scene_expansion 实测 380s+）会先于 AbortSignal.timeout(420s)
+// 被 undici 掐死，表现为不可读的 "fetch failed"（真检发现的第三层超时）。
+// dispatcher 超时是天花板，各请求的实际预算仍由 fetchSignal 的 AbortSignal 控制。
+const DISPATCHER_TIMEOUTS = { headersTimeout: 600_000, bodyTimeout: 600_000 };
 
 // Node 的 fetch 默认忽略 HTTP(S)_PROXY 环境变量；国内直连 OpenAI/Anthropic/Gemini
 // 通常不可达。检测到代理环境变量时挂全局代理 dispatcher（遵守 NO_PROXY，
 // 本地 127.0.0.1 的自家 API 与 Ollama 等不受影响）。
-if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy) {
-  try {
-    setGlobalDispatcher(new EnvHttpProxyAgent());
+try {
+  if (process.env.HTTPS_PROXY || process.env.HTTP_PROXY || process.env.https_proxy || process.env.http_proxy) {
+    setGlobalDispatcher(new EnvHttpProxyAgent(DISPATCHER_TIMEOUTS));
     console.log("[llm] 已启用环境代理（HTTPS_PROXY），外部模型 API 经代理访问");
-  } catch (err) {
-    console.warn("[llm] 代理 dispatcher 初始化失败：", err.message);
+  } else {
+    setGlobalDispatcher(new Agent(DISPATCHER_TIMEOUTS));
   }
+} catch (err) {
+  console.warn("[llm] dispatcher 初始化失败：", err.message);
 }
 
 export const LLM_PROVIDERS = ["claude_cli", "anthropic", "openai", "gemini", "custom"];
@@ -50,8 +58,10 @@ const TIMEOUT_MS = 300_000;
 
 // 把外部中止信号（客户端断开）与超时信号合并：任一触发即中止 fetch，
 // 避免客户端取消后底层 LLM 请求仍跑满 TIMEOUT_MS 造成连接泄漏。
-function fetchSignal(signal) {
-  const timeout = AbortSignal.timeout(TIMEOUT_MS);
+// timeoutMs 可选覆盖默认 300s——个别单次请求量大的步骤（如全片场景表一次性展开
+// 十几张剧情卡）在 glm-5.2 下实测耗时可达 380s+，仍在默认超时内触发 fetch failed。
+function fetchSignal(signal, timeoutMs = TIMEOUT_MS) {
+  const timeout = AbortSignal.timeout(timeoutMs);
   return signal ? AbortSignal.any([timeout, signal]) : timeout;
 }
 
@@ -212,7 +222,7 @@ export function getLlmStatus() {
 }
 
 // ── claude CLI 路径 ───────────────────────────────────────────────────────────
-function claudeCliOnce(prompt, { effort = "", onChunk = null, signal = null } = {}) {
+function claudeCliOnce(prompt, { effort = "", onChunk = null, signal = null, timeoutMs = TIMEOUT_MS } = {}) {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) { reject(new Error("请求已中止")); return; }
     const args = ["-p", "--output-format", "text"];
@@ -223,7 +233,7 @@ function claudeCliOnce(prompt, { effort = "", onChunk = null, signal = null } = 
     proc.stdin.setDefaultEncoding("utf8");
     let stdout = "";
     let stderr = "";
-    const timer = setTimeout(() => { proc.kill(); reject(new Error("claude CLI 超时")); }, TIMEOUT_MS);
+    const timer = setTimeout(() => { proc.kill(); reject(new Error("claude CLI 超时")); }, timeoutMs);
     // 客户端断开时杀掉子进程，避免订阅额度被无人接收的生成白白消耗
     const onAbort = () => { proc.kill(); reject(new Error("请求已中止")); };
     if (signal) signal.addEventListener("abort", onAbort, { once: true });
@@ -242,7 +252,7 @@ function claudeCliOnce(prompt, { effort = "", onChunk = null, signal = null } = 
 }
 
 // ── Anthropic API ─────────────────────────────────────────────────────────────
-async function anthropicComplete(prompt, { onChunk = null, signal = null } = {}) {
+async function anthropicComplete(prompt, { onChunk = null, signal = null, timeoutMs = TIMEOUT_MS } = {}) {
   const stream = Boolean(onChunk);
   const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.anthropic).replace(/\/+$/, "");
   const response = await fetch(`${base}/v1/messages`, {
@@ -259,7 +269,7 @@ async function anthropicComplete(prompt, { onChunk = null, signal = null } = {})
       stream,
       messages: [{ role: "user", content: prompt }]
     }),
-    signal: fetchSignal(signal)
+    signal: fetchSignal(signal, timeoutMs)
   });
   if (!response.ok) throw new Error(`Anthropic 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   if (!stream) {
@@ -279,9 +289,12 @@ async function anthropicComplete(prompt, { onChunk = null, signal = null } = {})
 }
 
 // ── OpenAI 及兼容端点（openai / custom） ─────────────────────────────────────
-async function openAiCompatComplete(prompt, { onChunk = null, signal = null } = {}) {
+async function openAiCompatComplete(prompt, { onChunk = null, signal = null, timeoutMs = TIMEOUT_MS } = {}) {
   const base = llmConfig.baseUrl || DEFAULT_BASE_URLS[llmConfig.provider] || DEFAULT_BASE_URLS.openai;
-  const stream = Boolean(onChunk);
+  // 恒为流式请求：非流式模式下，模型思考期间连接零字节流动，会被代理/网关当作空闲
+  // 连接掐断（真检实测：经本地代理 ~108s 即被断 UND_ERR_SOCKET other side closed，
+  // 而该次生成需 ~292s 才出结果）。SSE 流式让字节持续流动，对任何中间盒免疫；
+  // 调用方不要流（onChunk 为空）时在此聚合成整段返回，外部行为不变。
   const response = await fetch(`${base}/chat/completions`, {
     method: "POST",
     headers: {
@@ -290,37 +303,33 @@ async function openAiCompatComplete(prompt, { onChunk = null, signal = null } = 
     },
     body: JSON.stringify({
       model: llmConfig.model,
-      stream,
+      stream: true,
       temperature: 0.6,
       messages: [{ role: "user", content: prompt }]
     }),
-    signal: fetchSignal(signal)
+    signal: fetchSignal(signal, timeoutMs)
   });
   if (!response.ok) throw new Error(`${llmConfig.provider === "openai" ? "OpenAI" : "兼容端点"} 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
-  if (!stream) {
-    const payload = await response.json();
-    return payload.choices?.[0]?.message?.content ?? "";
-  }
   let full = "";
   for await (const data of sseEvents(response.body)) {
     if (data === "[DONE]") break;
     let evt;
     try { evt = JSON.parse(data); } catch { continue; }
     const delta = evt.choices?.[0]?.delta?.content;
-    if (delta) { full += delta; onChunk(delta); }
+    if (delta) { full += delta; if (onChunk) onChunk(delta); }
   }
   return full;
 }
 
 // ── Gemini API ────────────────────────────────────────────────────────────────
-async function geminiComplete(prompt, { onChunk = null, signal = null } = {}) {
+async function geminiComplete(prompt, { onChunk = null, signal = null, timeoutMs = TIMEOUT_MS } = {}) {
   const base = (llmConfig.baseUrl || DEFAULT_BASE_URLS.gemini).replace(/\/+$/, "");
   const endpoint = `${base}/v1beta/models/${encodeURIComponent(llmConfig.model)}:generateContent?key=${encodeURIComponent(llmConfig.apiKey)}`;
   const response = await fetch(endpoint, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
-    signal: fetchSignal(signal)
+    signal: fetchSignal(signal, timeoutMs)
   });
   if (!response.ok) throw new Error(`Gemini 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   const payload = await response.json();
@@ -356,11 +365,11 @@ async function dispatch(prompt, opts) {
 }
 
 // 带重试的完成调用（与原 callClaudeSubprocess 同语义）
-export async function completeText(prompt, { effort = "", retries = 2, retryDelayMs = 4000 } = {}) {
+export async function completeText(prompt, { effort = "", retries = 2, retryDelayMs = 4000, timeoutMs = TIMEOUT_MS } = {}) {
   let lastError;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      return await dispatch(prompt, { effort });
+      return await dispatch(prompt, { effort, timeoutMs });
     } catch (err) {
       lastError = err;
       if (attempt < retries) {
