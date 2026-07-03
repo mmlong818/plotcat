@@ -33,3 +33,34 @@ export function findUnknownSpeakers(script) {
   }
   return Array.from(unknown);
 }
+
+// 人物名单（含「周念/小雅」这类别名写法拆开后的每个名字）
+function rosterNameParts() {
+  const parts = new Set();
+  const all = [
+    ...list(appState.project.character_hub?.characters).map((c) => c.name || ""),
+    ...list(appState.project.series_bible?.regulars).map((c) => c.name || "")
+  ];
+  for (const raw of all) {
+    raw.split(/[\/／·、]/).map((s) => s.trim()).filter(Boolean).forEach((p) => parts.add(p));
+  }
+  return parts;
+}
+
+// 同姓漂移检测：动作行里被引号强调的短人名（字条/物证/照片上的名字），
+// 若与名单人物同姓但不在名单内，多半是 AI 写漂了（如设定「周念」写成「周瑶」）。
+// 只查引号内的 2-3 字词，控制误报。
+export function findRosterNameDrift(script) {
+  const parts = rosterNameParts();
+  const surnames = new Set(Array.from(parts).map((n) => n[0]).filter(Boolean));
+  const drift = new Set();
+  const quoted = String(script).matchAll(/[「“"']([一-龥]{2,3})[」”"']/g);
+  for (const m of quoted) {
+    const token = m[1];
+    if (parts.has(token)) continue;
+    if (!surnames.has(token[0])) continue;
+    if (GENERIC_SPEAKER_RE.test(token) || GENERIC_SUFFIX_RE.test(token)) continue;
+    drift.add(token);
+  }
+  return Array.from(drift);
+}

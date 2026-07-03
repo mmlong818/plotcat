@@ -194,6 +194,8 @@ ${libraryBlock ? `\n${libraryBlock}\n` : ""}
 - 反重复硬约束：新场景的事件**禁止复述任何已有场景已经演过的内容**（看上面每场的目的描述）。
   同一节拍的多场必须是「铺垫→执行→余波」的不同阶段，不是同一事件换个地点再来一遍。
   若你判断某个已有场景与规划的新场在事件上撞车、应当废弃或重写，把它列进 overlap_warnings，不要静默并存
+- 人名硬约束：title/purpose/obstacle/beat_summary 里出现的人名只能来自上方主要角色名单。
+  需要主角团之外的人物（同事、见习生、门卫）时一律用职能称呼，禁止给他们起名字
 
 JSON 输出：
 {
@@ -276,6 +278,7 @@ ${cardsBlock}
 要求：
 - 四件套必须呼应剧情卡，但要落到本场具体可拍的动作或对话
 - 输出文本中必须用具体人物名指称人物，禁止出现「POV」「主角」「他/她」开头这类占位称谓——这些文字会直接展示给编剧
+- 人名只能使用本项目人物名单：${characters.map((c) => c.name).filter(Boolean).join("、") || "（无）"}；名单外的人物用职能称呼（如「见习法医」），禁止起新名字
 - entry_state 和 exit_state 必须不同——如果剧情卡本身没有变化，请在 warnings 里指出
 - location/time_of_day 必须填实，作为本场拍摄定位；若已有定位（见上）则沿用或合理细化
 - 控制简洁，每项不超过 50 字
@@ -367,7 +370,7 @@ export function buildSceneScriptPrompt(projectContext, options) {
 
   const allowedNames = [...Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean), ...seriesBlocks.regularNames];
   const namesGuard = allowedNames.length > 0
-    ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。`
+    ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。此约束同样覆盖动作行、道具、字条、照片、回忆、对白中**提及**的一切人名——比如物证上写的名字、角色口中说起的旧人，都只能用名单内的名字，一个字都不能改。`
     : "";
 
   // ── 反同质化上下文：邻场剧本片段 + 全片已用过的开场动作/比喻 ──

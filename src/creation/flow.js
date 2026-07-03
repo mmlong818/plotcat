@@ -284,6 +284,11 @@ export function createCreationFlow(deps) {
       if (!choice) return true;
       const d = choice.data ?? {};
       if (!c.draft) c.draft = {};
+      // 首次采用会覆盖用户手写的概念——先暂存原文，渲染层给一个「恢复我的原概念」入口
+      const current = (c.draft.logline ?? "").trim();
+      if (current && c.userLoglineStash == null && current !== (d.hook ?? "").trim()) {
+        c.userLoglineStash = current;
+      }
       if (d.title && !c.draft.title) c.draft.title = String(d.title).replace(/^[《「]|[》」]$/g, "");
       if (d.hook) c.draft.logline = d.hook;
       // 核心冲突跟着方向一起带走，否则 finalize 后故事核心的「核心冲突」恒空
@@ -291,6 +296,17 @@ export function createCreationFlow(deps) {
       c.selectedConceptIdx = idx;
       c.aiError = "";
       renderCreationPage();
+      return true;
+    }
+
+    if (action === "cf-step1-restore-logline") {
+      if (c.userLoglineStash != null) {
+        if (!c.draft) c.draft = {};
+        c.draft.logline = c.userLoglineStash;
+        c.userLoglineStash = null;
+        c.selectedConceptIdx = null;
+        renderCreationPage();
+      }
       return true;
     }
 
@@ -325,6 +341,23 @@ export function createCreationFlow(deps) {
       return true;
     }
 
+    if (action === "cf-generate-all-acts") {
+      // 依次生成所有未生成的幕（串行，出错即停），免去逐幕手点三次
+      (async () => {
+        const acts = c._structurePreset?.acts ?? [];
+        for (let i = 0; i < acts.length; i++) {
+          if (appState.creation !== c) break;
+          if ((c.actResults ?? {})[acts[i].key]) continue;
+          c.currentActIdx = i;
+          renderCreationPage();
+          await handleGenerateAct(acts[i].key);
+          if (c.aiError) break;
+        }
+        renderCreationPage();
+      })();
+      return true;
+    }
+
     if (action === "cf-advance-act") {
       c.currentActIdx = (c.currentActIdx ?? 0) + 1;
       c.aiError = "";
@@ -347,6 +380,11 @@ export function createCreationFlow(deps) {
     if (action === "confirm-character") {
       const idx = Number(target.dataset.idx ?? -1);
       if (idx >= 0 && (c.characterProposals ?? [])[idx]) c.characterProposals[idx]._status = "confirmed";
+      renderCreationPage();
+      return true;
+    }
+    if (action === "confirm-all-characters") {
+      (c.characterProposals ?? []).forEach((p) => { if (p._status !== "skipped") p._status = "confirmed"; });
       renderCreationPage();
       return true;
     }

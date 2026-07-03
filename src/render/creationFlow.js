@@ -115,6 +115,7 @@ function renderAiLoadingOverlay(creation) {
           <span></span><span></span><span></span><span></span>
         </div>
         <p class="cf-ai-overlay-label">${escapeHtml(label)}</p>
+        <p class="cf-ai-overlay-hint" style="opacity:.65; font-size:.82rem; margin:2px 0 0;">重型生成约需 1-3 分钟，生成过程会实时预览</p>
         ${tail ? `<pre class="cf-ai-overlay-stream">${escapeHtml(tail)}</pre>` : ""}
         <button class="button button--ghost button--small cf-ai-cancel-btn" type="button" data-action="cancel-cf-ai">取消生成</button>
       </div>
@@ -238,6 +239,11 @@ function renderStep1(creation) {
           <textarea class="cf-textarea" rows="3"
             placeholder="主角是谁、面对什么困境、核心冲突是什么…（至少10字，也可点上方按钮让 AI 起草）"
             data-action="cf-set-draft-field" data-field="logline">${escapeHtml(logline)}</textarea>
+          ${creation.userLoglineStash != null && creation.userLoglineStash !== logline ? `
+            <p class="cf-label-opt" style="margin:4px 0 0;">已替换你手写的概念。
+              <button class="cf-choice-pick" type="button" style="display:inline;width:auto;padding:2px 8px;"
+                data-action="cf-step1-restore-logline" title="${escapeHtml(creation.userLoglineStash)}">恢复我的原概念</button>
+            </p>` : ""}
         </div>
 
         ${isLoadingConcept && stream ? `
@@ -354,7 +360,7 @@ function renderStep3New(creation) {
     <div class="cf-section">
       <div class="cf-deco-header">
         <h2 class="cf-deco-title"><span class="cf-deco-line"></span><span class="cf-deco-text">人物</span><span class="cf-deco-line"></span></h2>
-        <p class="cf-step-sub">确认或跳过 AI 提议的人物</p>
+        <p class="cf-step-sub">确认或跳过 AI 提议的人物——「确认」的进入项目人物表，「跳过」的不带入；不操作直接下一步等同全部确认</p>
       </div>
 
       <div class="cf-toolbar">
@@ -368,6 +374,12 @@ function renderStep3New(creation) {
           ${isLoading ? "disabled" : ""}>
           + 手动新增人物
         </button>
+        ${proposals.some((p) => p._status !== "confirmed" && p._status !== "skipped") ? `
+        <button class="cf-btn-ghost" type="button"
+          data-action="confirm-all-characters"
+          ${isLoading ? "disabled" : ""}>
+          ✓ 全部确认
+        </button>` : ""}
       </div>
 
       ${creation.aiError ? `
@@ -560,6 +572,12 @@ function renderStep4New(creation) {
             ${isLoading ? "disabled" : ""}>
             ${isLoading ? loadingDots("生成本幕") : "⚡ 生成本幕"}
           </button>
+          <button class="cf-btn-ghost" type="button"
+            data-action="cf-generate-all-acts"
+            ${isLoading ? "disabled" : ""}
+            title="从当前幕起依次生成所有剩余幕，每幕约 1-2 分钟">
+            ⚡⚡ 连续生成全部
+          </button>
         ` : `
           <button class="cf-btn-ghost" type="button"
             data-action="cf-generate-act"
@@ -603,6 +621,15 @@ function renderStep5New(creation) {
           <span class="cf-deco-text">确认并创建</span>
           <span class="cf-deco-line"></span>
         </h2>
+      </div>
+
+      <div class="cf-confirm-summary" style="margin-bottom:14px;">
+        <p class="cf-step-sub" style="margin:0 0 4px;">
+          <strong>《${escapeHtml((creation.draft?.title ?? "").trim() || "未命名（创建后可改）")}》</strong>
+          ${(creation.genres ?? []).length ? ` · ${escapeHtml((creation.genres ?? []).join("、"))}` : ""}
+        </p>
+        ${(creation.draft?.logline ?? "").trim() ? `<p class="cf-step-sub" style="margin:0;">${escapeHtml(creation.draft.logline)}</p>` : ""}
+        ${(creation.characterProposals ?? []).filter((p) => p._status !== "skipped").length ? `<p class="cf-step-sub" style="margin:4px 0 0;">人物：${escapeHtml((creation.characterProposals ?? []).filter((p) => p._status !== "skipped").map((p) => p.name).filter(Boolean).join("、"))}</p>` : ""}
       </div>
 
       <div class="cf-confirm-acts">${actSummaries}</div>

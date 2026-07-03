@@ -63,9 +63,18 @@ export function selectField(label, action, fieldName, value, choices, options = 
   );
 }
 
+// SQLite CURRENT_TIMESTAMP / datetime('now') 存的是无时区标记的 UTC（"YYYY-MM-DD HH:MM:SS"），
+// 直接 new Date() 会按本地时区解析导致显示偏移；这里统一按 UTC 解析。
+export function parseServerTime(value) {
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) {
+    return new Date(value.replace(" ", "T") + "Z");
+  }
+  return new Date(value);
+}
+
 export function formatTime(value) {
   if (!value) return "未保存";
-  const date = new Date(value);
+  const date = parseServerTime(value);
   if (Number.isNaN(date.getTime())) return "未保存";
   const now = new Date();
   const hhmm = date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false });

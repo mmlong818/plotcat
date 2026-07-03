@@ -2,7 +2,7 @@
 // 从 app.js 外提；运行期依赖（render / markDirty）经工厂注入。
 import { appState } from "../state.js";
 import { list } from "../utils.js";
-import { findUnknownSpeakers } from "./speakers.js";
+import { findUnknownSpeakers, findRosterNameDrift } from "./speakers.js";
 
 // 全局查找替换扫描的场次字段
 const SCENE_TEXT_FIELDS = ["title", "purpose", "obstacle", "beat_summary", "entry_state", "exit_state", "notes", "script_full", "screenplay_notes", "location"];
@@ -44,7 +44,8 @@ export function createScriptTools({ render, markDirty }) {
     alert(`已替换 ${hits} 处。`);
   }
 
-  // 人名巡检：全量回扫所有已写场次，列出名单外说话人
+  // 人名巡检：全量回扫所有已写场次，列出名单外说话人 + 动作行里的同姓漂移人名。
+  // 结果写入 appState.scriptAuditResult 由剧本页渲染成面板（可复制、可点场次跳转），不再用 alert。
   function auditScriptSpeakers() {
     const scenes = list(appState.project.scene_workbench?.scenes)
       .filter((s) => (s.script_full || "").trim().length > 50)
@@ -52,13 +53,16 @@ export function createScriptTools({ render, markDirty }) {
     const findings = [];
     for (const scene of scenes) {
       const unknown = findUnknownSpeakers(scene.script_full);
-      if (unknown.length > 0) findings.push(`第 ${scene.order_index} 场《${scene.title}》：${unknown.join("、")}`);
+      if (unknown.length > 0) {
+        findings.push({ sceneId: scene.id, orderIndex: scene.order_index, title: scene.title, kind: "名单外说话人", names: unknown });
+      }
+      const drift = findRosterNameDrift(scene.script_full);
+      if (drift.length > 0) {
+        findings.push({ sceneId: scene.id, orderIndex: scene.order_index, title: scene.title, kind: "疑似人名漂移（引号内与名单同姓但不在名单）", names: drift });
+      }
     }
-    if (findings.length === 0) {
-      alert(`人名巡检通过：${scenes.length} 个已写场次的说话人全部在人物名单内。`);
-      return;
-    }
-    alert(`人名巡检发现 ${findings.length} 个场次存在名单外说话人：\n\n${findings.join("\n")}\n\n可用「查找替换」统一改名，或重新生成这些场次。`);
+    appState.scriptAuditResult = { checkedCount: scenes.length, findings };
+    render();
   }
 
   return { globalFindReplace, auditScriptSpeakers };

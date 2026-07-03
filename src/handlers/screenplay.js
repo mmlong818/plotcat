@@ -25,6 +25,11 @@ export function handleScreenplayClick(action, target, id, nodeId) {
     ctx.auditScriptSpeakers();
     return true;
   }
+  if (action === "dismiss-script-audit") {
+    appState.scriptAuditResult = null;
+    ctx.render();
+    return true;
+  }
   if (action === "ai-write-screenplay-bulk") {
     ctx.aiWriteScreenplayBulk();
     return true;
