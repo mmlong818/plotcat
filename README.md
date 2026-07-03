@@ -1,121 +1,59 @@
-# 原点编剧系统 MVP
+# 原点编剧系统
 
-这是一个已经能跑起来的本地应用，不再只是文档和静态原型。
+本地运行的 AI 辅助编剧工作台。从一句话概念到成稿剧本的完整创作链路：
 
-当前这版已经包含：
+项目向导 → 意图锚点 → 故事圣经 → 结构/剧情板 → 场景 → 剧本生成 → 规则体检 → 专家面板 → 版本快照
 
-- `docs/`：项目方法论、产品规格、规则引擎规格和参考分析
-- `specs/`：故事圣经与规则检查器的结构化样例
-- `index.html` + `app.css` + `src/app.js`：前端工作台
-- `server.js`：本地 HTTP 服务入口
-- `src/server/`：数据库、项目读写、AI 调用
+## 功能
 
-## 当前能力
+- **五种作品形态**：电影长片、试播集、连续剧（季/集结构 + 跨集支线）、短片、微短剧
+- **新建项目向导**：AI 补全概念候选、蓝图字段，可逐字段重写
+- **故事圣经**：角色、关系、时间线、世界规则、伏笔
+- **剧情板与场景室**：结构模板（三幕/四幕/自定义）、剧情卡、场景展开、写本
+- **规则体检**：一致性、弧光追踪、视觉母题等自动检查
+- **专家面板**：结构、对白、潜台词、节奏等 10 个专家视角
+- **多项目管理 + 版本快照**：本地 SQLite 存储，可回滚历史版本
+- **多模型接入**：默认智谱 GLM（glm-5.2），支持 Claude（CLI 订阅 / API）、OpenAI（gpt-5.4）、Gemini 及任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/Ollama…）；未配置模型时自动回退到本地策略建议
 
-现在的应用已经支持：
+## 启动
 
-- 多项目管理
-- 项目切换
-- 版本快照与历史恢复
-- 意图锚点编辑
-- 故事圣经编辑
-  - 角色
-  - 关系
-  - 时间线
-  - 世界规则
-  - 伏笔
-- 场景室编辑
-- 规则体检
-- 专家面板
-- 本地 SQLite 数据库存储
-- OpenAI 专家建议调用
-  - 未配置 API Key 时自动回退到本地建议
+先决条件：Node.js 24+（使用内置 `node:sqlite`，无需额外数据库）。
 
-## 启动方式
+```
+node server.js
+```
 
-先决条件：
-
-- 已安装 Node.js 24 或更高版本
-
-启动：
-
-1. 在仓库根目录运行 `node server.js`
-2. 打开 [http://127.0.0.1:4173](http://127.0.0.1:4173)
-
-也可以运行：
-
-- `cmd /c npm.cmd run check`
-
-这个命令会检查后端模块是否能正常加载。
+打开 http://127.0.0.1:4173 即可使用。Windows 也可以用 `pnpm start`（走 `start-server.ps1`）。
 
 ## AI 接入
 
-有两种方式：
+两种方式：
 
-1. 启动服务前设置环境变量 `OPENAI_API_KEY`
-2. 打开应用后，在“专家面板”里直接输入 API Key 和模型名，再点“连接 AI”
+1. **界面配置（推荐）**：打开应用 → 设置 → 选择模型服务商 → 粘贴 API Key → 选择模型 → 连接。连接时会做一次微型生成验证，坏 key 当场报错。支持保存多套连接一键切换。
+2. **环境变量**：启动前设置 `LLM_PROVIDER`（`zhipu`/`claude_cli`/`anthropic`/`openai`/`gemini`/`custom`）及对应的 key：`ZHIPU_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `LLM_API_KEY`（配 `LLM_BASE_URL`）。
 
-默认模型是 `gpt-5`。
+`claude_cli` 使用本机已登录的 claude CLI（订阅计费），无需 API Key。
 
-说明：
+### 关于 API Key 的存储（请务必了解）
 
-- 通过界面输入的 API Key 只保存在当前服务进程里
-- 不会写进 SQLite 数据库
-- 没有配置 Key 时，专家面板仍然可用，但会回退到本地策略版建议
+- 通过界面输入的 API Key 会**明文保存在本地 SQLite 数据库**（`data/yuandian.db`）中，重启后无需重新粘贴。这是单机本地工具的有意设计：数据库就在你自己的磁盘上。
+- 环境变量来源的 key 不落库。
+- 服务只监听 `127.0.0.1`，不对局域网/公网开放。
+- **不要把 `data/` 目录（尤其是 `.db` 文件）分享或上传**——`.gitignore` 已默认排除。
 
 ## 数据存储
 
-运行后会在 `data/` 下生成本地 SQLite 数据库：
+首次启动自动在 `data/yuandian.db` 创建本地 SQLite 数据库，所有项目数据、版本快照、模型连接配置都在这一个文件里。
 
-- `data/yuandian.db`
+## 测试与质量门禁
 
-数据库会在第一次启动时自动创建。
+```
+npm test          # 单元测试
+npm run check     # 后端模块加载检查
+npm run smoke     # API 冒烟测试（需服务未启动，脚本自起）
+npm run gates     # 三道架构门禁：形态条件 / 形态边界 / action 基线
+```
 
-## 项目结构
+## 许可证
 
-- `docs/screenwriting-system-blueprint.md`
-  - 方法论蓝图
-- `docs/stable-route-mvp-spec.md`
-  - 第一版产品规格
-- `docs/story-bible-rule-engine-spec.md`
-  - 故事圣经和规则引擎规格
-- `docs/origin-v2-reference-analysis.md`
-  - 你提供的“原点系统”参考分析
-- `src/data/defaultProject.js`
-  - 样例项目数据
-- `src/logic/rules.js`
-  - 规则检查逻辑
-- `src/logic/experts.js`
-  - 本地专家建议逻辑
-- `src/server/db.js`
-  - SQLite 初始化与事务
-- `src/server/repository.js`
-  - 项目持久化
-- `src/server/ai.js`
-  - OpenAI 调用与回退逻辑
-
-## 已验证
-
-已经实际验证过：
-
-- 前端模块可初始化
-- 本地服务可启动
-- 首页和脚本资源可返回 `200`
-- `/api/status`、`/api/projects` 可正常返回
-- `/api/projects/:id` 可写回数据库
-- `/api/projects/:id/versions` 可创建版本快照
-- `/api/projects/:id/versions/:versionId/restore` 可恢复历史版本
-- `/api/experts/:id` 在无 Key 时可正常回退到本地建议
-
-## 还没做的部分
-
-当前还没有做这些：
-
-- 协作权限
-- 正式剧本排版导出
-- 复杂制片预算与排期
-- AI 输出的精细改稿流编排
-
-但作为第一版最小可用原型，核心链路已经通了：
-
-项目台 -> 意图锚点 -> 故事圣经 -> 场景卡 -> 规则体检 -> 专家建议 -> 版本快照 -> 数据库存储
+[PolyForm Noncommercial 1.0.0](./LICENSE)：允许个人使用、学习、修改和非商业分发；**不允许任何商业用途**。
