@@ -1,7 +1,7 @@
 {
-  "name": "yuandian-screenwriting-system",
+  "name": "plotcat",
   "version": "0.2.0",
-  "description": "原点编剧系统：本地运行的 AI 辅助编剧工作台，支持电影/试播集/连续剧/短片/微短剧",
+  "description": "PlotCat（原点编剧系统）：本地运行的 AI 辅助编剧工作台，支持电影/试播集/连续剧/短片/微短剧",
   "license": "PolyForm-Noncommercial-1.0.0",
   "private": true,
   "type": "module",
