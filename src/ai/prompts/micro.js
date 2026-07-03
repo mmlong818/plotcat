@@ -1,7 +1,8 @@
 // 微短剧节点 AI 提示词（依据《2025版微短剧AI辅助编剧系统》各节点设计）。
 // 每个 builder 返回 {system, user}，user 末尾给出严格 JSON 输出 schema。
 
-import { resolveProjectDoc } from "./shared.js";
+import { resolveProjectDoc, genreTagsOf } from "./shared.js";
+import { buildGenreBlendContract } from "../../shared/genreContract.js";
 
 const NO_EN_QUOTE = "严格输出 JSON；字符串内部禁止使用英文双引号，用书名号《》或中文引号代替。";
 
@@ -281,7 +282,23 @@ export function buildSeriesEpisodeDesignPrompt(ctx, opts) {
   const meta = proj.project ?? {};
   const sc = proj.story_core ?? {};
   const chars = (proj.story_bible?.characters ?? proj.character_hub?.characters ?? []).map((c) => c.name).filter(Boolean).join("、");
-  const acts = (proj.structure_profile?.acts ?? []).map((a) => `${a.title}(${a.purpose || ""})`).join(" → ");
+  const actList = proj.structure_profile?.acts ?? [];
+  const acts = actList.map((a) => `${a.title}(${a.purpose || ""})`).join(" → ");
+  // 结构骨架节点是季结构的具体事件锚点——分集必须把它们逐一落位，
+  // 否则季结构与分集大纲各讲各的故事（两次独立生成会互相漂移）
+  const actTitleById = new Map(actList.map((a) => [a.id, a.title]));
+  const nodeLines = (proj.structure_profile?.nodes ?? [])
+    .filter((n) => (n.title || n.note || "").trim())
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+    .map((n, i) => `${i + 1}. 【${actTitleById.get(n.act_id) || ""}】${n.title || ""}：${String(n.note || "").split("\n")[0].slice(0, 120)}`)
+    .join("\n");
+  // 跨集支线卡（剧情板·支线管理）：已规划的支线节拍按集锚定，分集设计必须咬合
+  const subplotCards = (proj.plot_board?.cards ?? []).filter((c) => c.episode_id && !c.deleted_at);
+  const epNoById = new Map((proj.episode_board?.episodes ?? []).map((e) => [e.id, e.order_index]));
+  const subplotLines = subplotCards
+    .sort((a, b) => (epNoById.get(a.episode_id) ?? 0) - (epNoById.get(b.episode_id) ?? 0))
+    .map((c) => `- 第 ${epNoById.get(c.episode_id) ?? "?"} 集【${c.lane_id === "lane_subplot" ? "支线" : c.lane_id === "lane_main" ? "主线" : "方案"}】${c.title || ""}${c.summary ? "：" + c.summary.slice(0, 60) : ""}`)
+    .join("\n");
   const season = o.season || 1;
   const from = o.from || 1, to = o.to || (o.count || 12);
   const throughline = (o.throughline || "").trim();
@@ -294,7 +311,7 @@ export function buildSeriesEpisodeDesignPrompt(ctx, opts) {
 主要人物：${chars || "（未填）"}
 季度结构：${acts || "（未设）"}
 第 ${season} 季贯穿线：${throughline || "（未填，请据设定自定本季推进）"}
-
+${nodeLines ? `\n【季结构事件锚点（硬约束：以下每个事件都必须在本季某一集落位，按结构顺序推进，不得遗漏或乱序）】\n${nodeLines}\n` : ""}${subplotLines ? `\n【跨集支线节拍（已按集锚定，对应集的大纲必须容纳这些支线拍并与主线咬合）】\n${subplotLines}\n` : ""}
 【任务】设计第 ${season} 季的【第 ${from} 到 ${to} 集】（共 ${to - from + 1} 集）。
 ${priorTail ? `上一集结尾：${priorTail}\n须无缝承接。` : "这是本季开篇若干集，从抓人的开场切入。"}
 要求：
@@ -302,10 +319,134 @@ ${priorTail ? `上一集结尾：${priorTail}\n须无缝承接。` : "这是本�
 - 本集看点：本集的核心戏剧事件或情感爆点
 - 集尾钩子：留扣勾着追下一集（本季最后一集为季终钩子）
 - 本集主线：一句话概括，承接上一集、推进本季贯穿线与人物弧
-- 沿用上述人物/题材/核心冲突；正好输出第 ${from} 到 ${to} 集，ep 用真实集号
+- 沿用上述人物/题材/核心冲突；正好输出第 ${from} 到 ${to} 集，ep 用真实集号${throughline ? "" : `
+- 贯穿线未填：先据设定定出本季贯穿线与季终钩子（随 JSON 一并输出），再按它铺集`}
 
 仅输出 JSON：
-{ "episodes": [ {"ep": ${from}, "title": "本集标题", "hook_3s": "开场钩子", "payoff": "本集看点", "cliffhanger": "集尾钩子", "summary": "本集主线一句话"} ] }`;
+{ ${throughline ? "" : `"throughline": "本季贯穿线一句话", "season_hook": "季终大钩子一句话", `}"episodes": [ {"ep": ${from}, "title": "本集标题", "hook_3s": "开场钩子", "payoff": "本集看点", "cliffhanger": "集尾钩子", "summary": "本集主线一句话"} ] }`;
+  return { system, user };
+}
+
+// 连续剧 · 跨集支线设计：依据季结构/分集大纲/人物关系，铺 2-3 条横跨多集的支线，
+// 每条支线的节拍按集锚定（进剧情板支线轨），并在下次分集设计时作为咬合约束注入。
+export function buildSeriesSubplotDesignPrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const season = opts?.season || 1;
+  const meta = proj.project ?? {};
+  const characters = proj.character_hub?.characters ?? proj.story_bible?.characters ?? [];
+  const charLines = characters.map((c) => `- ${c.name}（${c.story_role || ""}）：${c.external_goal || c.desire || ""}`).filter(Boolean).join("\n");
+  const rels = (proj.character_hub?.relationship_map ?? [])
+    .map((r) => {
+      const nameOf = (id) => characters.find((c) => c.id === id)?.name ?? "";
+      return `- ${nameOf(r.source_character_id)} ↔ ${nameOf(r.target_character_id)}：${r.relationship_type || ""}${r.tension ? "（张力：" + String(r.tension).slice(0, 40) + "）" : ""}`;
+    }).filter((s) => !s.startsWith("-  ↔")).join("\n");
+  const eps = (proj.episode_board?.episodes ?? [])
+    .filter((e) => (e.season ?? 1) === season)
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const epLines = eps.map((e, i) => `${i + 1}. 《${e.title || "未命名"}》${e.summary || ""}`).join("\n");
+  const throughline = (proj.episode_board?.seasons ?? []).find((s) => s.number === season)?.throughline || "";
+  const system = `你是连续剧多线叙事设计师。任务：为本季设计 2-3 条横跨多集的支线（B/C 线）。
+支线设计原则：
+- 每条支线有自己的欲望-阻力-变化弧，不是主线的注脚；但每条支线必须在某个节点与主线相撞（提供助力、制造代价或揭示信息）
+- 支线节拍稀疏铺设：每条线在本季出现 3-6 次，不必每集都有；两拍之间留悬置
+- 支线主角优先用配角/盟友/对手，给主角团之外的维度（职场生态、家庭、情感）
+- 人名只能使用人物名单内的名字
+${NO_EN_QUOTE}`;
+  const user = `【本剧设定】
+一句话故事：${meta.logline || "（未填）"}
+题材：${(Array.isArray(meta.genre) ? meta.genre : []).join("、") || "不限"}
+第 ${season} 季贯穿线：${throughline || "（未填）"}
+
+人物名单：
+${charLines || "（无）"}
+
+人物关系：
+${rels || "（无）"}
+
+【本季分集表（支线节拍要锚定到这些集上，与该集主线咬合而非打架）】
+${epLines || "（分集未铺，请按 12 集假设铺设）"}
+
+【任务】设计 2-3 条跨集支线。每条支线给出名称、一句话弧线、以及 3-6 个按集锚定的节拍。
+
+仅输出 JSON：
+{ "subplots": [ {
+  "name": "支线名（≤8 字）",
+  "arc": "这条线从哪到哪（一句话）",
+  "beats": [ { "ep": 2, "title": "节拍标题（人物+动作，≤14 字）", "summary": "这一拍发生什么、与本集主线怎么咬合（≤50 字）" } ]
+} ] }`;
+  return { system, user };
+}
+
+// 连续剧 · 单集拆场：把一集的五件套（钩子/主线/看点/集尾钩）拆成本集可写的场景序列。
+// 拆出的场景直接进 scene_workbench（带 episode_id），接回既有的「AI 写本场」链。
+export function buildEpisodeSceneBreakdownPrompt(ctx, opts) {
+  const proj = resolveProjectDoc(ctx);
+  const o = opts ?? {};
+  const eps = (proj.episode_board?.episodes ?? []).slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const ep = eps.find((e) => e.id === o.episodeId);
+  if (!ep) {
+    return { system: "你是连续剧剧本统筹。", user: '未找到目标集。请返回 {"scenes":[]}' };
+  }
+  const idx = eps.indexOf(ep);
+  const prev = idx > 0 ? eps[idx - 1] : null;
+  const next = idx < eps.length - 1 ? eps[idx + 1] : null;
+  const meta = proj.project ?? {};
+  const characters = proj.character_hub?.characters ?? proj.story_bible?.characters ?? [];
+  const names = characters.map((c) => c.name).filter(Boolean);
+  const charLines = characters.map((c) => `- ${c.name}（${c.story_role || ""}）：${c.external_goal || c.desire || ""}`).filter(Boolean).join("\n");
+  const season = ep.season ?? 1;
+  const throughline = (proj.episode_board?.seasons ?? []).find((s) => s.number === season)?.throughline || "";
+  // 资料库三件套 + 类型契约：与电影拆场链同等的硬约束，否则写到季中伏笔埋设/回收就失控
+  const rules = (proj.lock_layer?.projections?.world_rules ?? proj.story_bible?.world_rules ?? [])
+    .map((r) => `- ${r.rule_statement ?? r.statement ?? ""}`).filter((s) => s.length > 2).join("\n");
+  const timeline = (proj.lock_layer?.projections?.timeline_events ?? proj.story_bible?.timeline_events ?? [])
+    .slice().sort((a, b) => (a.story_day ?? 0) - (b.story_day ?? 0)).slice(0, 8)
+    .map((e) => `- 第 ${e.story_day ?? "?"} 天：${e.summary ?? ""}`).join("\n");
+  const setups = (proj.lock_layer?.projections?.setup_payoffs ?? proj.story_bible?.setup_payoffs ?? [])
+    .filter((s) => (s.setup_summary || "").trim())
+    .map((s) => `- 【${s.status === "closed" ? "已回收" : "待回收"}】${s.setup_summary}${s.expected_payoff_window ? `（预期回收：${s.expected_payoff_window}）` : ""}`).join("\n");
+  const libraryBlock = [
+    rules ? `世界规则（每场都必须遵守）：\n${rules}` : "",
+    timeline ? `故事内时间线（场景顺序不得违反此因果序）：\n${timeline}` : "",
+    setups ? `伏笔清单（若某条伏笔的埋设/回收应落在本集，安排明确的场并写进该场 purpose）：\n${setups}` : ""
+  ].filter(Boolean).join("\n\n");
+  const blendContract = buildGenreBlendContract(genreTagsOf(proj), "scene");
+  const system = `你是连续剧剧本统筹，把一集的分集大纲拆成可逐场撰写的场景序列。
+${blendContract ? `\n${blendContract}\n` : ""}拆场原则：
+- 每场有独立戏剧任务（谁要什么/谁挡着/赌注），场与场之间高低起伏
+- 第一场必须落实本集开场钩子；最后一场必须落在集尾钩子上
+- 地点/时段变化即分场；一集 45 分钟约 8-12 场
+- 人名硬约束：所有字段只能使用人物名单内的名字，群演用职能称呼（如「见习护士」），禁止起新名字
+${NO_EN_QUOTE}`;
+  const user = `【本剧设定】
+一句话故事：${meta.logline || "（未填）"}
+题材：${(Array.isArray(meta.genre) ? meta.genre : []).join("、") || "不限"}
+第 ${season} 季贯穿线：${throughline || "（未填）"}
+人物名单：
+${charLines || "（无）"}
+
+【要拆的这一集 · 第 ${ep.order_index} 集《${ep.title || "未命名"}》】
+- 开场钩子：${ep.hook_3s || "（未填）"}
+- 本集主线：${ep.summary || "（未填）"}
+- 本集看点：${ep.payoff || "（未填）"}
+- 集尾钩子：${ep.cliffhanger || "（未填）"}
+${prev ? `\n上一集《${prev.title || ""}》集尾：${prev.cliffhanger || prev.summary || ""}（本集开场须承接，不复述）` : ""}
+${next ? `下一集《${next.title || ""}》开场钩子：${next.hook_3s || ""}（本集结尾为它蓄力，不抢演）` : ""}
+${libraryBlock ? `\n${libraryBlock}\n` : ""}
+【任务】把这一集拆成 8-12 场，按放映顺序输出。
+
+仅输出 JSON：
+{ "scenes": [ {
+  "title": "场名（人物+具体动作，≤14 字）",
+  "purpose": "本场谁要做什么，赌的是什么（≤40 字）",
+  "obstacle": "具体阻力（≤40 字）",
+  "beat_summary": "本场转折点（≤40 字）",
+  "location": "具体地点（禁止待定）",
+  "time_of_day": "黎明/清晨/上午/正午/午后/黄昏/夜晚/深夜 之一",
+  "pov_name": "视点人物名（必须在人物名单内）",
+  "entry_state": "开场时 POV 处境（≤30 字）",
+  "exit_state": "收场时 POV 处境（须与进场有可见差值，≤30 字）"
+} ] }`;
   return { system, user };
 }
 

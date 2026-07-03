@@ -48,20 +48,29 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
     <section class="scene-workbench scene-workbench--triple">
       <aside class="workbench-pane workbench-pane--rail">
         <div class="summary-card">
-          <div class="list-card__head">
-            <div>
-              <p class="section-label">场景导航</p>
-              <h3>场景列表</h3>
-            </div>
-            <div style="display:flex; gap:6px">
+          <div class="list-card__head" style="flex-direction:column; align-items:stretch; gap:6px;">
+            <p class="section-label" style="white-space:nowrap; margin:0;">场景导航</p>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
               <button class="button button--ghost button--tiny" type="button" data-action="ai-expand-scenes" ${appState.sceneExpandLoading ? "disabled" : ""} title="把剧情卡拆成 2-4 场/卡的全片场景表，凑齐作品形态标准场数">${appState.sceneExpandLoading ? "规划中…" : "✦ AI 规划场景表"}</button>
               <button class="button button--ghost button--tiny" type="button" data-action="add-scene">新增场景</button>
             </div>
           </div>
           <div class="stack workbench-scroll-list">
-            ${scenes
-              .map(
-                (scene) => `
+            ${(() => {
+              // 场景挂了集（连续剧）时按集插分组头，与剧本撰写页同口径
+              const eps = list(appState.project.episode_board?.episodes)
+                .slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+              const epById = new Map(eps.map((e) => [e.id, e]));
+              const epNoInSeason = (ep) => eps.filter((e) => (e.season ?? 1) === (ep.season ?? 1)).indexOf(ep) + 1;
+              let lastEpId = null;
+              return scenes.map((scene) => {
+                let head = "";
+                if (scene.episode_id && scene.episode_id !== lastEpId) {
+                  lastEpId = scene.episode_id;
+                  const ep = epById.get(scene.episode_id);
+                  if (ep) head = `<div class="section-label" style="margin:8px 2px 2px;">S${ep.season ?? 1}E${epNoInSeason(ep)}《${escapeHtml(ep.title || "未命名")}》</div>`;
+                }
+                return head + `
                   <button class="list-select scene-row ${scene.id === appState.selection.sceneId ? "is-active" : ""}" type="button" data-action="select-scene" data-id="${escapeHtml(scene.id)}">
                     <span class="scene-row__num">${String(scene.order_index || 0).padStart(2, "0")}</span>
                     <span class="scene-row__body">
@@ -69,9 +78,9 @@ export function renderScenesPage(dom, appState, { getScene, getSceneLinkedPlotCa
                       <span class="scene-row__meta">${escapeHtml(getActTitle(scene.act_id))} · ${sceneStatusDot(scene.status)}${escapeHtml(sceneStatusLabels[scene.status] ?? scene.status)}${list(scene.linked_plot_card_ids).length === 0 && !(scene.purpose || "").trim() ? ` · <span class="scene-row__orphan" title="本场未关联任何剧情卡且没有场景目的，可能游离于故事主线之外">⚠ 游离场</span>` : ""}</span>
                     </span>
                   </button>
-                `
-              )
-              .join("")}
+                `;
+              }).join("");
+            })()}
           </div>
         </div>
       </aside>

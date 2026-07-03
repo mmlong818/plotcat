@@ -1533,12 +1533,24 @@ document.addEventListener("drop", (event) => {
   const dropzone = event.target.closest("[data-plot-dropzone]");
   if (!dropzone || !appState.draggedPlotCardId) return;
   event.preventDefault();
-  movePlotCardToLaneAct(
-    appState.draggedPlotCardId,
-    dropzone.dataset.laneId ?? getPlotCard(appState.draggedPlotCardId)?.lane_id ?? "lane_main",
-    dropzone.dataset.actId ?? getPlotCard(appState.draggedPlotCardId)?.act_id ?? list(appState.project.structure_profile?.acts)[0]?.id ?? "",
-    dropzone.dataset.nodeId ?? ""
-  );
+  // 按集布局的格子（连续剧支线板）：只改 lane + episode，不动结构节点归属
+  if (dropzone.dataset.episodeId) {
+    const card = getPlotCard(appState.draggedPlotCardId);
+    if (card) {
+      card.lane_id = dropzone.dataset.laneId ?? card.lane_id ?? "lane_main";
+      card.episode_id = dropzone.dataset.episodeId;
+      card.act_id = "";
+      card.node_id = "";
+      normalizeProject(); markDirty(); render();
+    }
+  } else {
+    movePlotCardToLaneAct(
+      appState.draggedPlotCardId,
+      dropzone.dataset.laneId ?? getPlotCard(appState.draggedPlotCardId)?.lane_id ?? "lane_main",
+      dropzone.dataset.actId ?? getPlotCard(appState.draggedPlotCardId)?.act_id ?? list(appState.project.structure_profile?.acts)[0]?.id ?? "",
+      dropzone.dataset.nodeId ?? ""
+    );
+  }
   appState.draggedPlotCardId = null;
   stopDragAutoScroll();
 });

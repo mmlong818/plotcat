@@ -31,6 +31,8 @@ import {
   buildEpisodeRewritePrompt,
   buildEpisodeDesignPrompt,
   buildSeriesEpisodeDesignPrompt,
+  buildEpisodeSceneBreakdownPrompt,
+  buildSeriesSubplotDesignPrompt,
   buildSynopsisPrompt,
   buildKeyScenesPrompt,
   buildActStructurePrompt,
@@ -85,7 +87,8 @@ ${user}`;
 // 注意上限：server.requestTimeout 与 undici dispatcher 均为 600s，此处必须留出重试余量。
 const STEP_TIMEOUT_OVERRIDES_MS = {
   scene_expansion: 540_000,
-  scene_script: 540_000
+  scene_script: 540_000,
+  episode_scene_breakdown: 540_000
 };
 
 export function parseJsonFromText(text) {
@@ -336,6 +339,8 @@ const FORMATTERS = {
   episode_rewrite: (parsed) => [{ id: makeId(), label: '改写', content: (parsed.script ?? '').slice(0, 40), data: parsed }],
   episode_design: (parsed) => [{ id: makeId(), label: '分集大纲', content: `${(parsed.episodes ?? []).length} 集`, data: parsed }],
   series_episode_design: (parsed) => [{ id: makeId(), label: '本季分集', content: `${(parsed.episodes ?? []).length} 集`, data: parsed }],
+  episode_scene_breakdown: (parsed) => [{ id: makeId(), label: '本集拆场', content: `${(parsed.scenes ?? []).length} 场`, data: parsed }],
+  series_subplot_design: (parsed) => [{ id: makeId(), label: '跨集支线', content: `${(parsed.subplots ?? []).length} 条`, data: parsed }],
   synopsis: formatSynopsisChoices,
   key_scenes: formatKeyScenesChoices,
   act_structure: formatActStructureChoices,
@@ -380,6 +385,8 @@ const PROMPT_BUILDERS = {
   episode_rewrite: (ctx, opts) => buildEpisodeRewritePrompt(ctx, opts),
   episode_design: (ctx, opts) => buildEpisodeDesignPrompt(ctx, opts),
   series_episode_design: (ctx, opts) => buildSeriesEpisodeDesignPrompt(ctx, opts),
+  episode_scene_breakdown: (ctx, opts) => buildEpisodeSceneBreakdownPrompt(ctx, opts),
+  series_subplot_design: (ctx, opts) => buildSeriesSubplotDesignPrompt(ctx, opts),
   synopsis: (ctx, opts) => buildSynopsisPrompt(ctx, opts),
   key_scenes: (ctx) => buildKeyScenesPrompt(ctx),
   act_structure: (ctx) => buildActStructurePrompt(ctx),

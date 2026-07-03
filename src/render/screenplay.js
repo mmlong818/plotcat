@@ -76,13 +76,33 @@ function renderSceneListItem(appState, scene, isActive) {
       <div class="screenplay-scene-item__head">
         <span class="screenplay-scene-item__order">#${escapeHtml(scene.order_index ?? "-")}</span>
         <span class="screenplay-scene-item__title">${escapeHtml(scene.title || "未命名场景")}</span>
-        <span class="screenplay-scene-item__status ${status.cls}">${status.tag}</span>
+        <span class="screenplay-scene-item__status ${status.cls}" ${status.title ? `title="${escapeHtml(status.title)}"` : ""}>${status.tag}</span>
       </div>
       <div class="screenplay-scene-item__meta">
         ${escapeHtml(getActTitle(appState, scene.act_id))} · ${escapeHtml(scene.location || "未定地点")}${pov ? " · " + escapeHtml(pov) : ""}
       </div>
     </button>
   `;
+}
+
+// 场景列表：场景挂了集（连续剧）按集分组显示，未挂集的场景照旧平铺
+function renderSceneListGrouped(appState, scenes, activeScene) {
+  const episodes = list(appState.project.episode_board?.episodes)
+    .slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const epById = new Map(episodes.map((e) => [e.id, e]));
+  const epNoInSeason = (ep) => episodes.filter((e) => (e.season ?? 1) === (ep.season ?? 1)).indexOf(ep) + 1;
+  let lastEpisodeId = null;
+  return scenes.map((s) => {
+    let head = "";
+    if (s.episode_id && s.episode_id !== lastEpisodeId) {
+      lastEpisodeId = s.episode_id;
+      const ep = epById.get(s.episode_id);
+      if (ep) {
+        head = `<div class="section-label" style="margin:10px 4px 4px;">S${ep.season ?? 1}E${epNoInSeason(ep)}《${escapeHtml(ep.title || "未命名")}》</div>`;
+      }
+    }
+    return head + renderSceneListItem(appState, s, s.id === activeScene?.id);
+  }).join("");
 }
 
 function renderRaterPanel(raterResult, allScenes = []) {
@@ -202,13 +222,14 @@ function renderEditor(appState, scene) {
       <header class="screenplay-editor__head">
         <div class="screenplay-editor__title-row">
           <h3>${escapeHtml(scene.title || "未命名场景")}</h3>
-          <span class="screenplay-scene-item__status ${status.cls}">${status.tag}</span>
+          <span class="screenplay-scene-item__status ${status.cls}" ${status.title ? `title="${escapeHtml(status.title)}"` : ""}>${status.tag}</span>
         </div>
         <div class="screenplay-editor__slug">${escapeHtml(header)}</div>
         <div class="screenplay-editor__meta">
           ${pov ? `POV：${escapeHtml(pov)} · ` : ""}
           目标：${escapeHtml(scene.purpose || "—")} · 障碍：${escapeHtml(scene.obstacle || "—")}
         </div>
+        ${status.title ? `<div class="screenplay-editor__meta" style="color:#b04848;">需修订原因：${escapeHtml(status.title)}——可「AI 写本场」重写或手动修正</div>` : ""}
       </header>
       <div class="screenplay-editor__toolbar">
         <button class="button button--ghost button--tiny" type="button" data-action="ai-write-scene-script" data-id="${escapeHtml(scene.id)}" ${isSceneAiBusy ? "disabled" : ""}>${isSceneAiBusy ? "AI 写作中..." : "AI 写本场"}</button>
@@ -326,7 +347,7 @@ export function renderScreenplayPage(dom, appState) {
       ${renderScriptAuditPanel(appState)}
       <div class="screenplay-page__body">
         <aside class="screenplay-page__list">
-          ${scenes.map((s) => renderSceneListItem(appState, s, s.id === activeScene?.id)).join("")}
+          ${renderSceneListGrouped(appState, scenes, activeScene)}
         </aside>
         <main class="screenplay-page__editor">
           ${renderEditor(appState, activeScene)}
@@ -386,9 +407,19 @@ function normalizeFountainScript(script) {
   return out.join("\n");
 }
 
-export function buildFountainText(appState) {
-  const scenes = getOrderedScenes(appState);
-  const title = appState.project.project?.title || "未命名剧本";
+export function buildFountainText(appState, { episodeId = "" } = {}) {
+  let scenes = getOrderedScenes(appState);
+  // 单集导出（连续剧）：只取该集场景，标题带集号
+  const episodes = list(appState.project.episode_board?.episodes)
+    .slice().sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const targetEp = episodeId ? episodes.find((e) => e.id === episodeId) : null;
+  if (targetEp) scenes = scenes.filter((s) => s.episode_id === episodeId);
+  // 集号统一用季内序（order_index 是跨季全局序）
+  const epNoInSeason = (ep) => episodes.filter((e) => (e.season ?? 1) === (ep.season ?? 1)).indexOf(ep) + 1;
+  const projTitle = appState.project.project?.title || "未命名剧本";
+  const title = targetEp
+    ? `${projTitle} S${targetEp.season ?? 1}E${epNoInSeason(targetEp)}《${targetEp.title || "未命名"}》`
+    : projTitle;
   const author = "原点编剧系统";
   const header = [
     `Title: ${title}`,
@@ -398,6 +429,15 @@ export function buildFountainText(appState) {
     "===",
     ""
   ].join("\n");
+  // 全剧导出且场景挂了集：按集插入 fountain 分节标记，剧本软件里天然成集结构
+  const epById = new Map(episodes.map((e) => [e.id, e]));
+  let lastEpisodeId = null;
+  const episodeSectionFor = (scene) => {
+    if (targetEp || !scene.episode_id || scene.episode_id === lastEpisodeId) return "";
+    lastEpisodeId = scene.episode_id;
+    const ep = epById.get(scene.episode_id);
+    return ep ? `# S${ep.season ?? 1}E${epNoInSeason(ep)}《${ep.title || "未命名"}》\n\n` : "";
+  };
 
   const hasRealLocation = (scene) => {
     const v = (scene.location || "").trim();
@@ -435,7 +475,7 @@ export function buildFountainText(appState) {
       lines.push(slug, "", `[[ 待撰写：${summary} ]]`);
     }
     lines.push("");
-    return lines.join("\n");
+    return episodeSectionFor(scene) + lines.join("\n");
   }).join("\n");
 
   return header + body;

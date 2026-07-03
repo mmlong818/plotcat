@@ -31,8 +31,11 @@ export const MODES = {
     label: "连续剧",
     steps: ["overview", "characters", "relationships", "structure", "episodes", "plots", "scenes", "screenplay"],
     landing: { page: "workflow", step: "overview" },
-    episode: { paywall: false, labels: SERIES_EP },
+    episode: { paywall: false, labels: SERIES_EP, sceneBreakdown: true },   // 长剧集逐场写本，集行给「AI 拆本集场景」
     structure: { numbering: "phase", unitWord: "阶段" },  // 季阶段(①②③ + 阶段名)，无电影"幕"语言
+    // 剧情板对连续剧 = 跨集支线管理：列按集（不按结构节点），卡片挂 episode_id，
+    // 支线节拍注入分集设计 prompt（主线推进由分集大纲负责，板子管的是多线咬合）
+    plots: { columns: "episodes", aiSubplots: true },
     creation: { finishAfterCharacters: true, finishLabel: "完成创建 · 进入季-集分集" }
   },
   micro_drama: {
@@ -51,6 +54,11 @@ export function getMode(format) {
 // 分集标准：无显式 episode 配置的形态兜底用短剧口径(保持历史默认)。
 export function getEpisodeConfig(format) {
   return getMode(format).episode ?? { paywall: true, labels: MICRO_EP };
+}
+
+// 剧情板差异：默认电影口径（列=结构节点）；连续剧声明 columns:"episodes"（列=集，跨集支线管理）。
+export function getPlotBoardConfig(format) {
+  return getMode(format).plots ?? { columns: "nodes", aiSubplots: false };
 }
 
 // 新建向导差异：无显式 creation 配置的形态走完整五步向导。
