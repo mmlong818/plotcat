@@ -17,12 +17,17 @@ export function episodeBoardHTML(appState) {
     .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
   const scenes = list(appState.project.scene_workbench?.scenes);
   const sceneCountOf = (ep) => list(ep.scene_ids).filter((sid) => scenes.some((s) => s.id === sid)).length;
+  // 连续剧逐场写本后，集的"已写"按场景成稿派生——否则场都写完了季表还显示"已写 0"（账目断裂）
+  const scriptedSceneCountOf = (ep) => list(ep.scene_ids)
+    .filter((sid) => ((scenes.find((s) => s.id === sid) ?? {}).script_full || "").trim().length > 50).length;
+  const isEpScripted = (ep) => ep.status === "scripted"
+    || (sceneCountOf(ep) > 0 && scriptedSceneCountOf(ep) === sceneCountOf(ep));
 
   // 季感知：series 按季分组、本季内 S{n}E{m} 编号；其余形态扁平单季。
   const seasons = list(appState.project.episode_board?.seasons);
   const activeSeason = withSeasons ? (appState.selection.seasonNumber ?? 1) : null;
   const eps = withSeasons ? allEps.filter((e) => (e.season ?? 1) === activeSeason) : allEps;
-  const scriptedCount = eps.filter((e) => e.status === "scripted").length;
+  const scriptedCount = eps.filter(isEpScripted).length;
   const paywallCount = eps.filter((e) => e.paywall_point).length;
   const labelOf = (ep, idxInView) => withSeasons ? `S${ep.season ?? 1}E${idxInView + 1}` : `E${ep.order_index}`;
 
@@ -107,13 +112,19 @@ export function episodeBoardHTML(appState) {
         <summary class="ep-script__sum">
           <span class="ep-script__no">${labelOf(ep, idx)}</span>
           <span class="ep-script__title">${escapeHtml(ep.title || "未命名")}</span>
-          <span class="ep-script__badge ${filled ? "ep-script__badge--ok" : ""}">${STATUS_LABEL[ep.status] ?? ep.status}</span>
-          ${sc > 0 ? `<span class="ep-script__badge">${sc}场</span>` : `<span class="ep-script__badge" style="color:#c0622a">⚠无场</span>`}
+          <span class="ep-script__badge ${filled ? "ep-script__badge--ok" : ""}">${isEpScripted(ep) ? "已写" : (STATUS_LABEL[ep.status] ?? ep.status)}</span>
+          ${sc > 0 ? `<span class="ep-script__badge">${sc}场${scriptedSceneCountOf(ep) > 0 ? ` · ${scriptedSceneCountOf(ep)}稿` : ""}</span>` : `<span class="ep-script__badge" style="color:#c0622a">⚠无场</span>`}
           ${showPaywall && ep.paywall_point ? `<span class="ep-script__badge ep-script__badge--ok">💰付费卡点</span>` : ""}
           ${ep.hook_3s ? `<span class="ep-script__preview">🎬 ${escapeHtml(ep.hook_3s)}</span>` : ""}
         </summary>
         <div class="ep-script__body">
           <div style="display:flex;justify-content:flex-end;gap:4px;margin-bottom:8px">
+            ${epCfg.sceneBreakdown ? `<button class="button button--ghost button--tiny" type="button"
+              data-action="ai-breakdown-episode" data-id="${escapeHtml(ep.id)}" ${appState.episodeSceneBusy?.[ep.id] ? "disabled" : ""}
+              title="把本集大纲拆成 8-12 场写入「场景拆解」，随后可逐场 AI 写本">${appState.episodeSceneBusy?.[ep.id] ? "拆场中…" : "✦ AI 拆本集场景"}</button>` : ""}
+            ${epCfg.sceneBreakdown && scriptedSceneCountOf(ep) > 0 ? `<button class="button button--ghost button--tiny" type="button"
+              data-action="export-episode-fountain" data-id="${escapeHtml(ep.id)}"
+              title="下载本集剧本（.fountain，含已写成稿的 ${scriptedSceneCountOf(ep)} 场）">⬇ 下载本集</button>` : ""}
             ${showPaywall ? `<button class="button button--ghost button--tiny ${ep.paywall_point ? "is-active" : ""}" type="button"
               data-action="toggle-episode-paywall" data-id="${escapeHtml(ep.id)}" title="标记/取消付费卡点">${ep.paywall_point ? "💰付费卡点" : "设为付费卡点"}</button>` : ""}
             <button class="button button--ghost button--tiny" type="button" data-action="move-episode-up" data-id="${escapeHtml(ep.id)}" ${idx === 0 ? "disabled" : ""} title="上移">↑</button>

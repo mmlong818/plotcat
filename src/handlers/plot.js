@@ -50,13 +50,16 @@ export function handlePlotClick(action, target, id, nodeId) {
   if (action === "add-plot-card") {
     const laneId = target.dataset.laneId ?? "";
     const actId = target.dataset.actId ?? "";
-    const targetNode = ctx.getNode(nodeId) ?? list(appState.project.structure_profile?.nodes)[0];
+    // 连续剧支线板：格子按集定位（episode_id），不挂结构节点
+    const episodeId = target.dataset.episodeId ?? "";
+    const targetNode = episodeId ? null : (ctx.getNode(nodeId) ?? list(appState.project.structure_profile?.nodes)[0]);
     const defaultLane = getVisibleLanes()[0];
     const newCard = {
       id: createId("plot"),
       title: "新剧情卡",
-      act_id: (actId || targetNode?.act_id) ?? list(appState.project.structure_profile?.acts)[0]?.id ?? "",
-      node_id: (nodeId || targetNode?.id) ?? "",
+      episode_id: episodeId,
+      act_id: episodeId ? "" : ((actId || targetNode?.act_id) ?? list(appState.project.structure_profile?.acts)[0]?.id ?? ""),
+      node_id: episodeId ? "" : ((nodeId || targetNode?.id) ?? ""),
       lane_id: (laneId || defaultLane?.id) ?? "",
       lane_kind: defaultLane?.kind ?? "canonical_mainline",
       type: "mainline",

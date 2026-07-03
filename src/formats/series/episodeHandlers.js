@@ -1,6 +1,7 @@
 import { ctx } from "../../handlers/context.js";
 import { appState } from "../../state.js";
 import { list } from "../../utils.js";
+import { buildFountainText } from "../../render/screenplay.js";
 
 // 短剧「集(episode)」CRUD。集是一等公民：黄金三秒钩子/爽点/集尾cliffhanger/付费卡点。
 function episodes() {
@@ -81,6 +82,30 @@ export function handleEpisodeClick(action, target, id, nodeId) {
   }
   if (action === "select-season") { appState.selection.seasonNumber = Number(id) || 1; ctx.render(); return true; }
   if (action === "ai-design-season") { ctx.aiDesignSeriesEpisodes(); return true; }  // 连续剧·AI设计本季分集
+  if (action === "ai-breakdown-episode") { ctx.aiBreakdownEpisodeScenes(id); return true; }  // 连续剧·单集拆场
+  if (action === "ai-design-subplots") { ctx.aiDesignSubplots(); return true; }              // 连续剧·跨集支线设计
+  if (action === "export-episode-fountain") {                                                // 连续剧·下载单集剧本
+    const ep = getEpisode(id);
+    if (!ep) return true;
+    const text = buildFountainText(appState, { episodeId: ep.id });
+    const projTitle = (appState.project.project?.title || "剧本").replace(/[\\/:*?"<>|]/g, "_");
+    const epTitle = (ep.title || "未命名").replace(/[\\/:*?"<>|]/g, "_");
+    // 集号用季内序（order_index 是跨季全局序，多季时 S2E13 就错了）
+    const inSeason = episodes().filter((e) => (e.season ?? 1) === (ep.season ?? 1))
+      .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+    const epNo = inSeason.indexOf(ep) + 1;
+    const fname = `${projTitle}_S${ep.season ?? 1}E${String(epNo).padStart(2, "0")}_${epTitle}.fountain`;
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return true;
+  }
   if (action === "select-episode") { appState.selection.episodeId = id; ctx.render(); return true; }
   if (action === "toggle-episode-paywall") {
     const ep = getEpisode(id);

@@ -1,5 +1,6 @@
 import { escapeHtml, list } from "../utils.js";
 import { plotTypeLabels, plotStatusLabels, PLOT_TROPE_OPTIONS, PLOT_MACGUFFIN_OPTIONS, PLOT_CATALYST_OPTIONS, PLOT_CONFLICT_TYPE_OPTIONS, PLOT_TWIST_OPTIONS } from "../state.js";
+import { getPlotBoardConfig } from "../modes/registry.js";
 
 const STATUS_LABELS = {
   draft: "草稿", exploring: "探索中", review: "待审", locked: "已锁定", discarded: "废弃",
@@ -126,10 +127,85 @@ function renderGrid(appState, lanes, acts, allCards, { getOrderedNodes, getPlotL
     </div>`;
 }
 
+// 连续剧剧情板：列 = 本季各集（跨集支线管理）。行仍是轨道；卡片以 episode_id 定列。
+// 主线推进由「分集大纲」负责，这块板子管的是 B/C 线如何横跨多集铺设并与主线咬合。
+function renderEpisodeGrid(appState, lanes, allCards) {
+  const season = appState.selection?.seasonNumber ?? 1;
+  const episodes = list(appState.project.episode_board?.episodes)
+    .filter((e) => (e.season ?? 1) === season)
+    .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  if (episodes.length === 0) {
+    return `<div class="pgrid-empty">还没有分集。请先在「分集大纲」建立季-集骨架并铺集，再回来铺跨集支线。</div>`;
+  }
+  const filled = (ep) => (ep.hook_3s || ep.summary || "").trim().length > 0;
+
+  const row1Cells = `
+    <div class="pgrid-hcell pgrid-hcell--act pgrid-hcell--act-head">
+      <span class="pgrid-act-title">第 ${season} 季 · 跨集支线</span>
+      <span class="pgrid-chip">${episodes.length} 集</span>
+    </div>
+    ${Array.from({ length: episodes.length - 1 }, () => `<div class="pgrid-hcell pgrid-hcell--act pgrid-hcell--act-fill"></div>`).join("")}`;
+
+  const row2Cells = episodes.map((ep, idx) => `
+    <div class="pgrid-hcell pgrid-hcell--node ${filled(ep) ? "" : "pgrid-col--empty"}" title="${escapeHtml(ep.summary || "")}">
+      <span class="pgrid-node-seq">E${String(idx + 1).padStart(2, "0")}</span>
+      <span class="pgrid-node-title">${escapeHtml(ep.title || `S${season}E${idx + 1}`)}</span>
+    </div>`).join("");
+
+  const dataRows = lanes.map((lane) => {
+    const colorSlot = lane.color_slot ?? "gray";
+    const cells = episodes.map((ep) => {
+      const cellCards = allCards.filter((c) => c.lane_id === lane.id && c.episode_id === ep.id)
+        .sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
+      return `
+        <div class="pgrid-cell ${filled(ep) ? "" : "pgrid-col--empty"}"
+          data-plot-dropzone="grid" data-lane-id="${escapeHtml(lane.id)}" data-episode-id="${escapeHtml(ep.id)}">
+          ${cellCards.length > 0
+            ? cellCards.map((c) => renderPCard(appState, c, lane)).join("")
+            : `<button class="pgrid-add-stub" data-action="add-plot-card" data-lane-id="${escapeHtml(lane.id)}" data-episode-id="${escapeHtml(ep.id)}" title="在这一集为该轨道添加节拍卡">+</button>`}
+        </div>`;
+    }).join("");
+    const laneCount = allCards.filter((c) => c.lane_id === lane.id && c.episode_id).length;
+    return `
+      <div class="pgrid-row pgrid-row--${escapeHtml(colorSlot)}">
+        <div class="pgrid-track-label">
+          <span class="pgrid-track-dot pgrid-track-dot--${escapeHtml(colorSlot)}"></span>
+          <span class="pgrid-track-name">${escapeHtml(lane.title)}</span>
+          <span class="pgrid-track-count">${laneCount} 卡</span>
+        </div>
+        ${cells}
+        <div class="pgrid-add-col-data"></div>
+      </div>`;
+  }).join("");
+
+  return `
+    <div class="pgrid-toolbar" style="display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+      <button class="button button--ghost button--small" type="button" data-action="ai-design-subplots" ${appState.subplotDesignBusy ? "disabled" : ""}
+        title="AI 依据季结构与分集大纲设计 2-3 条跨集支线，节拍按集落卡到支线轨">${appState.subplotDesignBusy ? "铺支线中…" : "✦ AI 铺跨集支线"}</button>
+      <span class="scene-summary-hint">主线推进在「分集大纲」；这里管 B/C 线横跨多集的铺设与咬合，支线卡会注入下次分集设计。</span>
+    </div>
+    <div class="pgrid-scroll">
+      <div class="pgrid-inner">
+        <div class="pgrid-hrow pgrid-hrow--acts">
+          <div class="pgrid-corner">轨道</div>
+          ${row1Cells}
+          <div class="pgrid-add-col-corner"></div>
+        </div>
+        <div class="pgrid-hrow pgrid-hrow--nodes">
+          <div class="pgrid-corner"></div>
+          ${row2Cells}
+          <div class="pgrid-add-col-head"></div>
+        </div>
+        ${dataRows}
+      </div>
+    </div>`;
+}
+
 function renderLibraryPanel(appState, allCards, trashedCards, lanes, { getPlotLane, getActTitle, getNode }) {
   // 卡片库只放「未归位」的卡——已挂上节点/幕的卡在上方板子里有完整呈现，
   // 重复列出只会占半屏制造困惑
-  const unplaced = allCards.filter((c) => !c.node_id || !c.act_id);
+  // 已按集归位（连续剧支线板）的卡不算未归位
+  const unplaced = allCards.filter((c) => !c.episode_id && (!c.node_id || !c.act_id));
   const sorted = unplaced.slice().sort((a, b) => (a.order_index ?? 9999) - (b.order_index ?? 9999));
   const laneById = new Map(lanes.map((l) => [l.id, l]));
   const trashOpen = !!appState.plotTrashOpen;
@@ -384,9 +460,11 @@ export function renderPlotsPage(dom, appState, {
   dom.plotsContent.innerHTML = `
     <div class="pgrid-workbench">
 
-      <!-- 主画布 -->
+      <!-- 主画布：列维度由模式注册表声明（电影=结构节点；连续剧=集，跨集支线管理） -->
       <div class="pgrid-canvas-wrap">
-        ${renderGrid(appState, lanes, orderedActs, allCards, { getOrderedNodes, getPlotLane })}
+        ${getPlotBoardConfig(appState.project.project?.format).columns === "episodes"
+          ? renderEpisodeGrid(appState, lanes, allCards)
+          : renderGrid(appState, lanes, orderedActs, allCards, { getOrderedNodes, getPlotLane })}
       </div>
 
       <!-- 右侧卡片库 -->

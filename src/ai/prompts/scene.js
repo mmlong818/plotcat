@@ -370,7 +370,7 @@ export function buildSceneScriptPrompt(projectContext, options) {
 
   const allowedNames = [...Array.from(sceneCharIds).map((cid) => charById.get(cid)?.name).filter(Boolean), ...seriesBlocks.regularNames];
   const namesGuard = allowedNames.length > 0
-    ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要群众/路人，统一写「路人」「店员」等通名，不要起新名字。此约束同样覆盖动作行、道具、字条、照片、回忆、对白中**提及**的一切人名——比如物证上写的名字、角色口中说起的旧人，都只能用名单内的名字，一个字都不能改。`
+    ? `\n严禁创造新人物名。本场允许出现的人物名仅有：${allowedNames.join("、")}。若需要主角团之外的群演，直接用其职能称呼（如「护士」「刑警」「店员」），不要起新名字，也不要写成「路人护士」这类叠床架屋的说法。此约束同样覆盖动作行、道具、字条、照片、回忆、对白中**提及**的一切人名——比如物证上写的名字、角色口中说起的旧人，都只能用名单内的名字，一个字都不能改。`
     : "";
 
   // ── 反同质化上下文：邻场剧本片段 + 全片已用过的开场动作/比喻 ──

@@ -208,7 +208,9 @@ function renderStep1(creation) {
           <span class="cf-deco-text">故事核心</span>
           <span class="cf-deco-line"></span>
         </h2>
-        <p class="cf-step-sub">先告诉 AI 你想讲什么故事，接下来的 5 步会一气呵成产出结构 / 人物 / 情节 / 场景的全套内容 — 所有内容随后都可自由修改。</p>
+        <p class="cf-step-sub">${getCreationConfig(creation.draft?.format).finishAfterCharacters
+          ? "先告诉 AI 你想讲什么故事，接下来的 3 步产出结构与人物，建项后再按季铺分集 — 所有内容随后都可自由修改。"
+          : "先告诉 AI 你想讲什么故事，接下来的 5 步会一气呵成产出结构 / 人物 / 情节 / 场景的全套内容 — 所有内容随后都可自由修改。"}</p>
       </div>
 
       <div class="cf-form-stack">
