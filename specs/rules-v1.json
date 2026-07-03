@@ -1,0 +1,196 @@
+[
+  {
+    "id": "character_consistency_v1",
+    "name": "Character Consistency",
+    "category": "continuity",
+    "severity": "high",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["character", "scene_card", "draft_version"],
+    "evidence_fields": [
+      "external_want",
+      "internal_need",
+      "core_fear",
+      "voice_rules",
+      "input_state",
+      "output_state"
+    ],
+    "pass_condition_summary": "Character behavior stays compatible with established motives and voice.",
+    "output_focus": "Flag unexplained changes in motive, tone, or behavior."
+  },
+  {
+    "id": "knowledge_state_conflict_v1",
+    "name": "Knowledge State Conflict",
+    "category": "continuity",
+    "severity": "critical",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["character", "scene_card", "timeline_event"],
+    "evidence_fields": [
+      "participants",
+      "new_information",
+      "input_state",
+      "output_state"
+    ],
+    "pass_condition_summary": "No character acts on information they have not learned yet.",
+    "output_focus": "Flag impossible awareness or unsupported deductions."
+  },
+  {
+    "id": "timeline_conflict_v1",
+    "name": "Timeline Conflict",
+    "category": "continuity",
+    "severity": "critical",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["timeline_event", "scene_card"],
+    "evidence_fields": [
+      "story_day",
+      "sequence_index",
+      "location",
+      "input_state",
+      "output_state"
+    ],
+    "pass_condition_summary": "Events can be ordered without contradiction.",
+    "output_focus": "Flag incompatible timing, travel, or sequence assumptions."
+  },
+  {
+    "id": "world_rule_violation_v1",
+    "name": "World Rule Violation",
+    "category": "continuity",
+    "severity": "critical",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["world_rule", "scene_card", "draft_version"],
+    "evidence_fields": [
+      "rule_statement",
+      "rule_level",
+      "exceptions",
+      "new_information"
+    ],
+    "pass_condition_summary": "Scenes remain compatible with established world rules or explicit exceptions.",
+    "output_focus": "Flag rule changes that are not explained or authorized."
+  },
+  {
+    "id": "setup_payoff_gap_v1",
+    "name": "Setup Payoff Gap",
+    "category": "structure",
+    "severity": "high",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["setup_payoff", "scene_card"],
+    "evidence_fields": [
+      "setup_summary",
+      "setup_scene_id",
+      "expected_payoff_window",
+      "payoff_scene_id",
+      "status"
+    ],
+    "pass_condition_summary": "Important setups are paid off within a meaningful window or intentionally left open.",
+    "output_focus": "Flag hanging promises, weak payoffs, and orphaned setups."
+  },
+  {
+    "id": "scene_goal_missing_v1",
+    "name": "Scene Goal Missing",
+    "category": "scene",
+    "severity": "high",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["scene_card"],
+    "evidence_fields": [
+      "pov_character_id",
+      "goal",
+      "obstacle",
+      "tactic"
+    ],
+    "pass_condition_summary": "Each scene has a clear objective and opposition.",
+    "output_focus": "Flag scenes that drift without a playable objective."
+  },
+  {
+    "id": "scene_turn_missing_v1",
+    "name": "Scene Turn Missing",
+    "category": "scene",
+    "severity": "high",
+    "trigger_mode": ["on_scene_save", "on_review_run"],
+    "requires": ["scene_card"],
+    "evidence_fields": [
+      "turn",
+      "value_shift",
+      "input_state",
+      "output_state"
+    ],
+    "pass_condition_summary": "Each scene changes the situation, value, or relationship state.",
+    "output_focus": "Flag static scenes that end where they started."
+  },
+  {
+    "id": "middle_sag_v1",
+    "name": "Middle Sag",
+    "category": "structure",
+    "severity": "medium",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["beat", "scene_card"],
+    "evidence_fields": [
+      "order_index",
+      "goal",
+      "turn",
+      "new_information"
+    ],
+    "pass_condition_summary": "Middle sequences introduce escalation, revelation, or strategic change.",
+    "output_focus": "Flag repeated scene patterns with low escalation."
+  },
+  {
+    "id": "exposition_overload_v1",
+    "name": "Exposition Overload",
+    "category": "dialogue",
+    "severity": "medium",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["scene_card", "draft_version"],
+    "evidence_fields": [
+      "dialogue_notes",
+      "new_information",
+      "goal",
+      "turn"
+    ],
+    "pass_condition_summary": "Dialogue conveys information with intent, conflict, and subtext.",
+    "output_focus": "Flag scenes that explain too much without dramatic pressure."
+  },
+  {
+    "id": "production_hotspot_v1",
+    "name": "Production Hotspot",
+    "category": "production",
+    "severity": "low",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["scene_card"],
+    "evidence_fields": [
+      "location",
+      "time_of_day",
+      "production_tags"
+    ],
+    "pass_condition_summary": "High-cost elements are visible and not overly concentrated without payoff.",
+    "output_focus": "Flag clusters of expensive scenes with low story return."
+  },
+  {
+    "id": "arc_tracking_v1",
+    "name": "Arc Tracking",
+    "category": "anchor",
+    "severity": "medium",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["intent_anchor", "beat", "scene_card"],
+    "evidence_fields": [
+      "arc",
+      "slot",
+      "turn",
+      "value_shift"
+    ],
+    "pass_condition_summary": "Scene emotion and value shift remain compatible with the intended arc stage.",
+    "output_focus": "Flag scenes whose emotional turn contradicts the expected arc path."
+  },
+  {
+    "id": "motif_tracking_v1",
+    "name": "Motif Tracking",
+    "category": "anchor",
+    "severity": "low",
+    "trigger_mode": ["on_review_run"],
+    "requires": ["intent_anchor", "scene_card"],
+    "evidence_fields": [
+      "motif",
+      "new_information",
+      "production_tags"
+    ],
+    "pass_condition_summary": "Core visual motif appears with meaningful frequency and stays semantically coherent.",
+    "output_focus": "Flag missing, excessive, or distorted motif usage."
+  }
+]

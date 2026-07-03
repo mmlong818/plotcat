@@ -1,0 +1,54 @@
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+
+# 知识源缓存（本地由 sync 写入）
+data/knowledge-cache/
+.tmp/
+node_modules/
+.env
+.env.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# E2E 测试与调试临时产物
+e2e-screenshots/
+screenshots/
+tests/e2e/inspect-shots/
+tests/e2e/real-check-shots/
+tests/e2e/adversarial-flow-result.json
+tests/e2e/adversarial-screenplay.md
+
+# 一次性 DOM 调试脚本（迭代多次的临时排查工具）
+tests/e2e/dom-inspect*.mjs
+tests/e2e/debug-page.mjs
+
+# 工具与规划目录（本地工作产物，不入库）
+.claude/
+.superpowers/
+docs/superpowers/
+
+# 调试用临时数据快照（含真实剧本数据，严禁入库）
+.tmp-*
+tmp_*.json
+_projects.json
+
+# 数据库备份
+data/*.bak*
+
+# 参考稿原件等私有文档，严禁入库
+*.pdf
+*.docx
+
+# E2E 截图与走查产物目录
+tests/e2e/*-shots/
+tests/e2e/audit-*/
+tests/e2e/realcheck-10-runs/
+tests/e2e/_fullflow_verify.out
+tests/e2e/_*.png
+.gstack/
+tests/e2e/refactor-smoke.mjs
+tests/e2e/refactor-probe.mjs
+tests/e2e/_realcheck/

@@ -1,0 +1,126 @@
+{
+  "project": {
+    "id": "project_001",
+    "title": "",
+    "format": "feature_or_pilot",
+    "language": "zh-CN",
+    "genre": [],
+    "logline": "",
+    "theme_question": "",
+    "tone": "",
+    "status": "development"
+  },
+  "intent_anchor": {
+    "id": "anchor_001",
+    "core_idea": "",
+    "theme": "",
+    "protagonist": "",
+    "arc": "",
+    "motif": "",
+    "genre": [],
+    "status": "active",
+    "revisions": [
+      {
+        "id": "anchor_rev_001",
+        "changed_fields": [],
+        "reason": "",
+        "created_at": ""
+      }
+    ]
+  },
+  "story_bible": {
+    "premise": "",
+    "core_conflict": "",
+    "characters": [
+      {
+        "id": "char_001",
+        "name": "",
+        "story_role": "protagonist",
+        "external_want": "",
+        "internal_need": "",
+        "psychological_flaw": "",
+        "moral_flaw": "",
+        "public_mask": "",
+        "core_fear": "",
+        "wound": "",
+        "arc_start": "",
+        "arc_end": "",
+        "voice_rules": [],
+        "secret": ""
+      }
+    ],
+    "relationships": [
+      {
+        "id": "rel_001",
+        "source_character_id": "char_001",
+        "target_character_id": "char_002",
+        "relationship_type": "",
+        "tension": "",
+        "power_balance": "",
+        "shared_history": "",
+        "hidden_information": ""
+      }
+    ],
+    "world_rules": [
+      {
+        "id": "rule_001",
+        "rule_statement": "",
+        "rule_level": "hard",
+        "scope": "",
+        "exceptions": [],
+        "evidence": []
+      }
+    ],
+    "timeline_events": [
+      {
+        "id": "event_001",
+        "story_day": 1,
+        "sequence_index": 1,
+        "summary": "",
+        "participants": [],
+        "location": "",
+        "trigger": "",
+        "consequence": ""
+      }
+    ],
+    "beats": [
+      {
+        "id": "beat_001",
+        "framework": "three_act",
+        "slot": "act_1_turn",
+        "purpose": "",
+        "linked_scene_ids": []
+      }
+    ],
+    "scene_cards": [
+      {
+        "id": "scene_001",
+        "order_index": 1,
+        "title": "",
+        "pov_character_id": "char_001",
+        "location": "",
+        "time_of_day": "",
+        "goal": "",
+        "obstacle": "",
+        "tactic": "",
+        "turn": "",
+        "value_shift": "",
+        "new_information": [],
+        "input_state": "",
+        "output_state": "",
+        "production_tags": []
+      }
+    ],
+    "setup_payoffs": [
+      {
+        "id": "setup_001",
+        "setup_summary": "",
+        "setup_scene_id": "scene_001",
+        "expected_payoff_window": "",
+        "status": "open",
+        "payoff_scene_id": "",
+        "payoff_summary": ""
+      }
+    ]
+  }
+}

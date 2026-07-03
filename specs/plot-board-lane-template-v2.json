@@ -1,0 +1,155 @@
+{
+  "plot_board": {
+    "view_mode": "structure",
+    "lanes": [
+      {
+        "id": "lane_main",
+        "title": "正式主线",
+        "kind": "canonical_mainline",
+        "sort_order": 10,
+        "color_slot": "lane_main",
+        "is_canonical": true,
+        "scenario_group_id": null,
+        "notes": ""
+      },
+      {
+        "id": "lane_subplot_a",
+        "title": "支线 A",
+        "kind": "subplot",
+        "sort_order": 20,
+        "color_slot": "lane_sub",
+        "is_canonical": true,
+        "scenario_group_id": null,
+        "notes": ""
+      },
+      {
+        "id": "lane_undefined",
+        "title": "未定义",
+        "kind": "undefined",
+        "sort_order": 90,
+        "color_slot": "lane_undefined",
+        "is_canonical": false,
+        "scenario_group_id": null,
+        "notes": "用于暂存还没归类的剧情卡"
+      },
+      {
+        "id": "lane_option_a",
+        "title": "方案轨 A",
+        "kind": "scenario",
+        "sort_order": 110,
+        "color_slot": "lane_scenario_a",
+        "is_canonical": false,
+        "scenario_group_id": "scenario_endgame",
+        "notes": ""
+      },
+      {
+        "id": "lane_option_b",
+        "title": "方案轨 B",
+        "kind": "scenario",
+        "sort_order": 120,
+        "color_slot": "lane_scenario_b",
+        "is_canonical": false,
+        "scenario_group_id": "scenario_endgame",
+        "notes": ""
+      }
+    ],
+    "scenario_groups": [
+      {
+        "id": "scenario_endgame",
+        "title": "终局解法对照",
+        "question": "主角最后应该牺牲什么",
+        "status": "exploring",
+        "promoted_lane_id": null,
+        "notes": ""
+      }
+    ],
+    "cards": [
+      {
+        "id": "plot_001",
+        "title": "主角在开场失去稳定身份",
+        "summary": "用一次公开失态把主角从旧秩序里剥离出来。",
+        "act_id": "act_1",
+        "node_id": "setup",
+        "lane_id": "lane_main",
+        "lane_kind": "canonical_mainline",
+        "order_index": 10,
+        "scenario_group_id": null,
+        "is_canonical": true,
+        "type": "mainline",
+        "status": "review",
+        "dramatic_question": "主角是否还能维持旧身份",
+        "conflict": "体制要求稳定，主角内心已经开始失控。",
+        "change": "主角第一次暴露裂缝。",
+        "character_ids": [
+          "char_protagonist"
+        ],
+        "notes": ""
+      },
+      {
+        "id": "plot_002",
+        "title": "盟友提出一条危险捷径",
+        "summary": "支线角色带来一种更快但代价更大的方案。",
+        "act_id": "act_2",
+        "node_id": "lock_in",
+        "lane_id": "lane_subplot_a",
+        "lane_kind": "subplot",
+        "order_index": 10,
+        "scenario_group_id": null,
+        "is_canonical": true,
+        "type": "enhancement",
+        "status": "draft",
+        "dramatic_question": "主角是否会接受捷径",
+        "conflict": "短期收益和长期代价发生冲突。",
+        "change": "主角被迫看到另一种生存方式。",
+        "character_ids": [
+          "char_protagonist",
+          "char_ally"
+        ],
+        "notes": ""
+      },
+      {
+        "id": "plot_003",
+        "title": "终局方案 A：主角公开真相",
+        "summary": "主角在公众面前自毁式揭露真相。",
+        "act_id": "act_5",
+        "node_id": "finale",
+        "lane_id": "lane_option_a",
+        "lane_kind": "scenario",
+        "order_index": 10,
+        "scenario_group_id": "scenario_endgame",
+        "is_canonical": false,
+        "type": "alternate",
+        "status": "exploring",
+        "dramatic_question": "公开是否值得付出代价",
+        "conflict": "真相会摧毁主角，也会完成主题。",
+        "change": "故事走向高代价收束。",
+        "character_ids": [
+          "char_protagonist",
+          "char_antagonist"
+        ],
+        "notes": ""
+      },
+      {
+        "id": "plot_004",
+        "title": "终局方案 B：主角留下钩子后沉默离场",
+        "summary": "主角不公开全貌，只留下让观众继续追的钩子。",
+        "act_id": "act_5",
+        "node_id": "aftershock",
+        "lane_id": "lane_option_b",
+        "lane_kind": "scenario",
+        "order_index": 10,
+        "scenario_group_id": "scenario_endgame",
+        "is_canonical": false,
+        "type": "alternate",
+        "status": "exploring",
+        "dramatic_question": "不说破是否更适合季尾结构",
+        "conflict": "主题完整性与持续观看动力发生冲突。",
+        "change": "故事走向悬念式收束。",
+        "character_ids": [
+          "char_protagonist"
+        ],
+        "notes": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,100 @@
+export function getMockData(step, options) {
+  const mockMap = {
+    logline: {
+      choices: [
+        {
+          id: "mock_logline_a",
+          label: "方案A",
+          content: "【逆流而上】\n一名即将退休的刑警，在最后一案中发现自己30年前的判决是错的——而真凶，正是他最信任的搭档。\n\n外部冲突：在系统压力下推翻铁案\n内部冲突：正义与忠诚哪个更重要\n反转潜力：主角可能才是真正的帮凶\n对标：《告白》的执念+《十二怒汉》的道德困境",
+          data: { title: "逆流而上", hook: "最后一案变成最深的罪", external_conflict: "推翻铁案", internal_conflict: "正义与忠诚", twist_potential: "主角可能是帮凶", comparable: "告白+十二怒汉" }
+        },
+        {
+          id: "mock_logline_b",
+          label: "方案B",
+          content: "【替身】\n一个整容失败的女演员，以替身身份重回演艺圈，却发现自己正在爱上那个夺走她人生的人。\n\n外部冲突：维持替身身份不被识破\n内部冲突：复仇欲望与真实情感的撕裂\n反转潜力：那个人其实早就认出了她\n对标：《奥赛罗》式设局+当代偶像剧的身份游戏",
+          data: { title: "替身", hook: "她用别人的脸重新活了一次", external_conflict: "维持身份", internal_conflict: "复仇与爱的撕裂", twist_potential: "早被认出", comparable: "奥赛罗+偶像身份剧" }
+        },
+        {
+          id: "mock_logline_c",
+          label: "方案C",
+          content: "【第五季】\n气候崩溃后，一个掌控最后农业数据的女科学家，必须在政府、资本和难民之间选择把种子给谁——而每个选择都意味着有人死去。\n\n外部冲突：三方抢夺数据控制权\n内部冲突：科学家的中立还是人类的偏爱\n反转潜力：数据本身就是被篡改的\n对标：《饥饿游戏》的政治+《她》的孤独感",
+          data: { title: "第五季", hook: "最后的种子，谁能得到", external_conflict: "三方争夺", internal_conflict: "中立还是人性", twist_potential: "数据是假的", comparable: "饥饿游戏+末日孤独" }
+        }
+      ],
+      reasoning: "三个方向分别探索了：道德困境型（警察/真相）、身份游戏型（替身/复仇）、末日抉择型（资源/权力）。每个都有强烈的内外冲突和内置反转空间。",
+      warnings: []
+    },
+    treatment: {
+      choices: [{
+        id: "mock_treatment_a",
+        label: "方案A",
+        content: "【开端】警察老林在退休宴上接到最后一个案子：一具与30年前悬案高度吻合的尸体。世界：体制内的秩序感，他的缺口：从不质疑自己的判断。\n\n【激励事件】DNA比对证明，30年前入狱的人是无辜的。\n\n【中段复杂化】老林追查真相，却发现越来越多证据指向他最好的搭档老周。每一步推进都在摧毁他的过去。\n\n【黑暗时刻】老林被迫选择：提交证据意味着摧毁老周的家庭和他自己的荣誉；放弃意味着无辜者继续背锅。\n\n【终局抉择】他选择提交证据——不是为了正义，而是他终于承认自己当年也知道有什么不对，只是选择了不看。\n\n【余韵】老周入狱。老林在退休的第一天，去了那个冤案者家里，什么都没说。",
+        data: { treatment: { opening: "退休宴/悬案", catalyst: "DNA证明冤案", midpoint_complication: "证据指向老周", dark_moment: "无法两全", final_choice: "提交证据承认自己的共谋", aftermath: "沉默的登门" }, theme_statement: "正义不是找到真凶，而是承认自己选择了不看" }
+      }],
+      reasoning: "Treatment以内部冲突驱动外部行动，避免了单纯的悬疑解谜，将主题锁定为「共谋者的觉醒」。",
+      warnings: ["故事节奏较重，需确认目标受众接受度"]
+    },
+    characters: {
+      choices: [{
+        id: "mock_characters_a",
+        label: "方案A",
+        content: "【林国梁】protagonist\n欲望：安稳退休，不留遗憾\n需求：承认自己一直知道真相但选择了沉默\n创伤：父亲是被冤枉的右派，他用一辈子的「正确」来证明自己不一样\n弧光：从「按规则的正义」到「需要代价的真相」\n\n【周建国】antagonist\n欲望：保住现在的一切（家庭、地位、干净的履历）\n需求：他从未真正相信自己做错了，他只是做了「那个年代人人都会做的选择」\n创伤：穷怕了，权力是他唯一的安全感\n弧光：从理所当然到被自己的逻辑审判",
+        data: { characters: [{ name: "林国梁", story_role: "protagonist", desire: "安稳退休", need: "承认共谋", wound: "父亲被冤枉", arc_start: "按规则行事", arc_end: "选择代价高昂的真相" }, { name: "周建国", story_role: "antagonist", desire: "保住地位", need: "承担责任", wound: "穷怕了", arc_start: "理所当然", arc_end: "被自己逻辑审判" }] }
+      }],
+      reasoning: "两个主要角色形成「同一创伤的两种应对」的对照结构，避免了简单的正邪二元。",
+      warnings: []
+    },
+    beat_sheet: {
+      choices: [{
+        id: "mock_beatsheet_a",
+        label: "方案A",
+        content: "[1%] 开场印象\n退休宴上，老林接到电话。他看了一眼，接了。主角状态：表面淡定，内心已经不平静。\n\n[12%] 诱发事件\nDNA报告：死者与30年前无辜者匹配。一切开始动摇。\n\n[30%] 主线锁定\n老林选择私下调查，不上报。他告诉自己是为了确认真相。\n\n[55%] 反扑\n老周发现老林在查，开始布局反制。老林的家人收到威胁。\n\n[80%] 崩塌\n老林发现30年前的案卷里有他自己的签名——他签掉了那份质疑报告。\n\n[90%] 终局\n老林提交证据，接受调查。",
+        data: { beat_sheet: [{ beat_name: "开场印象", percentage: "1%", what_happens: "退休宴接电话", protagonist_state: "表面淡定内心动摇" }] }
+      }],
+      reasoning: "节拍映射以内部冲突为核心节点，外部事件作为触发器而非主体。",
+      warnings: []
+    },
+    scene_outline: {
+      choices: [
+        {
+          id: "mock_scene_a",
+          label: "场景1",
+          content: "INT. 档案室 - 深夜\n目标：老林找到30年前案卷中的质疑报告\n冲突：档案管理员发现他违规调档\n转折：他找到了报告，上面有他自己的签名\n信息增量：观众知道他曾经知道真相\n结尾问题：他会销毁这份证据吗",
+          data: { title: "INT. 档案室 - 深夜", scene_goal: "找质疑报告", conflict: "违规调档被发现", turn: "发现自己的签名", end_question: "他会销毁证据吗" }
+        }
+      ],
+      reasoning: "场景选择档案室这一密闭空间，强化主角与过去的私密对话感。",
+      warnings: []
+    },
+    scene_weave: {
+      choices: [{
+        id: "mock_weave_a",
+        label: "方案A",
+        content: "INT. 档案室 - 深夜\n\n昏黄的灯。林国梁翻开最后一个文件夹。\n\n他的手指停在一张纸上。很久。\n\n档案员（门口）\n林局，这批卷宗是保密级别的。\n\n林国梁\n我知道。\n\n他没有转身。手指压住那张纸。\n\n档案员\n我需要登记你的查阅记录。\n\n林国梁\n（终于转身，声音很平）\n登记吧。\n\n他把那张纸放了回去。但他记住了上面的字。\n\n档案员走后，他在原地站了很久，什么都没动。",
+        data: { script: "完整剧本场景", subtext_map: [{ character: "档案员", says: "需要登记", means: "你在做违规的事" }, { character: "林国梁", says: "登记吧", means: "我已经得到我想要的了" }], emotion_arc: "紧张→发现→决定", end_hook: "他记住了但没取走——他要自己承担" }
+      }],
+      reasoning: "用「不拿走」替代「拿走」，让主角的选择更有分量——他不需要证据，他知道自己记得。",
+      warnings: []
+    },
+    diagnosis: {
+      choices: [{
+        id: "mock_diagnosis_a",
+        label: "诊断报告",
+        content: "综合评分：6.5/10\n\n故事结构：7/10 - 五幕结构清晰，但中段压力不够持续\n角色发展：8/10 - 主角内外冲突设计扎实，对手稍显单薄\n场景张力：6/10 - 部分场景目标不明确，需要更清晰的进出场状态\n对话质量：待评估 - 尚无完整对白样本\n类型符合度：7/10 - 悬疑+道德剧的结合有市场，但节奏偏重\n\n问题与建议：\n⚠ 中段缺乏具体的时间压力 → 加入外部截止点（如退休日期倒计时）\n⚠ 对手动机需要更多同情空间 → 给老周一场关于「为何这样做」的解释场景\n\n优势：\n✓ 主题清晰，「共谋者的觉醒」有独特道德维度\n✓ 主角的内部障碍设计是故事最强处",
+        data: { scores: { story_structure: { score: 7, comment: "五幕结构清晰" }, character_development: { score: 8, comment: "主角扎实" }, scene_tension: { score: 6, comment: "部分场景目标不明确" }, dialogue_quality: { score: 6, comment: "待评估" }, genre_fit: { score: 7, comment: "节奏偏重" } }, overall_score: 6.5 }
+      }],
+      reasoning: "整体诊断基于项目现有数据，评分侧重结构完整性和角色驱动力。",
+      warnings: ["对白样本不足，对话质量评分仅供参考"]
+    },
+    fallback: {
+      choices: [{
+        id: "mock_fallback",
+        label: "示例",
+        content: "AI生成服务暂时不可用，请检查API密钥配置后重试。",
+        data: {}
+      }]
+    }
+  };
+
+  return mockMap[step] ?? mockMap.fallback;
+}

@@ -1,0 +1,255 @@
+{
+  "project": {
+    "id": "project_001",
+    "title": "",
+    "format": "feature_or_pilot",
+    "language": "zh-CN",
+    "genre": [],
+    "logline": "",
+    "theme_question": "",
+    "tone": "",
+    "status": "development"
+  },
+  "intent_anchor": {
+    "id": "anchor_001",
+    "core_idea": "",
+    "theme": "",
+    "protagonist": "",
+    "arc": "",
+    "motif": "",
+    "genre": [],
+    "status": "active",
+    "revisions": []
+  },
+  "story_core": {
+    "premise": "",
+    "core_conflict": "",
+    "central_question": "",
+    "stakes": "",
+    "ending_direction": ""
+  },
+  "structure_profile": {
+    "id": "structure_001",
+    "template": "three_act",
+    "rhythm_overlay": "save_the_cat",
+    "customization_mode": "guided",
+    "acts": [
+      {
+        "id": "act_1",
+        "label": "第一幕",
+        "purpose": "",
+        "target_ratio": 0.25,
+        "sort_order": 1,
+        "status": "active"
+      },
+      {
+        "id": "act_2",
+        "label": "第二幕",
+        "purpose": "",
+        "target_ratio": 0.5,
+        "sort_order": 2,
+        "status": "active"
+      },
+      {
+        "id": "act_3",
+        "label": "第三幕",
+        "purpose": "",
+        "target_ratio": 0.25,
+        "sort_order": 3,
+        "status": "active"
+      }
+    ],
+    "nodes": [
+      {
+        "id": "node_001",
+        "act_id": "act_1",
+        "slot_code": "opening_image",
+        "label": "开场画面",
+        "required": true,
+        "source": "save_the_cat",
+        "sort_order": 1,
+        "goal": "",
+        "status": "empty",
+        "linked_plot_card_ids": []
+      },
+      {
+        "id": "node_002",
+        "act_id": "act_1",
+        "slot_code": "catalyst",
+        "label": "催化事件",
+        "required": true,
+        "source": "save_the_cat",
+        "sort_order": 2,
+        "goal": "",
+        "status": "empty",
+        "linked_plot_card_ids": []
+      },
+      {
+        "id": "node_003",
+        "act_id": "act_2",
+        "slot_code": "midpoint",
+        "label": "中点",
+        "required": true,
+        "source": "save_the_cat",
+        "sort_order": 3,
+        "goal": "",
+        "status": "empty",
+        "linked_plot_card_ids": []
+      },
+      {
+        "id": "node_004",
+        "act_id": "act_3",
+        "slot_code": "finale",
+        "label": "终局",
+        "required": true,
+        "source": "save_the_cat",
+        "sort_order": 4,
+        "goal": "",
+        "status": "empty",
+        "linked_plot_card_ids": []
+      }
+    ],
+    "coverage_summary": {
+      "required_node_count": 4,
+      "filled_node_count": 0,
+      "missing_node_ids": [
+        "node_001",
+        "node_002",
+        "node_003",
+        "node_004"
+      ]
+    }
+  },
+  "genre_profile": {
+    "primary_genre": "",
+    "secondary_genres": [],
+    "tone_axis": [],
+    "audience_promise": [],
+    "required_conventions": [
+      {
+        "id": "conv_001",
+        "label": "",
+        "description": "",
+        "status": "missing",
+        "linked_plot_card_ids": []
+      }
+    ],
+    "optional_conventions": [],
+    "taboo_items": [],
+    "pace_profile": {
+      "density": "medium",
+      "reversal_frequency": "medium",
+      "reveal_pattern": "ladder"
+    },
+    "notes": ""
+  },
+  "character_hub": {
+    "characters": [
+      {
+        "id": "char_001",
+        "name": "",
+        "function_role": "protagonist",
+        "story_role": "protagonist",
+        "external_want": "",
+        "internal_need": "",
+        "flaw": "",
+        "wound": "",
+        "secret": "",
+        "stance": "",
+        "arc_start": "",
+        "arc_end": "",
+        "status": "draft",
+        "linked_plot_card_ids": [],
+        "impacted_plot_card_ids": [],
+        "tags": []
+      }
+    ],
+    "relationships": [
+      {
+        "id": "rel_001",
+        "source_character_id": "char_001",
+        "target_character_id": "",
+        "relationship_type": "",
+        "tension": "",
+        "power_balance": "",
+        "shared_history": "",
+        "hidden_information": "",
+        "status": "draft",
+        "linked_plot_card_ids": []
+      }
+    ]
+  },
+  "plot_board": {
+    "cards": [
+      {
+        "id": "plot_001",
+        "title": "",
+        "summary": "",
+        "act_id": "act_1",
+        "node_id": "node_001",
+        "type": "mainline",
+        "status": "draft",
+        "dramatic_function": "",
+        "priority": 1,
+        "owner_character_ids": [
+          "char_001"
+        ],
+        "influenced_character_ids": [],
+        "relationship_ids": [],
+        "dependency_ids": [],
+        "blocked_by_ids": [],
+        "leads_to_ids": [],
+        "impact_summary": {
+          "character_changes": [],
+          "relationship_changes": [],
+          "timeline_changes": [],
+          "rule_changes": [],
+          "setup_changes": []
+        },
+        "lock_candidate": false,
+        "scene_count_estimate": 1,
+        "notes": ""
+      }
+    ],
+    "views": {
+      "default_lane": "type",
+      "sort_mode": "act_then_node_then_priority"
+    }
+  },
+  "lock_layer": {
+    "locked_plot_card_ids": [],
+    "pending_lock_ids": [],
+    "change_requests": [],
+    "projections": {
+      "characters": [],
+      "relationships": [],
+      "timeline_events": [],
+      "world_rules": [],
+      "setup_payoffs": [],
+      "story_facts": []
+    }
+  },
+  "scene_workbench": {
+    "scene_cards": [
+      {
+        "id": "scene_001",
+        "plot_card_id": "plot_001",
+        "act_id": "act_1",
+        "order_index": 1,
+        "title": "",
+        "pov_character_id": "char_001",
+        "location": "",
+        "time_of_day": "",
+        "goal": "",
+        "obstacle": "",
+        "turn": "",
+        "value_shift": "",
+        "input_state": "",
+        "output_state": "",
+        "status": "draft"
+      }
+    ],
+    "ordering_mode": "story_order",
+    "unassigned_plot_card_ids": []
+  }
+}
