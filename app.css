@@ -9737,3 +9737,16 @@ body[data-active-step] .char-card:hover {
 .app-footer a { color: var(--accent); }
 .app-footer a:hover { text-decoration: underline; }
 .app-footer__sep { color: var(--muted-2); }
+
+/* 顶栏 PlotCat 猫头 logo；暗色主题下猫身为深色，垫浅色圆角底衬保持可见 */
+.hero__logo {
+  height: 34px;
+  width: 34px;
+  flex: none;
+  margin-right: 10px;
+}
+[data-theme="dark"] .hero__logo {
+  background: #faf6ee;
+  border-radius: 9px;
+  padding: 2px;
+}
