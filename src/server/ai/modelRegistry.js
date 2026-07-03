@@ -15,14 +15,24 @@ const runtimeConfig = {
   get model() { return getLlmConfig().model; },
   get source() { return getLlmConfig().source; }
 };
-const defaultModels = { openai: "gpt-5.4-mini", gemini: "gemini-2.5-flash" };
+const defaultModels = { zhipu: "glm-5.2", openai: "gpt-5.4", gemini: "gemini-2.5-flash" };
+
+// 智谱 bigmodel.cn 无公开的 /models 列表端点，用静态清单（核对于 2026-06-27）
+const ZHIPU_MODELS = [
+  { id: "glm-5.2", label: "GLM-5.2（旗舰 · 1M 上下文）" },
+  { id: "glm-5.1", label: "GLM-5.1" },
+  { id: "glm-5", label: "GLM-5" },
+  { id: "glm-5-turbo", label: "GLM-5-Turbo" },
+  { id: "glm-4.7", label: "GLM-4.7" },
+  { id: "glm-4.7-flash", label: "GLM-4.7-Flash（免费）" }
+];
 
 // 模型列表请求超时：无 signal 的 fetch 在网络卡顿时会挂死 /api/ai/models
 const LIST_TIMEOUT_MS = 15_000;
 
 function normalizeProvider(value) {
   const v = String(value ?? "").trim();
-  return ["claude_cli", "anthropic", "openai", "gemini", "custom"].includes(v) ? v : "openai";
+  return ["zhipu", "claude_cli", "anthropic", "openai", "gemini", "custom"].includes(v) ? v : "openai";
 }
 
 function sortByPreferredOrder(items, priorities = []) {
@@ -189,6 +199,9 @@ async function listAvailableModels({ provider, apiKey, baseUrl }) {
   const safeProvider = normalizeProvider(trimText(provider));
   if (safeProvider === "claude_cli") {
     return { provider: safeProvider, models: [], defaultModel: "" };
+  }
+  if (safeProvider === "zhipu") {
+    return { provider: safeProvider, models: ZHIPU_MODELS, defaultModel: resolvePreferredModel(safeProvider, ZHIPU_MODELS) };
   }
   const safeApiKey = resolveApiKey(safeProvider, apiKey);
   if (!safeApiKey) {

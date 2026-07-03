@@ -626,7 +626,8 @@ async function generateExpertResponse({ expertId, project, selectedScene, issues
   try {
     const text = await callClaudeSubprocess(buildExpertPrompt(expertId, project, selectedScene, issues));
     const output = parseJsonFromClaude(text);
-    return { mode: "ai", provider: "claude", model: "claude", output };
+    const status = getLlmStatus();
+    return { mode: "ai", provider: status.provider, model: status.model, output };
   } catch (error) {
     return fallbackExpertResponse(expertId, project, selectedScene, issues, error.message);
   }
@@ -637,10 +638,11 @@ async function generateCreateWizardConceptOptions({ draft }) {
     const safeDraft = sanitizeWizardDraft(draft);
     const text = await callClaudeSubprocess(buildConceptOptionsPrompt(safeDraft));
     const output = parseJsonFromClaude(text);
+    const status = getLlmStatus();
     return {
       mode: "ai",
-      provider: "claude",
-      model: "claude",
+      provider: status.provider,
+      model: status.model,
       options: list(output.options).slice(0, 3).map((option, index) => ({
         id: `concept_${index + 1}`,
         label: trimText(option.label) || `方向 ${index + 1}`,
@@ -659,15 +661,25 @@ async function generateCreateWizardStep({ stepId, draft }) {
     const safeDraft = sanitizeWizardDraft(draft);
     const text = await callClaudeSubprocess(buildWizardStepPrompt(safeStepId, safeDraft));
     const output = parseJsonFromClaude(text);
+    const status = getLlmStatus();
     return {
       mode: "ai",
-      provider: "claude",
-      model: "claude",
+      provider: status.provider,
+      model: status.model,
       fields: pickWizardStepFields(safeStepId, normalizeWizardPatch(output, safeDraft))
     };
   } catch (error) {
     return fallbackWizardStep(safeStepId, draft, error.message);
   }
+}
+
+// 模型不总遵守“只输出字段 value”：glm 等会用英文字段名或中文标签作 key，做多级兜底提取
+function extractSingleFieldValue(output, field) {
+  const direct =
+    trimText(output.value) || trimText(output[field]) || trimText(output[wizardFieldLabels[field]]);
+  if (direct) return direct;
+  const strings = Object.values(output).filter((v) => typeof v === "string" && v.trim());
+  return strings.length === 1 ? strings[0].trim() : "";
 }
 
 async function regenerateCreateWizardField({ field, draft }) {
@@ -676,12 +688,13 @@ async function regenerateCreateWizardField({ field, draft }) {
     const safeDraft = sanitizeWizardDraft(draft);
     const text = await callClaudeSubprocess(buildWizardFieldPrompt(safeField, safeDraft));
     const output = parseJsonFromClaude(text);
+    const status = getLlmStatus();
     return {
       mode: "ai",
-      provider: "claude",
-      model: "claude",
+      provider: status.provider,
+      model: status.model,
       field: safeField,
-      value: trimText(output.value)
+      value: extractSingleFieldValue(output, safeField)
     };
   } catch (error) {
     return fallbackWizardField(safeField, draft, error.message);

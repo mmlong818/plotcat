@@ -573,7 +573,7 @@ export function renderProjectCreateForm(dom, appState, { getProjectCreateStep, g
 }
 
 export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isAiConfigBusy, getCurrentAiModelOptions }) {
-  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "openai";
+  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "zhipu";
   const modelOptions = getCurrentAiModelOptions(provider);
   const hasStoredConnection = appState.ai.configured && appState.ai.provider === provider;
   const configBusy = isAiConfigBusy();
@@ -606,7 +606,7 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
     <div class="create-ai-config create-ai-config--settings">
       ${profilesBlock}
       <div class="create-wizard__choices create-wizard__choices--providers">
-        ${["claude_cli", "anthropic", "openai", "gemini", "custom"]
+        ${["zhipu", "claude_cli", "anthropic", "openai", "gemini", "custom"]
           .map(
             (value) => `
               <button
@@ -661,7 +661,7 @@ export function renderAiSettingsDialog(dom, appState, { providerChoiceLabel, isA
       <div class="form-grid form-grid--ai">
         <div class="field field--full">
           <label>模型</label>
-          ${(provider === "openai" || provider === "gemini") ? `
+          ${(provider === "openai" || provider === "gemini" || provider === "zhipu") ? `
           <select data-action="ai-config-field" data-field="model" ${modelOptions.length ? "" : "disabled"}>
             <option value="">${modelOptions.length ? "选择一个模型" : "先获取模型列表"}</option>
             ${modelOptions

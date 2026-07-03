@@ -467,12 +467,23 @@ function updateDraftField(fieldName, value) {
 // ── AI config ────────────────────────────────────────────────────────────────
 
 const PROVIDER_LABELS = {
+  zhipu: "智谱 GLM",
   claude_cli: "Claude CLI（订阅）",
-  anthropic: "Anthropic API",
+  anthropic: "Claude API",
   openai: "OpenAI",
   gemini: "Gemini",
   custom: "兼容端点"
 };
+
+// 智谱无公开模型列表端点，前端直接给静态清单（与服务端 modelRegistry 保持一致）
+const ZHIPU_MODEL_OPTIONS = [
+  { id: "glm-5.2", label: "GLM-5.2（旗舰 · 1M 上下文）" },
+  { id: "glm-5.1", label: "GLM-5.1" },
+  { id: "glm-5", label: "GLM-5" },
+  { id: "glm-5-turbo", label: "GLM-5-Turbo" },
+  { id: "glm-4.7", label: "GLM-4.7" },
+  { id: "glm-4.7-flash", label: "GLM-4.7-Flash（免费）" }
+];
 
 function providerChoiceLabel(value) {
   return PROVIDER_LABELS[value] ?? "OpenAI";
@@ -480,12 +491,13 @@ function providerChoiceLabel(value) {
 
 function defaultModelForProvider(value) {
   return {
+    zhipu: "glm-5.2",
     claude_cli: "",
     anthropic: "claude-sonnet-4-6",
-    openai: "gpt-5.4-mini",
+    openai: "gpt-5.4",
     gemini: "gemini-2.5-flash",
     custom: "deepseek-v4-flash"
-  }[value] ?? "gpt-5.4-mini";
+  }[value] ?? "gpt-5.4";
 }
 
 function isAiConfigBusy() {
@@ -495,6 +507,9 @@ function isAiConfigBusy() {
 function getCurrentAiModelOptions(provider) {
   if (appState.aiModelCatalog.provider === provider && appState.aiModelCatalog.options.length) {
     return appState.aiModelCatalog.options;
+  }
+  if (provider === "zhipu") {
+    return ZHIPU_MODEL_OPTIONS;
   }
   if (appState.ai.configured && appState.ai.provider === provider && appState.ai.model) {
     return [{ id: appState.ai.model, label: appState.ai.model }];
@@ -511,10 +526,9 @@ function formatCreateAssistantErrorCurrent(error) {
 }
 
 function aiProviderLabel(value) {
-  if (value === "gemini") return "Gemini";
-  if (value === "openai") return "OpenAI";
   if (value === "claude") return "Claude";
-  return "本地建议";
+  if (value === "local") return "本地建议";
+  return PROVIDER_LABELS[value] ?? "本地建议";
 }
 
 async function requestCreateStepSuggestionCurrent(stepId = getProjectCreateStep().id) {
@@ -625,7 +639,7 @@ async function requestCreateFieldSuggestionCurrent(fieldName) {
 }
 
 async function saveAiConfigDraftCurrentV2() {
-  const provider = appState.aiConfigDraft.provider || "openai";
+  const provider = appState.aiConfigDraft.provider || "zhipu";
   const apiKey = appState.aiConfigDraft.apiKey.trim();
   const model = appState.aiConfigDraft.model.trim();
   const baseUrl = (appState.aiConfigDraft.baseUrl || "").trim();
@@ -675,7 +689,7 @@ async function saveAiConfigDraftCurrentV2() {
 }
 
 async function disconnectAiConfigDraftCurrentV2() {
-  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "openai";
+  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "zhipu";
   appState.createAssistant.loading = true;
   appState.createAssistant.target = "ai-config";
   appState.createAssistant.message = "";
@@ -705,7 +719,7 @@ async function disconnectAiConfigDraftCurrentV2() {
 }
 
 async function fetchAiModelOptionsCurrentV2() {
-  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "openai";
+  const provider = appState.aiConfigDraft.provider || appState.ai.provider || "zhipu";
   const apiKey = appState.aiConfigDraft.apiKey.trim();
   const hasStoredConnection = appState.ai.configured && appState.ai.provider === provider;
   if (!apiKey && !hasStoredConnection) {
