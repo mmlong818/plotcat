@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo.png" alt="PlotCat Logo" width="440">
+</p>
+
 # PlotCat · 原点编剧系统
 
 本地运行的 AI 辅助编剧工作台。从一句话概念到成稿剧本的完整创作链路：
