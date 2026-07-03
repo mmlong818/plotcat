@@ -15,24 +15,44 @@
 - **多项目管理 + 版本快照**：本地 SQLite 存储，可回滚历史版本
 - **多模型接入**：默认智谱 GLM（glm-5.2），支持 Claude（CLI 订阅 / API）、OpenAI（gpt-5.4）、Gemini 及任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/Ollama…）；未配置模型时自动回退到本地策略建议
 
-## 启动
+## 快速开始（零基础三步走）
 
-先决条件：Node.js 24+（使用内置 `node:sqlite`，无需额外数据库）。
+**第一步：安装 Node.js（只需装一次）**
+
+1. 打开 Node.js 官网 https://nodejs.org/ ，下载并安装最新版（需要 24 或更高版本，安装时一路点"下一步"即可）
+2. 装好后按 `Win + R` 输入 `cmd` 回车，在黑色窗口里输入 `node -v` 回车——显示 `v24.x.x` 之类的版本号就说明装好了
+
+**第二步：启动应用**
+
+在本项目文件夹里打开终端（Windows：在文件夹空白处右键 →"在终端中打开"），输入：
 
 ```
 node server.js
 ```
 
-打开 http://127.0.0.1:4173 即可使用。Windows 也可以用 `pnpm start`（走 `start-server.ps1`）。
+看到"已启动"提示后，用浏览器打开 http://127.0.0.1:4173 就能用了。关掉这个终端窗口应用就停止，数据都在本地不会丢。
 
-## AI 接入
+**第三步：连接 AI 模型**（见下一节）
 
-两种方式：
+不连接模型也能用，但 AI 生成功能会退化成本地固定建议——要发挥全部能力，请照下面的教程拿一个智谱 API Key。
 
-1. **界面配置（推荐）**：打开应用 → 设置 → 选择模型服务商 → 粘贴 API Key → 选择模型 → 连接。连接时会做一次微型生成验证，坏 key 当场报错。支持保存多套连接一键切换。
-2. **环境变量**：启动前设置 `LLM_PROVIDER`（`zhipu`/`claude_cli`/`anthropic`/`openai`/`gemini`/`custom`）及对应的 key：`ZHIPU_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `LLM_API_KEY`（配 `LLM_BASE_URL`）。
+## 获取智谱 API Key（新手教程）
 
-`claude_cli` 使用本机已登录的 claude CLI（订阅计费），无需 API Key。
+本应用默认使用智谱 AI 的 GLM-5.2 模型（国内可直连，无需梯子）。API Key 相当于你在智谱平台的"付费通行证"，获取步骤：
+
+1. **注册**：打开智谱 AI 开放平台 https://open.bigmodel.cn/ ，用手机号注册并登录
+2. **实名认证**：按平台提示完成个人实名认证（国内平台的合规要求；新用户通常会赠送免费体验额度）
+3. **创建 Key**：登录后进入控制台，找到「API 密钥」/「API Keys」页面，点「创建新的 API Key」，把生成的 Key 复制下来（一长串字符，中间带一个点，形如 `xxxxxxxx.xxxxxxxx`）
+4. **充值（可选）**：免费额度用完后在平台「财务」页充值。GLM-5.2 价格约为输入 8 元 / 输出 28 元每百万 tokens——写一整集剧本的成本通常在几元以内；预算敏感可以在应用里改选免费的 GLM-4.7-Flash 先体验
+5. **连接**：回到本应用 → 打开「设置」→ 服务商选「智谱 GLM」→ 粘贴刚复制的 Key → 模型保持 GLM-5.2 → 点「连接」。连接时会自动做一次真实生成验证，Key 无效或余额不足会当场报错
+
+Key 会保存在你自己电脑的本地数据库里，重启不用重新粘贴。**不要把 Key 发给任何人，也不要截图外传。**
+
+### 其他模型服务商
+
+设置面板同样支持：Claude（本机 claude CLI 订阅 / Anthropic API）、OpenAI（gpt-5.4）、Gemini，以及任意 OpenAI 兼容端点（DeepSeek / Kimi / Qwen / 本地 Ollama 等）。可以保存多套连接一键切换。
+
+进阶用法：也可以用环境变量配置——启动前设置 `LLM_PROVIDER`（`zhipu`/`claude_cli`/`anthropic`/`openai`/`gemini`/`custom`）及对应的 key：`ZHIPU_API_KEY` / `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `GEMINI_API_KEY` / `LLM_API_KEY`（配 `LLM_BASE_URL`）。
 
 ### 关于 API Key 的存储（请务必了解）
 
