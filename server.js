@@ -47,7 +47,7 @@ ensureProjectSeeded();
 function safePath(urlPath) {
   const rawPath = urlPath === "/" ? "/index.html" : urlPath;
   const filePath = path.normalize(path.join(root, rawPath));
-  if (!filePath.startsWith(root)) {
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) {
     return null;
   }
   return filePath;

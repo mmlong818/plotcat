@@ -38,6 +38,10 @@ _projects.json
 # 数据库备份
 data/*.bak*
 
+# 参考稿原件等私有文档，严禁入库
+*.pdf
+*.docx
+
 # E2E 截图与走查产物目录
 tests/e2e/*-shots/
 tests/e2e/audit-*/
@@ -46,9 +50,5 @@ tests/e2e/_fullflow_verify.out
 tests/e2e/_*.png
 .gstack/
 tests/e2e/refactor-smoke.mjs
-tests/e2e/.actions_baseline_DONOTCOMMIT.txt
-tests/e2e/refactor-gate.mjs
 tests/e2e/refactor-probe.mjs
-tests/e2e/mode-gate.mjs
-tests/e2e/.mode_baseline_DONOTCOMMIT.txt
 tests/e2e/_realcheck/
