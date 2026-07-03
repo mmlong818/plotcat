@@ -9711,3 +9711,11 @@ body[data-active-step] .char-card:hover {
 #panel-micro #micro-nav,
 #panel-micro #micro-content { max-width: 1040px; margin-left: auto; margin-right: auto; }
 #micro-content .cf-textarea { field-sizing: content; min-height: 2.4em; }
+
+/* 暗色主题：裸 select（未包 .field 的，如资料库「系列挂载」下拉）跟随主题，不再 UA 默认白底 */
+[data-theme="dark"] select {
+  background: var(--paper);
+  color: var(--ink);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm, 6px);
+}

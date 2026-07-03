@@ -33,18 +33,26 @@ function lockedTextareaField(character, label, fieldName, value, options = {}) {
 function renderTraitDisplay(character) {
   const selected = new Set(list(character.traits));
   const locked = list(character.locked_fields).includes("traits");
+  // 通用标签池 20 个平铺是视觉噪音，且与已生成的深度人设（欲望/创伤/弧光）脱节——
+  // 已选的常显，完整标签池折叠进 details，需要补标签时再展开
+  const selectedChips = CHARACTER_TRAITS.filter((t) => selected.has(t)).map((t) => `
+    <button class="ref-chip is-active" type="button" data-action="toggle-character-trait" data-id="${escapeHtml(t)}">${escapeHtml(t)}</button>
+  `).join("");
   return `
     <section class="${locked ? "is-locked-section" : ""}">
       <p class="section-label section-label--row">
         <span>性格特质 <span class="section-label__hint">点击切换 · 共 ${selected.size} 项</span></span>
         ${lockBadge(character, "traits")}
       </p>
-      <div class="chip-wrap trait-pool">
-        ${CHARACTER_TRAITS.map((t) => `
-          <button class="ref-chip ${selected.has(t) ? "is-active" : ""}"
-            type="button" data-action="toggle-character-trait" data-id="${escapeHtml(t)}">${escapeHtml(t)}</button>
-        `).join("")}
-      </div>
+      ${selected.size > 0 ? `<div class="chip-wrap trait-pool">${selectedChips}</div>` : ""}
+      <details ${selected.size === 0 ? "" : ""}>
+        <summary class="section-label__hint" style="cursor:pointer; user-select:none;">${selected.size > 0 ? "＋ 从标签池添加" : "＋ 从标签池选择特质（可选——欲望/创伤/弧光已足够驱动生成）"}</summary>
+        <div class="chip-wrap trait-pool" style="margin-top:6px;">
+          ${CHARACTER_TRAITS.filter((t) => !selected.has(t)).map((t) => `
+            <button class="ref-chip" type="button" data-action="toggle-character-trait" data-id="${escapeHtml(t)}">${escapeHtml(t)}</button>
+          `).join("")}
+        </div>
+      </details>
     </section>
   `;
 }

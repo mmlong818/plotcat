@@ -1,6 +1,6 @@
 import { escapeHtml, list } from "../utils.js";
 import { formatLabels, projectStatusLabels, projectCreateStepsCurrent, projectFormatChoices, TONE_OPTIONS } from "../state.js";
-import { formatTime } from "../utils.js";
+import { formatTime, parseServerTime } from "../utils.js";
 
 function createDraftToneField(appState, selected) {
   return `
@@ -42,8 +42,8 @@ function createDraftGenreField(appState, selected) {
 
 export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getStructureOptionsForFormat }) {
   const sortedProjects = [...appState.projectList].sort((left, right) => {
-    const leftValue = Date.parse(left.last_opened_at || left.updated_at || 0);
-    const rightValue = Date.parse(right.last_opened_at || right.updated_at || 0);
+    const leftValue = parseServerTime(left.last_opened_at || left.updated_at || 0).getTime();
+    const rightValue = parseServerTime(right.last_opened_at || right.updated_at || 0).getTime();
     return rightValue - leftValue;
   });
   const heroProject = sortedProjects[0];

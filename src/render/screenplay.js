@@ -323,6 +323,7 @@ export function renderScreenplayPage(dom, appState) {
         ${appState.raterResult && appState.raterResult.mode === "full" ? renderRaterPanel(appState.raterResult, scenes) : ""}
       </header>
       ${errorBanner}
+      ${renderScriptAuditPanel(appState)}
       <div class="screenplay-page__body">
         <aside class="screenplay-page__list">
           ${scenes.map((s) => renderSceneListItem(appState, s, s.id === activeScene?.id)).join("")}
@@ -334,6 +335,28 @@ export function renderScreenplayPage(dom, appState) {
     </section>
   `;
   restoreFocusState(dom.screenplayContent, focusState);
+}
+
+// 人名巡检结果面板：替代原生 alert——结果可复制、可点场次跳转、可关闭
+function renderScriptAuditPanel(appState) {
+  const result = appState.scriptAuditResult;
+  if (!result) return "";
+  const body = result.findings.length === 0
+    ? `<p class="scene-summary-hint">巡检通过：${result.checkedCount} 个已写场次未发现名单外说话人或人名漂移。</p>`
+    : result.findings.map((f) => `
+        <p class="scene-summary-hint">
+          <button class="button button--ghost button--small" type="button" data-action="select-screenplay-scene" data-id="${escapeHtml(f.sceneId)}">第 ${f.orderIndex ?? "?"} 场《${escapeHtml(f.title || "未命名")}》</button>
+          · ${escapeHtml(f.kind)}：<strong>${escapeHtml(f.names.join("、"))}</strong>
+        </p>`).join("") +
+      `<p class="scene-summary-hint">可用「查找替换」统一改名，或重新生成对应场次。</p>`;
+  return `
+    <div class="screenplay-audit-panel" style="border:1px solid var(--border-color, #e0d6c4); border-radius:8px; padding:10px 14px; margin:4px 0 10px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <strong>人名巡检结果（已扫 ${result.checkedCount} 场）</strong>
+        <button class="button button--ghost button--small" type="button" data-action="dismiss-script-audit">关闭</button>
+      </div>
+      ${body}
+    </div>`;
 }
 
 // Fountain 规范化：中文角色 cue 加 @ 强制标记（标准解析器对非全大写 cue 一律按 action 处理）、

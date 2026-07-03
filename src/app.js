@@ -411,6 +411,8 @@ function insertSceneFromPlotCard(cardId) {
   };
   appState.project.scene_workbench.scenes.push(scene);
   appState.selection.sceneId = scene.id;
+  // 跳到场景拆解页定位到新场景——否则用户停留在剧情板上，看不到任何反馈
+  setCurrentStep("scenes");
   normalizeProject();
   markDirty();
   render();
@@ -823,10 +825,14 @@ function renderRuntimeStatus() {
   const aiLabel = !ai.configured && ai.provider !== "claude_cli"
     ? "AI 未配置"
     : ai.provider === "claude_cli" ? "Claude CLI" : (ai.model || ai.provider || "");
+  // 向导完成后的静默补全链（填节点/提炼故事核心/规划全片场景表）对用户可见化——
+  // 否则场景表在后台悄悄长出 31 场，用户毫无感知
+  const pipelineStage = appState.autoPipelineStage || (appState.sceneExpandLoading ? "规划全片场景表" : "");
   dom.runtimeStatus.innerHTML = `
     <span class="chip chip--soft">${escapeHtml(mode)}</span>
     <span class="chip chip--save chip--save-${savingState}">${escapeHtml(savingLabel)}</span>
     ${aiLabel ? `<span class="chip chip--soft chip--ai-model" title="当前生效的 AI 模型（点 ⚙ 可切换）">${escapeHtml(aiLabel)}</span>` : ""}
+    ${pipelineStage ? `<span class="chip chip--soft chip--pipeline" title="新项目创建后 AI 自动补全，完成后自动保存；不影响你当前操作">⏳ 后台 AI：${escapeHtml(pipelineStage)}…</span>` : ""}
   `;
   if (dom.saveButton) {
     dom.saveButton.classList.toggle("is-dirty", savingState === "dirty");
@@ -892,8 +898,9 @@ function renderStepperNav() {
           data-action="go-step"
           data-id="${escapeHtml(item.id)}"
           ${isActive ? 'aria-current="step"' : ""}
+          title="${escapeHtml(item.label)}${completed ? "（已完成）" : ""}"
         >
-          <span class="step-button__count">${completed && !isActive ? "✓" : index + 1}</span>
+          <span class="step-button__count">${index + 1}</span>
           <span class="step-button__label">${escapeHtml(item.label)}</span>
           <span class="step-button__hint">${escapeHtml(item.description)}</span>
         </button>

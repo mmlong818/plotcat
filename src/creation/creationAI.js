@@ -476,10 +476,14 @@ export function createCreationAI(deps) {
   async function autoEnrichNewProject({ withRelationships = false, withNodes = false } = {}) {
     const projectId = appState.project?.project?.id;
     const stillSame = () => appState.project?.project?.id === projectId;
+    // 静默链可见化：顶栏 chip 显示当前后台补全阶段（renderRuntimeStatus 消费）
+    const setStage = (stage) => { appState.autoPipelineStage = stage; render(); };
+    try {
 
     if (withRelationships && stillSame()) {
       const chars = list(appState.project.story_bible?.characters);
       if (chars.length >= 2 && list(appState.project.character_hub?.relationship_map).length === 0) {
+        setStage("生成人物关系网");
         const nameToId = new Map(chars.map((ch) => [ch.name, ch.id]));
         // 静默链失败用户无从知晓（精品创作组装期 AI 负载高易抖动）——多给一次机会，独立容错不连累后续补全
         let rels = [];
@@ -512,6 +516,7 @@ export function createCreationAI(deps) {
     }
 
     if (withNodes && stillSame() && list(appState.project.structure_profile?.nodes).every((n) => !(n.note ?? "").trim())) {
+      setStage("填写结构节点");
       try { await handleGenStructureNotes(); } catch { /* 节点填写失败不阻塞后续 */ }
       if (stillSame()) await saveProjectToServer().catch(() => {});
     }
@@ -520,6 +525,7 @@ export function createCreationAI(deps) {
       const core = appState.project.story_core ?? {};
       const CORE_KEYS = ["core_conflict", "central_question", "emotional_promise", "theme_statement"];
       if (CORE_KEYS.filter((k) => !(core[k] ?? "").trim()).length >= 3) {
+        setStage("提炼故事核心");
         const res = await callGenerateAPI("story_core", appState.project, {});
         const d = res.choices?.[0]?.data ?? {};
         if (!res.error && stillSame()) {
@@ -536,6 +542,7 @@ export function createCreationAI(deps) {
       const scenes = list(appState.project.scene_workbench?.scenes);
       const hasRealScene = scenes.some((s) => (s.script_full || s.script_excerpt || "").trim() || ((s.location || "").trim() && s.location !== "待定地点"));
       if (!hasRealScene && getLivePlotCards().length > 0) {
+        setStage("规划全片场景表");
         appState.sceneExpandLoading = true;
         render();
         try {
@@ -559,6 +566,11 @@ export function createCreationAI(deps) {
           }
         }
       }
+    }
+
+    } finally {
+      appState.autoPipelineStage = "";
+      render();
     }
   }
 

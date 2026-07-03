@@ -350,10 +350,16 @@ export function renderLocksPage(dom, appState, { getTimelineEvent, getWorldRule,
   }
 
   const allEmpty = lockedCards.length === 0 && timeline.length === 0 && rules.length === 0 && setups.length === 0;
+  // 项目已有剧情卡/场景时，四件套空着大概率是「不知道要提炼」而不是「没内容可提」——给一键 CTA
+  const hasStoryMaterial = list(appState.project.plot_board?.cards).length > 0
+    || list(appState.project.scene_workbench?.scenes).some((s) => (s.purpose || s.script_full || "").trim());
   const zeroGuide = allEmpty ? `
     <p class="scene-summary-hint" style="margin: 6px 2px 12px">
       资料库汇集本作品的时间节点、世界规则、伏笔、类型约束，以及未来对接的外部知识源。
-      左侧的「已锁定剧情卡」来自「剧情开发」页面，可作为参考；勾选页签开始填写或导入资料。
+      这些资料会注入后续所有 AI 生成（扩场/写本/幕评师）作为硬约束。
+      ${hasStoryMaterial ? `你的剧情卡和场景已经有内容了——点这里让 AI 通读剧本，一键提炼时间线与伏笔：
+        <button class="button button--primary button--tiny" type="button" data-action="ai-extract-continuity" ${appState.continuityExtractLoading ? "disabled" : ""}>${appState.continuityExtractLoading ? "提炼中…" : "✦ 从剧本提炼"}</button>`
+      : "左侧的「已锁定剧情卡」来自「剧情开发」页面，可作为参考；勾选页签开始填写或导入资料。"}
     </p>
   ` : "";
 
