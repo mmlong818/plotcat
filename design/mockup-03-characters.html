@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>原点编剧 · 人物核心</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2EDE5;
+    --surface:#FDFAF5;
+    --surface-2:#EFE7D9;
+    --ink:#1A1410;
+    --accent:#B05110;
+    --muted:#6B5E57;
+    --line:rgba(26,20,16,0.10);
+    --line-soft:rgba(26,20,16,0.06);
+    --role-lead:#B05110;
+    --role-second:#3B6FA0;
+    --role-villain:#2E6B40;
+    --role-support:#C8B9AF;
+    --serif:'EB Garamond','Source Han Serif SC','Songti SC',serif;
+    --sans:'DM Sans','PingFang SC','Hiragino Sans GB',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased;overflow:hidden}
+
+  /* Layout */
+  .app{display:grid;grid-template-columns:220px 1fr;height:100vh}
+
+  /* Sidebar */
+  .sidebar{background:var(--ink);color:#E7DFD2;display:flex;flex-direction:column;padding:22px 0}
+  .sidebar .brand{display:flex;align-items:center;gap:10px;padding:0 22px 28px;border-bottom:1px solid rgba(242,237,229,0.08)}
+  .sidebar .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(176,81,16,0.18)}
+  .sidebar .brand .name{font-family:var(--serif);font-size:17px;font-weight:500;letter-spacing:0.04em;color:#F2EDE5}
+  .sidebar .proj{padding:18px 22px;border-bottom:1px solid rgba(242,237,229,0.08)}
+  .sidebar .proj .eyebrow{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(231,223,210,0.45);margin-bottom:6px}
+  .sidebar .proj .title{font-family:var(--serif);font-size:1.05rem;color:#F2EDE5}
+  .sidebar nav{padding:14px 0;flex:1;overflow:auto}
+  .nav-group-title{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:rgba(231,223,210,0.4);padding:14px 22px 8px}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:9px 22px;color:rgba(231,223,210,0.7);text-decoration:none;font-size:13.5px;position:relative;cursor:pointer;transition:color .15s, background .15s}
+  .nav-item:hover{color:#F2EDE5}
+  .nav-item .num{font-family:var(--serif);font-style:italic;color:rgba(231,223,210,0.4);font-size:13px;width:18px}
+  .nav-item.done .num{color:var(--accent)}
+  .nav-item.active{color:#F2EDE5;background:rgba(242,237,229,0.04)}
+  .nav-item.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--accent)}
+  .nav-item.active .num{color:var(--accent);font-weight:600}
+  .sidebar .foot{padding:14px 22px;font-size:11px;color:rgba(231,223,210,0.35);border-top:1px solid rgba(242,237,229,0.08)}
+
+  /* Main */
+  main{display:grid;grid-template-columns:260px 1fr 240px;height:100vh;overflow:hidden}
+
+  /* People list column */
+  .people{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+  .people header{padding:22px 20px 14px;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between}
+  .people header h2{font-family:var(--serif);font-size:1.35rem;font-weight:500}
+  .people header .add{background:var(--ink);color:#F2EDE5;border:none;border-radius:999px;padding:6px 12px;font-size:12px;font-family:var(--sans);cursor:pointer;display:inline-flex;align-items:center;gap:5px;transition:background .2s}
+  .people header .add:hover{background:var(--accent)}
+  .people .list{overflow:auto;padding:6px 0 22px;flex:1}
+  .group-label{font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);padding:18px 20px 8px;display:flex;align-items:center;gap:10px}
+  .group-label::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+  .person{display:flex;align-items:center;gap:12px;padding:11px 20px;cursor:pointer;position:relative;transition:background .15s}
+  .person:hover{background:rgba(26,20,16,0.03)}
+  .person .pip{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .person .pip.lead{background:var(--role-lead)}
+  .person .pip.second{background:var(--role-second)}
+  .person .pip.villain{background:var(--role-villain)}
+  .person .pip.support{background:var(--role-support);box-shadow:inset 0 0 0 1px rgba(26,20,16,0.15)}
+  .person .name{font-family:var(--serif);font-size:1.05rem;flex:1;letter-spacing:0.01em}
+  .person .tag{font-size:10.5px;color:var(--muted);letter-spacing:0.08em}
+  .person.active{background:var(--surface-2)}
+  .person.active::before{content:"";position:absolute;left:0;top:6px;bottom:6px;width:3px;background:var(--accent)}
+  .person.active .name{color:var(--ink);font-weight:500}
+  .person.dim .name,.person.dim .tag{color:var(--muted)}
+
+  /* Center editor */
+  .editor{overflow:auto;padding:36px 56px 80px;background:var(--bg)}
+  .editor-head{margin-bottom:36px;display:flex;align-items:flex-end;justify-content:space-between;gap:24px;padding-bottom:22px;border-bottom:1px solid var(--line)}
+  .editor-head .eyebrow{font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:10px}
+  .editor-head .eyebrow::after{content:"";width:24px;height:1px;background:var(--accent)}
+  .editor-head h1{font-family:var(--serif);font-size:2.6rem;font-weight:500;letter-spacing:-0.01em;line-height:1.05}
+  .editor-head .role-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--accent);margin-top:10px;letter-spacing:0.06em}
+  .editor-head .role-tag .pip{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .editor-head .actions{display:flex;gap:8px;font-size:12px;color:var(--muted)}
+  .editor-head .actions span{padding:6px 10px;border:1px solid var(--line);border-radius:999px;cursor:pointer;transition:border-color .15s}
+  .editor-head .actions span:hover{border-color:var(--ink);color:var(--ink)}
+
+  .section{margin-bottom:42px}
+  .section-label{font-family:var(--serif);font-style:italic;font-size:1.05rem;color:var(--muted);margin-bottom:18px;display:flex;align-items:center;gap:14px}
+  .section-label::before{content:"";display:inline-block;width:14px;height:1px;background:var(--accent)}
+  .section-label .en{font-family:var(--sans);font-style:normal;font-size:10px;letter-spacing:0.22em;text-transform:uppercase;color:rgba(26,20,16,0.35);margin-left:auto}
+
+  .field{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:14px;transition:border-color .2s, box-shadow .2s}
+  .field:hover{border-color:rgba(26,20,16,0.18)}
+  .field-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .field-label{font-size:11px;letter-spacing:0.16em;text-transform:uppercase;color:var(--muted);font-weight:600}
+  .lock{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--accent);letter-spacing:0.08em}
+  .lock svg{width:11px;height:11px}
+  .field-text{font-family:var(--serif);font-size:1.15rem;line-height:1.55;color:var(--ink);letter-spacing:0.005em}
+
+  /* Arc preview within section */
+  .arc-band{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 24px;display:grid;grid-template-columns:1fr 32px 1fr;align-items:center;gap:18px;margin-top:14px}
+  .arc-cell .lbl{font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+  .arc-cell .val{font-family:var(--serif);font-size:1.1rem;line-height:1.4}
+  .arc-arrow{display:flex;align-items:center;justify-content:center;color:var(--accent)}
+
+  /* Psych tools */
+  details.tools{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:0;overflow:hidden}
+  details.tools summary{list-style:none;cursor:pointer;padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+  details.tools summary::-webkit-details-marker{display:none}
+  details.tools summary .left{display:flex;flex-direction:column;gap:4px}
+  details.tools summary .ttl{font-family:var(--serif);font-size:1.1rem}
+  details.tools summary .meta{font-size:11.5px;color:var(--muted);letter-spacing:0.04em}
+  details.tools summary .meta b{color:var(--accent);font-weight:600;font-family:var(--sans);letter-spacing:0.08em}
+  details.tools summary .chev{transition:transform .25s ease;color:var(--muted)}
+  details.tools[open] summary .chev{transform:rotate(90deg)}
+  .tools-body{padding:6px 20px 22px;border-top:1px solid var(--line-soft)}
+  .tools-row{margin-top:18px}
+  .tools-row .row-label{font-size:10.5px;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+  .mbti-grid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px}
+  .mbti{font-family:var(--sans);font-size:11.5px;font-weight:600;letter-spacing:0.05em;text-align:center;padding:9px 0;border:1px solid var(--line);border-radius:6px;color:var(--muted);background:var(--bg)}
+  .mbti.on{background:var(--ink);color:#F2EDE5;border-color:var(--ink)}
+  .maslow{display:flex;flex-direction:column;gap:4px}
+  .maslow .lv{display:flex;align-items:center;gap:10px;padding:7px 12px;border:1px solid var(--line);border-radius:6px;font-size:13px;color:var(--muted);background:var(--bg)}
+  .maslow .lv .num{font-family:var(--serif);font-style:italic;color:rgba(26,20,16,0.35);width:18px}
+  .maslow .lv.on{background:rgba(176,81,16,0.08);border-color:var(--accent);color:var(--ink)}
+  .maslow .lv.on .num{color:var(--accent)}
+
+  /* Right panel */
+  .panel{background:var(--surface);border-left:1px solid var(--line);padding:28px 22px;overflow:auto}
+  .panel-section{margin-bottom:34px}
+  .panel-section h3{font-size:10.5px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .panel-section h3::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+  .donut-wrap{display:flex;justify-content:center;margin-bottom:14px}
+  .donut-wrap svg{width:160px;height:160px}
+  .donut-center{font-family:var(--serif);font-size:11px;letter-spacing:0.18em;text-transform:uppercase;fill:var(--muted)}
+  .legend{display:flex;flex-direction:column;gap:7px}
+  .legend .row{display:flex;align-items:center;gap:10px;font-size:12.5px}
+  .legend .sw{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+  .legend .nm{flex:1;font-family:var(--serif);font-size:13.5px}
+  .legend .pct{color:var(--muted);font-variant-numeric:tabular-nums}
+
+  .rel-list{display:flex;flex-direction:column;gap:10px}
+  .rel{display:flex;flex-direction:column;gap:3px;padding:10px 12px;background:var(--bg);border-radius:8px;border:1px solid var(--line-soft)}
+  .rel .pair{font-family:var(--serif);font-size:13.5px}
+  .rel .pair .ar{color:var(--accent);margin:0 4px}
+  .rel .kind{font-size:11px;color:var(--muted);letter-spacing:0.04em}
+  .rel.tense{border-color:rgba(176,81,16,0.35)}
+  .rel.tense .kind{color:var(--accent)}
+
+  .arc-mini{display:flex;flex-direction:column;gap:8px}
+  .arc-mini .track{position:relative;height:6px;background:var(--bg);border-radius:99px;overflow:hidden}
+  .arc-mini .fill{position:absolute;inset:0;width:62%;background:linear-gradient(90deg,var(--accent),#D27A3E);border-radius:99px}
+  .arc-mini .ends{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);letter-spacing:0.05em}
+  .arc-mini .path{font-family:var(--serif);font-style:italic;font-size:13.5px;text-align:center;color:var(--ink);margin-top:4px}
+  .arc-mini .path .a{color:var(--muted)}
+  .arc-mini .path .ar{color:var(--accent);margin:0 6px}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand"><span class="dot"></span><span class="name">原点编剧</span></div>
+    <div class="proj">
+      <div class="eyebrow">Project</div>
+      <div class="title">记忆的形状</div>
+    </div>
+    <nav>
+      <div class="nav-group-title">创作流程</div>
+      <a class="nav-item done"><span class="num">01</span>故事核心</a>
+      <a class="nav-item done"><span class="num">02</span>世界设定</a>
+      <a class="nav-item active"><span class="num">03</span>人物核心</a>
+      <a class="nav-item"><span class="num">04</span>结构骨架</a>
+      <a class="nav-item"><span class="num">05</span>分集大纲</a>
+      <a class="nav-item"><span class="num">06</span>场景设计</a>
+      <a class="nav-item"><span class="num">07</span>剧本正文</a>
+      <div class="nav-group-title">工具</div>
+      <a class="nav-item"><span class="num">·</span>对白炉</a>
+      <a class="nav-item"><span class="num">·</span>导出</a>
+    </nav>
+    <div class="foot">v0.4 · 自动保存于 14:22</div>
+  </aside>
+
+  <main>
+    <!-- People list -->
+    <section class="people">
+      <header>
+        <h2>人物核心</h2>
+        <button class="add">＋ 新增</button>
+      </header>
+      <div class="list">
+        <div class="group-label">主角</div>
+        <div class="person active">
+          <span class="pip lead"></span>
+          <span class="name">陈昭</span>
+          <span class="tag">主角</span>
+        </div>
+
+        <div class="group-label">次主角</div>
+        <div class="person">
+          <span class="pip second"></span>
+          <span class="name">林欣然</span>
+          <span class="tag">次主角</span>
+        </div>
+
+        <div class="group-label">反派</div>
+        <div class="person">
+          <span class="pip villain"></span>
+          <span class="name">魏昌明</span>
+          <span class="tag">反派</span>
+        </div>
+
+        <div class="group-label">配角</div>
+        <div class="person dim">
+          <span class="pip support"></span>
+          <span class="name">江晓梅</span>
+          <span class="tag">配角</span>
+        </div>
+        <div class="person dim">
+          <span class="pip support"></span>
+          <span class="name">方建国</span>
+          <span class="tag">配角</span>
+        </div>
+        <div class="person dim">
+          <span class="pip support"></span>
+          <span class="name">老周</span>
+          <span class="tag">配角</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Editor -->
+    <section class="editor">
+      <div class="editor-head">
+        <div>
+          <div class="eyebrow">Character · 03 of 06</div>
+          <h1>陈昭</h1>
+          <div class="role-tag"><span class="pip"></span>主角 · 38 岁 · 刑侦顾问</div>
+        </div>
+        <div class="actions">
+          <span>复制</span><span>导出</span><span>AI 建议</span>
+        </div>
+      </div>
+
+      <!-- Section 1: Motivation & Secret -->
+      <div class="section">
+        <div class="section-label">动机与秘密 <span class="en">Motive & Secret</span></div>
+
+        <div class="field">
+          <div class="field-head">
+            <div class="field-label">外部目标</div>
+            <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>已锁定</span>
+          </div>
+          <div class="field-text">找出连环案真相，在记忆消失前证明自己无罪。</div>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <div class="field-label">内部需要</div>
+            <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>已锁定</span>
+          </div>
+          <div class="field-text">接受不完整的自我，不再用控制感对抗恐惧。</div>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <div class="field-label">核心矛盾</div>
+          </div>
+          <div class="field-text">越执着于真相，越可能摧毁自己想保护的一切。</div>
+        </div>
+
+        <div class="field">
+          <div class="field-head">
+            <div class="field-label">秘密</div>
+            <span class="lock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>已锁定</span>
+          </div>
+          <div class="field-text">第三起案件现场的指纹确实是他的——但他不知道为什么。</div>
+        </div>
+      </div>
+
+      <!-- Section 2: Arc -->
+      <div class="section">
+        <div class="section-label">弧光变化 <span class="en">Character Arc</span></div>
+
+        <div class="field">
+          <div class="field-head"><div class="field-label">开场面具</div></div>
+          <div class="field-text">孤僻、偏执、不近人情。用近乎冷酷的专业能力，掩盖深处正在崩溃的自我。</div>
+        </div>
+
+        <div class="arc-band">
+          <div class="arc-cell">
+            <div class="lbl">弧光起点</div>
+            <div class="val">相信真相能够救赎自己</div>
+          </div>
+          <div class="arc-arrow">
+            <svg width="32" height="20" viewBox="0 0 32 20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 10h26m0 0l-6-6m6 6l-6 6"/></svg>
+          </div>
+          <div class="arc-cell">
+            <div class="lbl">弧光终点</div>
+            <div class="val">接受真相可能永远残缺，但人生仍值得继续</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Psych Tools (collapsed by default) -->
+      <div class="section">
+        <div class="section-label">心理工具 <span class="en">Psych Toolkit</span></div>
+        <details class="tools">
+          <summary>
+            <div class="left">
+              <div class="ttl">人格类型与需求层级</div>
+              <div class="meta">已选 MBTI · <b>INTJ</b> · 马斯洛 · <b>安全需求</b></div>
+            </div>
+            <div class="chev">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 2l6 5-6 5"/></svg>
+            </div>
+          </summary>
+          <div class="tools-body">
+            <div class="tools-row">
+              <div class="row-label">MBTI · 16 型人格</div>
+              <div class="mbti-grid">
+                <div class="mbti">ISTJ</div><div class="mbti">ISFJ</div><div class="mbti">INFJ</div><div class="mbti on">INTJ</div>
+                <div class="mbti">ISTP</div><div class="mbti">ISFP</div><div class="mbti">INFP</div><div class="mbti">INTP</div>
+                <div class="mbti">ESTP</div><div class="mbti">ESFP</div><div class="mbti">ENFP</div><div class="mbti">ENTP</div>
+                <div class="mbti">ESTJ</div><div class="mbti">ESFJ</div><div class="mbti">ENFJ</div><div class="mbti">ENTJ</div>
+              </div>
+            </div>
+            <div class="tools-row">
+              <div class="row-label">马斯洛需求层级 · 角色当前停留层</div>
+              <div class="maslow">
+                <div class="lv"><span class="num">V</span>自我实现</div>
+                <div class="lv"><span class="num">IV</span>尊重需求</div>
+                <div class="lv"><span class="num">III</span>归属与爱</div>
+                <div class="lv on"><span class="num">II</span>安全需求 · 当前驱动层</div>
+                <div class="lv"><span class="num">I</span>生理需求</div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- Right panel -->
+    <aside class="panel">
+      <div class="panel-section">
+        <h3>对白比例</h3>
+        <div class="donut-wrap">
+          <svg viewBox="0 0 42 42">
+            <!-- bg ring -->
+            <circle cx="21" cy="21" r="15.915" fill="#FDFAF5" stroke="#EFE7D9" stroke-width="6"/>
+            <!-- segments: total circumference ~100. dasharray "x rest" length -->
+            <!-- 陈昭 42% -->
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#B05110" stroke-width="6"
+              stroke-dasharray="42 58" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+            <!-- 林欣然 28% start at 42 -->
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#3B6FA0" stroke-width="6"
+              stroke-dasharray="28 72" stroke-dashoffset="-17" transform="rotate(-90 21 21)"/>
+            <!-- 魏昌明 18% start at 70 -->
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#2E6B40" stroke-width="6"
+              stroke-dasharray="18 82" stroke-dashoffset="-45" transform="rotate(-90 21 21)"/>
+            <!-- 其他 12% start at 88 -->
+            <circle cx="21" cy="21" r="15.915" fill="transparent" stroke="#C8B9AF" stroke-width="6"
+              stroke-dasharray="12 88" stroke-dashoffset="-63" transform="rotate(-90 21 21)"/>
+            <text x="21" y="20.5" text-anchor="middle" class="donut-center">对白</text>
+            <text x="21" y="24" text-anchor="middle" class="donut-center">分布</text>
+          </svg>
+        </div>
+        <div class="legend">
+          <div class="row"><span class="sw" style="background:#B05110"></span><span class="nm">陈昭</span><span class="pct">42%</span></div>
+          <div class="row"><span class="sw" style="background:#3B6FA0"></span><span class="nm">林欣然</span><span class="pct">28%</span></div>
+          <div class="row"><span class="sw" style="background:#2E6B40"></span><span class="nm">魏昌明</span><span class="pct">18%</span></div>
+          <div class="row"><span class="sw" style="background:#C8B9AF"></span><span class="nm">其他</span><span class="pct">12%</span></div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>关系网</h3>
+        <div class="rel-list">
+          <div class="rel">
+            <div class="pair">陈昭<span class="ar">→</span>林欣然</div>
+            <div class="kind">单向爱慕 · 隐藏</div>
+          </div>
+          <div class="rel tense">
+            <div class="pair">陈昭<span class="ar">⇄</span>魏昌明</div>
+            <div class="kind">强力对手 · 张力 9/10</div>
+          </div>
+          <div class="rel">
+            <div class="pair">陈昭<span class="ar">→</span>江晓梅</div>
+            <div class="kind">导师/被托付</div>
+          </div>
+          <div class="rel">
+            <div class="pair">陈昭<span class="ar">⇄</span>方建国</div>
+            <div class="kind">旧友 · 互不信任</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-section">
+        <h3>弧光进度</h3>
+        <div class="arc-mini">
+          <div class="track"><div class="fill"></div></div>
+          <div class="ends"><span>起点</span><span>62%</span><span>终点</span></div>
+          <div class="path"><span class="a">清醒控制</span><span class="ar">→</span>放手接纳</div>
+        </div>
+      </div>
+    </aside>
+
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>原点编剧 · 项目主页</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F2EDE5;
+    --surface:#FDFAF5;
+    --ink:#1A1410;
+    --accent:#B05110;
+    --muted:#6B5E57;
+    --line:rgba(26,20,16,0.10);
+    --line-soft:rgba(26,20,16,0.06);
+    --serif:'EB Garamond', 'Source Han Serif SC', 'Songti SC', serif;
+    --sans:'DM Sans','PingFang SC','Hiragino Sans GB',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+
+  /* Top bar */
+  .topbar{
+    position:sticky;top:0;z-index:50;
+    height:52px;background:var(--ink);color:#F2EDE5;
+    display:flex;align-items:center;padding:0 28px;
+    font-family:var(--sans);font-size:13px;letter-spacing:0.01em;
+  }
+  .topbar .logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px}
+  .topbar .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px rgba(176,81,16,0.18)}
+  .topbar .logo .name{font-family:var(--serif);font-size:16px;font-weight:500;letter-spacing:0.04em}
+  .topbar .spacer{flex:1}
+  .topbar .nav{display:flex;gap:24px;color:rgba(242,237,229,0.7)}
+  .topbar .nav a{color:inherit;text-decoration:none;transition:color .2s}
+  .topbar .nav a:hover{color:#F2EDE5}
+
+  /* Page */
+  .page{max-width:1060px;margin:0 auto;padding:48px 32px 96px}
+
+  /* Header */
+  .eyebrow{font-family:var(--sans);font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--muted);font-weight:500}
+  .page-head{margin-bottom:56px}
+  .page-head .eyebrow{margin-bottom:14px}
+  .page-head h1{font-family:var(--serif);font-weight:500;font-size:2.5rem;line-height:1.1;letter-spacing:-0.01em;margin-bottom:8px}
+  .page-head .sub{color:var(--muted);font-size:15px}
+  .page-head .sub b{color:var(--ink);font-weight:600}
+
+  /* Featured card */
+  .featured{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:36px 40px;
+    display:grid;grid-template-columns:1fr 200px;gap:40px;align-items:center;
+    margin-bottom:64px;
+    box-shadow:0 1px 3px rgba(26,20,16,0.04);
+    transition:box-shadow .25s ease, transform .25s ease;
+  }
+  .featured:hover{box-shadow:0 4px 16px rgba(26,20,16,0.08)}
+  .featured .eyebrow{margin-bottom:14px;display:flex;align-items:center;gap:10px}
+  .featured .eyebrow::after{content:"";flex:0 0 24px;height:1px;background:var(--accent)}
+  .featured h2{font-family:var(--serif);font-weight:500;font-size:2rem;line-height:1.15;margin-bottom:12px;letter-spacing:-0.005em}
+  .featured .logline{color:var(--muted);font-size:15.5px;line-height:1.6;max-width:520px;margin-bottom:22px;font-style:italic;font-family:var(--serif);font-size:1.15rem}
+  .meta-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+  .stage{display:inline-flex;align-items:center;gap:6px;color:var(--ink);font-weight:500}
+  .stage .pip{width:7px;height:7px;border-radius:50%;background:var(--accent)}
+  .meta-row .sep{color:rgba(26,20,16,0.25);margin:0 2px}
+  .featured-right{display:flex;flex-direction:column;align-items:center;gap:20px}
+  .arc{position:relative;width:160px;height:160px}
+  .arc svg{transform:rotate(-90deg)}
+  .arc .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .arc .pct b{font-family:var(--serif);font-size:2rem;font-weight:500;color:var(--ink);line-height:1}
+  .arc .pct span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.18em;margin-top:6px}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    background:var(--ink);color:#F2EDE5;
+    border:none;border-radius:999px;
+    padding:11px 22px;font-family:var(--sans);font-size:13px;font-weight:500;letter-spacing:0.02em;
+    cursor:pointer;text-decoration:none;
+    transition:background .2s ease, transform .15s ease;
+  }
+  .btn:hover{background:var(--accent)}
+  .btn.accent{background:var(--accent)}
+  .btn.accent:hover{background:#8E3F0A}
+  .btn .arrow{transition:transform .2s ease}
+  .btn:hover .arrow{transform:translateX(3px)}
+
+  /* Section header */
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .section-head .title{font-family:var(--serif);font-size:1.5rem;font-weight:500}
+  .section-head .title .count{color:var(--muted);font-size:1rem;margin-left:8px;font-style:italic}
+
+  /* Project grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:24px 24px 20px;
+    display:flex;flex-direction:column;gap:14px;
+    cursor:pointer;
+    transition:border-color .2s, box-shadow .25s, transform .2s;
+    min-height:260px;
+  }
+  .card:hover{border-color:rgba(26,20,16,0.22);box-shadow:0 4px 14px rgba(26,20,16,0.07);transform:translateY(-2px)}
+  .card .top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .card h3{font-family:var(--serif);font-size:1.35rem;font-weight:500;line-height:1.2;letter-spacing:-0.005em}
+  .badge{
+    display:inline-block;font-size:10.5px;letter-spacing:0.16em;text-transform:uppercase;
+    padding:4px 9px;border-radius:6px;
+    background:rgba(176,81,16,0.10);color:var(--accent);font-weight:600;white-space:nowrap;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{font-size:11.5px;color:var(--muted);padding:3px 9px;border:1px solid var(--line);border-radius:999px}
+  .card .logline{
+    color:var(--muted);font-size:13.5px;line-height:1.55;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+    font-family:var(--serif);font-style:italic;font-size:1rem;
+  }
+  .progress{height:3px;background:rgba(26,20,16,0.08);border-radius:2px;overflow:hidden;margin-top:auto}
+  .progress > i{display:block;height:100%;background:var(--accent);border-radius:2px}
+  .card .foot{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;color:var(--muted)}
+  .card .foot .step{color:var(--ink);font-weight:500}
+  .card .foot .step .pip{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--accent);margin-right:6px;vertical-align:middle}
+
+  @media (max-width: 880px){
+    .featured{grid-template-columns:1fr;padding:28px}
+    .featured-right{align-items:flex-start}
+    .grid{grid-template-columns:1fr 1fr}
+  }
+  @media (max-width: 560px){
+    .grid{grid-template-columns:1fr}
+    .page{padding:32px 20px 64px}
+    .page-head h1{font-size:2rem}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <span class="dot"></span>
+    <span class="name">原点编剧</span>
+  </div>
+  <div class="spacer"></div>
+  <nav class="nav">
+    <a href="#">空间</a>
+    <a href="#">设置</a>
+    <a href="#">帮助</a>
+  </nav>
+</header>
+
+<main class="page">
+
+  <section class="page-head">
+    <div class="eyebrow">2025年5月15日 &nbsp;·&nbsp; 星期四</div>
+    <h1>欢迎回来</h1>
+    <p class="sub">你有 <b>4</b> 个进行中的项目</p>
+  </section>
+
+  <article class="featured">
+    <div class="featured-left">
+      <div class="eyebrow">上次打开 · 2 小时前</div>
+      <h2>《第七夜的回声》</h2>
+      <p class="logline">一名刑警每睡七天就失忆一次，他必须在记忆消散前破解一桩与自己有关的连环命案。</p>
+      <div class="meta-row">
+        <span class="stage"><span class="pip"></span>剧情开发</span>
+        <span class="sep">·</span><span>都市悬疑</span>
+        <span class="sep">·</span><span>6 集</span>
+        <span class="sep">·</span><span>8 人物</span>
+        <span class="sep">·</span><span>12 场景</span>
+      </div>
+    </div>
+    <div class="featured-right">
+      <div class="arc">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(26,20,16,0.08)" stroke-width="6"/>
+          <circle cx="80" cy="80" r="70" fill="none" stroke="#B05110" stroke-width="6"
+            stroke-linecap="round"
+            stroke-dasharray="439.82"
+            stroke-dashoffset="175.93"/>
+        </svg>
+        <div class="pct"><b>60%</b><span>完成</span></div>
+      </div>
+      <a href="#" class="btn">继续创作 <span class="arrow">→</span></a>
+    </div>
+  </article>
+
+  <section>
+    <div class="section-head">
+      <div class="title">所有项目<span class="count">· 4 个</span></div>
+      <button class="btn accent">＋ 新建项目</button>
+    </div>
+
+    <div class="grid">
+
+      <div class="card">
+        <div class="top">
+          <h3>《第七夜的回声》</h3>
+          <span class="badge">剧集</span>
+        </div>
+        <div class="chips"><span class="chip">都市悬疑</span><span class="chip">6 集</span></div>
+        <p class="logline">刑警每睡七天就失忆一次，他必须在记忆消散前破解连环命案。</p>
+        <div class="progress"><i style="width:60%"></i></div>
+        <div class="foot">
+          <span class="step"><span class="pip"></span>剧情开发</span>
+          <span>2 小时前</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="top">
+          <h3>《镜中凶手》</h3>
+          <span class="badge">剧集</span>
+        </div>
+        <div class="chips"><span class="chip">悬疑心理</span><span class="chip">10 集</span></div>
+        <p class="logline">心理咨询师在病人的梦境中逐渐发现，凶手的影子与自己重合。</p>
+        <div class="progress"><i style="width:35%"></i></div>
+        <div class="foot">
+          <span class="step"><span class="pip"></span>人物核心</span>
+          <span>昨天</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="top">
+          <h3>《归途》</h3>
+          <span class="badge">电影</span>
+        </div>
+        <div class="chips"><span class="chip">家庭剧情</span><span class="chip">长片</span></div>
+        <p class="logline">离家二十年的女儿在父亲临终前回到那座她发誓再也不会踏入的小城。</p>
+        <div class="progress"><i style="width:80%"></i></div>
+        <div class="foot">
+          <span class="step"><span class="pip"></span>场景拆解</span>
+          <span>3 天前</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="top">
+          <h3>《海边的候鸟》</h3>
+          <span class="badge">短片</span>
+        </div>
+        <div class="chips"><span class="chip">文艺爱情</span><span class="chip">25 分钟</span></div>
+        <p class="logline">两个像候鸟般在城市间漂泊的人，于一个错过末班车的夜晚短暂相遇。</p>
+        <div class="progress"><i style="width:15%"></i></div>
+        <div class="foot">
+          <span class="step"><span class="pip"></span>结构骨架</span>
+          <span>上周</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>原点编剧系统</title>
+    <meta
+      name="description"
+      content="以幕、剧情卡和场为主链，支持角色、类型约束与锁定层联动的编剧工作台。"
+    />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23b5601d'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23faf6ee'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Noto+Serif+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="hero">
+        <div class="hero__copy">
+          <p id="hero-eyebrow" class="eyebrow">项目中心</p>
+          <h1 id="hero-title">项目中心</h1>
+        </div>
+        <div id="stepper-nav" class="stepper-nav" aria-label="创作步骤"></div>
+        <div class="hero__side">
+          <div id="step-cta-slot" class="step-cta-slot"></div>
+          <div class="hero__actions">
+            <div id="runtime-status" class="runtime-status" aria-live="polite"></div>
+            <button id="save-button" class="button button--primary button--small" type="button">保存</button>
+            <span class="hero__sep" aria-hidden="true"></span>
+            <button id="page-project-button" class="button button--ghost button--small" type="button">项目中心</button>
+            <button id="page-library-button" class="button button--ghost button--small" type="button">资料库</button>
+            <button id="open-settings-button" class="button button--ghost button--small" type="button">⚙</button>
+          </div>
+          <button id="theme-toggle-button" class="button button--ghost button--small hero__theme-btn" type="button" title="切换主题">🌙</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section id="panel-projects" class="panel panel--projects" data-page="project">
+          <div id="project-list" class="project-board"></div>
+        </section>
+
+        <section id="panel-overview" class="panel panel--workflow" data-page="workflow" data-step-group="overview">
+          <div id="overview-content"></div>
+        </section>
+
+        <section
+          id="panel-structure"
+          class="panel panel--workflow panel--structure"
+          data-page="workflow"
+          data-step-group="structure"
+        >
+          <div id="structure-content"></div>
+        </section>
+
+        <section id="panel-plots" class="panel panel--workflow" data-page="workflow" data-step-group="plots">
+          <div id="plots-content"></div>
+        </section>
+
+        <section
+          id="panel-characters"
+          class="panel panel--workflow"
+          data-page="workflow"
+          data-step-group="characters"
+        >
+          <div id="characters-content"></div>
+        </section>
+
+        <section
+          id="panel-relationships"
+          class="panel panel--workflow"
+          data-page="workflow"
+          data-step-group="relationships"
+        >
+          <div id="relationships-content"></div>
+        </section>
+
+        <section id="panel-series" class="panel panel--library" data-page="series">
+          <div id="series-content"></div>
+        </section>
+        <section id="panel-library" class="panel panel--library" data-page="library">
+          <div id="locks-content"></div>
+        </section>
+
+        <section id="panel-episodes" class="panel panel--workflow" data-page="workflow" data-step-group="episodes">
+          <div id="episodes-content"></div>
+        </section>
+
+        <section id="panel-scenes" class="panel panel--workflow" data-page="workflow" data-step-group="scenes">
+          <div id="scenes-content"></div>
+        </section>
+
+        <section id="panel-screenplay" class="panel panel--workflow" data-page="workflow" data-step-group="screenplay">
+          <div id="screenplay-content"></div>
+        </section>
+
+        <!-- 工作台步骤底部导航：上一步 / 下一步（跟随当前步，公共槽位） -->
+        <div id="workflow-step-footer" class="workflow-step-footer" hidden></div>
+
+        <!-- 微短剧独立创作区（节点流水线，仅 micro_drama 形态） -->
+        <section id="panel-micro" class="panel panel--micro" data-page="micro">
+          <nav id="micro-nav" class="micro-nav" aria-label="微短剧创作节点"></nav>
+          <div id="micro-content"></div>
+        </section>
+
+        <!-- AI 创作流程面板（追加） -->
+        <section id="panel-creation" class="panel panel--workflow" data-page="creation">
+          <div id="creationContent"></div>
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <span>本系统由<strong>猫叔</strong>独立开发</span>
+        <span class="app-footer__sep" aria-hidden="true">·</span>
+        <span>仅供学习使用，禁止商用及商业性二创分发（<a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener">PolyForm Noncommercial 1.0.0</a>）</span>
+        <span class="app-footer__sep" aria-hidden="true">·</span>
+        <a href="https://github.com/mmlong818/yuandian-screenwriting-system" target="_blank" rel="noopener">GitHub 仓库</a>
+      </footer>
+
+      <div id="project-create-dialog" class="dialog-backdrop" hidden>
+        <section class="dialog-panel dialog-panel--wizard">
+          <div class="panel__header">
+            <div>
+              <p id="project-create-eyebrow" class="panel__eyebrow">新增项目</p>
+              <h2 id="project-create-title">定义形态</h2>
+              <p id="project-create-description" class="hero__text"></p>
+            </div>
+          </div>
+          <div class="wizard-progress">
+            <div id="project-create-progress" class="wizard-progress__bar"></div>
+          </div>
+          <div class="summary-card">
+            <div id="project-create-form" class="form-grid"></div>
+            <div class="wizard-actions">
+              <button id="cancel-create-project-button" class="button button--ghost" type="button">取消</button>
+              <button id="prev-create-project-button" class="button button--ghost" type="button">上一步</button>
+              <button id="confirm-create-project-button" class="button button--primary" type="button">
+                创建并进入创作
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <div id="structure-library-dialog" class="dialog-backdrop" hidden>
+      <section class="dialog-panel dialog-panel--library">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">29类通用结构</p>
+            <h2>结构参考库</h2>
+            <p class="hero__text">选择一个结构套用到当前项目，或仅作参考。套用后可继续在结构骨架页自由编辑。</p>
+          </div>
+        </div>
+        <div id="structure-library-content"></div>
+        <div class="wizard-actions">
+          <button id="close-library-button" class="button button--ghost" type="button">关闭</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="settings-dialog" class="dialog-backdrop" hidden>
+      <section class="dialog-panel">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">全局设置</p>
+            <h2>模型连接</h2>
+            <p class="hero__text">在这里连接模型、获取模型列表并切换当前使用的模型。</p>
+          </div>
+        </div>
+        <div id="settings-form"></div>
+        <div class="settings-danger-zone">
+          <button id="reset-button" class="button button--danger button--tiny" type="button">重置当前项目</button>
+          <div id="reset-confirm-area"></div>
+        </div>
+        <div class="wizard-actions">
+          <button id="close-settings-button" class="button button--ghost" type="button">关闭</button>
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

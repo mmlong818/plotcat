@@ -1,0 +1,19 @@
+{
+  "name": "yuandian-screenwriting-system",
+  "version": "0.2.0",
+  "description": "原点编剧系统：本地运行的 AI 辅助编剧工作台，支持电影/试播集/连续剧/短片/微短剧",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "powershell -ExecutionPolicy Bypass -File .\\start-server.ps1",
+    "start:direct": "node server.js",
+    "check": "node --input-type=module -e \"import('./src/server/db.js'); import('./src/server/repository.js'); import('./src/server/ai.js'); console.log('server modules ok')\"",
+    "test": "node --test tests/unit/**/*.test.mjs",
+    "smoke": "node tests/api-smoke.mjs",
+    "gates": "node tests/e2e/mode-gate.mjs && node tests/e2e/format-boundary-gate.mjs && node tests/e2e/refactor-gate.mjs"
+  },
+  "dependencies": {
+    "undici": "^8.4.1"
+  }
+}

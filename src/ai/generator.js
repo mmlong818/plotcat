@@ -1,0 +1,452 @@
+import { completeText } from '../server/llm.js';
+import { extractJsonCandidate, repairUnescapedQuotes } from '../server/ai/jsonRepair.js';
+import {
+  buildLoglinePrompt,
+  buildTreatmentPrompt,
+  buildCharactersPrompt,
+  buildBeatSheetPrompt,
+  buildSceneOutlinePrompt,
+  buildSceneWeavePrompt,
+  buildSceneScriptPrompt,
+  buildSceneBreakdownPrompt,
+  buildSceneExpansionPrompt,
+  buildContinuityExtractionPrompt,
+  buildGenreAuditPrompt,
+  buildGenreRemedyPrompt,
+  buildCharacterAuditPrompt,
+  buildActRaterPrompt,
+  buildDiagnosisPrompt,
+  buildPulsePrompt,
+  buildConceptPrompt,
+  buildThemeAnchorPrompt,
+  buildWorldForgePrompt,
+  buildCharSmithPrompt,
+  buildPlotFramePrompt,
+  buildThrillPrompt,
+  buildPacePayPrompt,
+  buildDialoguePrompt,
+  buildThemeLiftPrompt,
+  buildGenderTunePrompt,
+  buildEpisodeScriptPrompt,
+  buildEpisodeRewritePrompt,
+  buildEpisodeDesignPrompt,
+  buildSeriesEpisodeDesignPrompt,
+  buildEpisodeSceneBreakdownPrompt,
+  buildSeriesSubplotDesignPrompt,
+  buildSynopsisPrompt,
+  buildKeyScenesPrompt,
+  buildActStructurePrompt,
+  buildSingleCharacterPrompt,
+  buildRefineCharacterPrompt,
+  buildRelationshipsPrompt,
+  buildTitlePrompt,
+  buildStoryCorePrompt,
+  buildWorldRulesPrompt,
+  buildTimelineEventsPrompt,
+  buildSetupPayoffsPrompt,
+  buildEvaluateConceptsPrompt,
+  buildEvaluateSynopsisPrompt,
+  buildEvaluateCharactersPrompt,
+  buildEvaluateKeyScenesPrompt,
+  buildEvaluateActStructurePrompt
+} from './prompts.js';
+
+let BEAT_SHEET_LIBRARY = {};
+
+try {
+  const beatModule = await import('../data/beatSheetLibrary.js');
+  BEAT_SHEET_LIBRARY = beatModule.BEAT_SHEET_LIBRARY ?? {};
+} catch {
+  // 知识库文件尚未创建，使用空对象
+}
+
+function makeId() {
+  return `choice_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// 类型知识注入已迁移到 prompts.js（shared/genreContract.js 的混合契约），不再在此层取库
+
+function getBeatData(template) {
+  return BEAT_SHEET_LIBRARY[template] ?? null;
+}
+
+async function callClaude(system, user, timeoutMs) {
+  const fullPrompt = `${system}
+
+---
+
+${user}`;
+  const text = await completeText(fullPrompt, timeoutMs ? { timeoutMs } : {});
+  return parseJsonFromText(text);
+}
+
+// 个别单次生成量大的步骤，默认 300s 超时下 glm-5.2 等模型实测经常不够（真检发现，
+// 全片场景表一次性展开十几张剧情卡耗时 380s+；单场完整剧本撰写 scene_script 实测也达 420s+；
+// 且同一请求重复采样 164s/292s/420s+，思考型模型时延方差极大，预算要给足）。
+// 仅放宽这些步骤，其余步骤维持默认超时，避免用一刀切的更长超时掩盖其他步骤真正的卡死。
+// 注意上限：server.requestTimeout 与 undici dispatcher 均为 600s，此处必须留出重试余量。
+const STEP_TIMEOUT_OVERRIDES_MS = {
+  scene_expansion: 540_000,
+  scene_script: 540_000,
+  episode_scene_breakdown: 540_000
+};
+
+export function parseJsonFromText(text) {
+  const codeBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
+  let raw;
+  if (codeBlockMatch) {
+    raw = codeBlockMatch[1];
+  } else {
+    // 从首个 { 开始用 brace counter 配对到对应 }，正确处理嵌套数组/对象
+    raw = extractFirstBalancedJson(text) ?? text;
+  }
+  const trimmed = raw.trim();
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    try {
+      return JSON.parse(repairUnescapedQuotes(trimmed));
+    } catch {
+      // 截断兜底：输出被截断时 brace 不平衡，改用「截到最后一个 }」的候选再修复
+      try {
+        const candidate = extractJsonCandidate(text).trim();
+        try {
+          return JSON.parse(candidate);
+        } catch {
+          return JSON.parse(repairUnescapedQuotes(candidate));
+        }
+      } catch {
+        return { raw: text };
+      }
+    }
+  }
+}
+
+// 从文本中提取第一个 brace 平衡的 {...} 片段
+function extractFirstBalancedJson(text) {
+  const start = text.indexOf("{");
+  if (start === -1) return null;
+  let depth = 0;
+  let inString = false;
+  let escapeNext = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escapeNext) { escapeNext = false; continue; }
+    if (ch === "\\") { escapeNext = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    else if (ch === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
+  }
+  return null;
+}
+
+function formatLoglineChoices(parsed) {
+  const loglines = parsed.loglines ?? [];
+  if (loglines.length === 0) {
+    return [{
+      id: makeId(),
+      label: '方案A',
+      content: parsed.raw ?? JSON.stringify(parsed),
+      data: parsed
+    }];
+  }
+  const labels = ['方案A', '方案B', '方案C', '方案D'];
+  return loglines.map((item, i) => ({
+    id: makeId(),
+    label: labels[i] ?? `方案${i + 1}`,
+    content: `【${item.title ?? ''}】\n${item.hook ?? ''}\n\n外部冲突：${item.external_conflict ?? ''}\n内部冲突：${item.internal_conflict ?? ''}\n反转潜力：${item.twist_potential ?? ''}\n对标：${item.comparable ?? ''}`,
+    data: item
+  }));
+}
+
+function formatTreatmentChoices(parsed) {
+  const t = parsed.treatment ?? {};
+  const content = [
+    `【开端】${t.opening ?? ''}`,
+    `【激励事件】${t.catalyst ?? ''}`,
+    `【中段复杂化】${t.midpoint_complication ?? ''}`,
+    `【黑暗时刻】${t.dark_moment ?? ''}`,
+    `【终局抉择】${t.final_choice ?? ''}`,
+    `【余韵】${t.aftermath ?? ''}`,
+    `\n主题：${parsed.theme_statement ?? ''}`
+  ].join('\n\n');
+  return [{ id: makeId(), label: '方案A', content, data: parsed }];
+}
+
+function formatCharactersChoices(parsed) {
+  const chars = parsed.characters ?? [];
+  const content = chars.map((c) =>
+    `【${c.name}】${c.story_role ?? ''}\n欲望：${c.desire ?? ''}\n需求：${c.need ?? ''}\n创伤：${c.wound ?? ''}\n弧光：${c.arc_start ?? ''} → ${c.arc_end ?? ''}`
+  ).join('\n\n');
+  return [{ id: makeId(), label: '方案A', content, data: parsed }];
+}
+
+function formatBeatSheetChoices(parsed) {
+  const beats = parsed.beat_sheet ?? [];
+  const content = beats.map((b) =>
+    `[${b.percentage ?? ''}] ${b.beat_name ?? ''}\n${b.what_happens ?? ''}\n主角状态：${b.protagonist_state ?? ''}`
+  ).join('\n\n');
+  return [{ id: makeId(), label: '方案A', content, data: parsed }];
+}
+
+function formatSceneOutlineChoices(parsed) {
+  const scenes = parsed.scenes ?? [];
+  if (scenes.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? '', data: parsed }];
+  }
+  return scenes.map((s, i) => ({
+    id: makeId(),
+    label: `场景${i + 1}`,
+    content: `${s.title ?? ''}\n目标：${s.scene_goal ?? ''}\n冲突：${s.conflict ?? ''}\n转折：${s.turn ?? ''}\n信息增量：${s.information_gain ?? ''}\n结尾问题：${s.end_question ?? ''}`,
+    data: s
+  }));
+}
+
+function formatSceneWeaveChoices(parsed) {
+  return [{
+    id: makeId(),
+    label: '方案A',
+    content: parsed.script ?? parsed.raw ?? '',
+    data: parsed
+  }];
+}
+
+function formatPulseChoices(parsed) {
+  const seeds = parsed.seeds ?? [];
+  if (seeds.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? '', data: parsed }];
+  }
+  const labels = ['种子A', '种子B', '种子C'];
+  return seeds.map((s, i) => ({
+    id: makeId(),
+    label: labels[i] ?? `种子${i + 1}`,
+    content: `【${s.title ?? ''}】\n${s.hook ?? ''}\n\n冲突：${s.core_conflict ?? ''}\n置换：${s.twist ?? ''}\n风险：${s.weakness ?? ''}`,
+    data: s
+  }));
+}
+
+function formatDiagnosisChoices(parsed) {
+  const scores = parsed.scores ?? {};
+  const lines = Object.entries(scores).map(([key, val]) => {
+    const labels = {
+      story_structure: '故事结构',
+      character_development: '角色发展',
+      scene_tension: '场景张力',
+      dialogue_quality: '对话质量',
+      genre_fit: '类型符合度'
+    };
+    return `${labels[key] ?? key}：${val.score ?? 0}/10 - ${val.comment ?? ''}`;
+  });
+  const issues = (parsed.critical_issues ?? []).map((i) => `⚠ ${i.issue ?? ''} → ${i.fix ?? ''}`);
+  const content = [
+    `综合评分：${parsed.overall_score ?? 0}/10`,
+    '',
+    ...lines,
+    '',
+    '问题与建议：',
+    ...issues,
+    '',
+    '优势：',
+    ...(parsed.strengths ?? []).map((s) => `✓ ${s}`)
+  ].join('\n');
+  return [{ id: makeId(), label: '诊断报告', content, data: parsed }];
+}
+
+function formatConceptChoices(parsed) {
+  const concepts = parsed.concepts ?? [];
+  if (concepts.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? JSON.stringify(parsed), data: parsed }];
+  }
+  const labels = ['方案A', '方案B', '方案C'];
+  return concepts.map((item, i) => ({
+    id: makeId(),
+    label: labels[i] ?? `方案${i + 1}`,
+    content: `【${item.title ?? ''}】\n${item.hook ?? ''}\n\n核心冲突：${item.core_conflict ?? ''}\n独特视角：${item.unique_angle ?? ''}`,
+    data: item
+  }));
+}
+
+function formatSynopsisChoices(parsed) {
+  const synopses = parsed.synopses ?? [];
+  if (synopses.length === 0) {
+    return [{ id: makeId(), label: '方案A', content: parsed.raw ?? '', data: parsed }];
+  }
+  return synopses.map((s, i) => ({
+    id: makeId(),
+    label: s.version_label ?? `版本${i + 1}`,
+    content: s.summary ?? '',
+    data: s
+  }));
+}
+
+function formatKeyScenesChoices(parsed) {
+  const scenes = parsed.scenes ?? [];
+  if (scenes.length === 0) {
+    return [{ id: makeId(), label: '场景A', content: parsed.raw ?? '', data: parsed }];
+  }
+  return scenes.map((s, i) => ({
+    id: makeId(),
+    label: s.title ?? `场景${i + 1}`,
+    content: `${s.title ?? ''}\n目标：${s.goal ?? ''}\n冲突：${s.conflict ?? ''}\n转折：${s.turn ?? ''}\n位置：${s.act_position ?? ''}`,
+    data: s
+  }));
+}
+
+function formatActStructureChoices(parsed) {
+  const acts = parsed.acts ?? [];
+  return [{
+    id: makeId(),
+    label: '三幕结构',
+    content: acts.map((a) => `【${a.act_name ?? ''}】${a.percentage_range ?? ''}\n${(a.beats ?? []).map((b) => `  · ${b.name ?? ''}（${b.timing ?? ''}）：${b.description ?? ''}`).join('\n')}`).join('\n\n'),
+    data: { acts, reasoning: parsed.reasoning ?? '' }
+  }];
+}
+
+const FORMATTERS = {
+  pulse: formatPulseChoices,
+  logline: formatLoglineChoices,
+  treatment: formatTreatmentChoices,
+  characters: formatCharactersChoices,
+  beat_sheet: formatBeatSheetChoices,
+  scene_outline: formatSceneOutlineChoices,
+  scene_weave: formatSceneWeaveChoices,
+  scene_script: (parsed) => [{
+    id: makeId(),
+    label: '剧本',
+    content: (parsed.script ?? '').slice(0, 80),
+    data: parsed
+  }],
+  scene_breakdown: (parsed) => [{ id: makeId(), label: '场景拆解', content: parsed.entry_state ?? '', data: parsed }],
+  scene_expansion: (parsed) => [{ id: makeId(), label: '全片场景表', content: `${(parsed.scenes ?? []).length} 场`, data: parsed }],
+  continuity_extraction: (parsed) => [{ id: makeId(), label: '连续性提炼', content: `${(parsed.setup_payoffs ?? []).length} 组伏笔 / ${(parsed.timeline_events ?? []).length} 条时间线`, data: parsed }],
+  genre_audit: (parsed) => [{ id: makeId(), label: '类型契约审计', content: `${(parsed.fulfillment ?? []).filter((f) => f.status === 'fulfilled').length}/${(parsed.fulfillment ?? []).length} 兑现`, data: parsed }],
+  genre_remedy: (parsed) => [{ id: makeId(), label: '契约修复方案', content: `${(parsed.scene_directives ?? []).length} 场重写 / ${(parsed.new_scenes ?? []).length} 场新增`, data: parsed }],
+  character_audit: (parsed) => [{ id: makeId(), label: '档案兑现体检', content: `${(parsed.characters ?? []).length} 人`, data: parsed }],
+  act_rater: (parsed) => [{ id: makeId(), label: '幕评师', content: `${parsed.overall?.score ?? '?'}/10`, data: parsed }],
+  diagnosis: formatDiagnosisChoices,
+  concept: formatConceptChoices,
+  theme_anchor: (parsed) => [{ id: makeId(), label: '主题定位', content: parsed.logline ?? '', data: parsed }],
+  world_forge: (parsed) => [{ id: makeId(), label: '世界观', content: (parsed.summary ?? '').slice(0, 40), data: parsed }],
+  char_smith: (parsed) => [{ id: makeId(), label: '人物', content: parsed.protagonist?.identity ?? '', data: parsed }],
+  plot_frame: (parsed) => [{ id: makeId(), label: '总框架', content: (parsed.event_chain ?? [])[0] ?? '', data: parsed }],
+  thrill: (parsed) => [{ id: makeId(), label: '爽点高潮', content: `主爽点${(parsed.main_thrills ?? []).length}`, data: parsed }],
+  pace_pay: (parsed) => [{ id: makeId(), label: '节奏付费', content: `付费节点${(parsed.pay_nodes ?? []).length}`, data: parsed }],
+  micro_dialogue: (parsed) => [{ id: makeId(), label: '对话', content: parsed.golden_line ?? '', data: parsed }],
+  theme_lift: (parsed) => [{ id: makeId(), label: '主题升华', content: parsed.theme_statement?.core ?? '', data: parsed }],
+  gender_tune: (parsed) => [{ id: makeId(), label: '性别向', content: (parsed.demand_map ?? '').slice(0, 40), data: parsed }],
+  episode_script: (parsed) => [{ id: makeId(), label: '本集剧本', content: (parsed.script ?? '').slice(0, 40), data: parsed }],
+  episode_rewrite: (parsed) => [{ id: makeId(), label: '改写', content: (parsed.script ?? '').slice(0, 40), data: parsed }],
+  episode_design: (parsed) => [{ id: makeId(), label: '分集大纲', content: `${(parsed.episodes ?? []).length} 集`, data: parsed }],
+  series_episode_design: (parsed) => [{ id: makeId(), label: '本季分集', content: `${(parsed.episodes ?? []).length} 集`, data: parsed }],
+  episode_scene_breakdown: (parsed) => [{ id: makeId(), label: '本集拆场', content: `${(parsed.scenes ?? []).length} 场`, data: parsed }],
+  series_subplot_design: (parsed) => [{ id: makeId(), label: '跨集支线', content: `${(parsed.subplots ?? []).length} 条`, data: parsed }],
+  synopsis: formatSynopsisChoices,
+  key_scenes: formatKeyScenesChoices,
+  act_structure: formatActStructureChoices,
+  single_character: (parsed) => [{ id: makeId(), label: '角色', content: parsed.character?.name ?? '', data: parsed }],
+  refine_character: (parsed) => [{ id: makeId(), label: '修正结果', content: parsed.character?.name ?? '', data: parsed }],
+  relationships: (parsed) => [{ id: makeId(), label: '关系网', content: `${(parsed.relationships ?? []).length} 条关系`, data: parsed }],
+  title: (parsed) => [{ id: makeId(), label: '片名', content: parsed.title ?? '', data: parsed }],
+  story_core: (parsed) => [{ id: makeId(), label: '故事核心', content: (parsed.core_conflict ?? '').slice(0, 50), data: parsed }],
+  world_rules: (parsed) => [{ id: makeId(), label: '世界规则', content: `${(parsed.world_rules ?? []).length} 条规则`, data: parsed }],
+  timeline_events: (parsed) => [{ id: makeId(), label: '时间线', content: `${(parsed.timeline_events ?? []).length} 条事件`, data: parsed }],
+  setup_payoffs: (parsed) => [{ id: makeId(), label: '伏笔', content: `${(parsed.setup_payoffs ?? []).length} 组伏笔`, data: parsed }]
+};
+
+const PROMPT_BUILDERS = {
+  pulse: (_ctx, opts) => buildPulsePrompt(opts),
+  logline: (ctx, opts, gd) => buildLoglinePrompt(ctx, opts, gd),
+  treatment: (ctx, opts) => buildTreatmentPrompt(ctx, opts),
+  characters: (ctx, opts, gd) => buildCharactersPrompt(ctx, opts, gd),
+  beat_sheet: (ctx, opts, gd, bd) => buildBeatSheetPrompt(ctx, opts, gd, bd),
+  scene_outline: (ctx, opts) => buildSceneOutlinePrompt(ctx, opts),
+  scene_weave: (ctx, opts) => buildSceneWeavePrompt(ctx, opts),
+  scene_script: (ctx, opts) => buildSceneScriptPrompt(ctx, opts),
+  scene_breakdown: (ctx, opts) => buildSceneBreakdownPrompt(ctx, opts),
+  scene_expansion: (ctx, opts) => buildSceneExpansionPrompt(ctx, opts),
+  continuity_extraction: (ctx) => buildContinuityExtractionPrompt(ctx),
+  genre_audit: (ctx) => buildGenreAuditPrompt(ctx),
+  genre_remedy: (ctx) => buildGenreRemedyPrompt(ctx),
+  character_audit: (ctx) => buildCharacterAuditPrompt(ctx),
+  act_rater: (ctx, opts) => buildActRaterPrompt(ctx, opts),
+  diagnosis: (ctx) => buildDiagnosisPrompt(ctx),
+  concept: (_ctx, opts) => buildConceptPrompt(opts),
+  theme_anchor: (ctx, opts) => buildThemeAnchorPrompt(ctx, opts),
+  world_forge: (ctx, opts) => buildWorldForgePrompt(ctx, opts),
+  char_smith: (ctx, opts) => buildCharSmithPrompt(ctx, opts),
+  plot_frame: (ctx, opts) => buildPlotFramePrompt(ctx, opts),
+  thrill: (ctx) => buildThrillPrompt(ctx),
+  pace_pay: (ctx) => buildPacePayPrompt(ctx),
+  micro_dialogue: (ctx, opts) => buildDialoguePrompt(ctx, opts),
+  theme_lift: (ctx) => buildThemeLiftPrompt(ctx),
+  gender_tune: (ctx, opts) => buildGenderTunePrompt(ctx, opts),
+  episode_script: (ctx, opts) => buildEpisodeScriptPrompt(ctx, opts),
+  episode_rewrite: (ctx, opts) => buildEpisodeRewritePrompt(ctx, opts),
+  episode_design: (ctx, opts) => buildEpisodeDesignPrompt(ctx, opts),
+  series_episode_design: (ctx, opts) => buildSeriesEpisodeDesignPrompt(ctx, opts),
+  episode_scene_breakdown: (ctx, opts) => buildEpisodeSceneBreakdownPrompt(ctx, opts),
+  series_subplot_design: (ctx, opts) => buildSeriesSubplotDesignPrompt(ctx, opts),
+  synopsis: (ctx, opts) => buildSynopsisPrompt(ctx, opts),
+  key_scenes: (ctx) => buildKeyScenesPrompt(ctx),
+  act_structure: (ctx) => buildActStructurePrompt(ctx),
+  single_character: (ctx, opts) => buildSingleCharacterPrompt(ctx, opts?.existingChars ?? [], opts?.storyRole ?? "supporting"),
+  refine_character: (ctx, opts) => buildRefineCharacterPrompt(ctx, opts?.character ?? {}, opts?.lockedFields ?? []),
+  relationships: (ctx, opts) => buildRelationshipsPrompt(ctx, opts),
+  title: (ctx) => buildTitlePrompt(ctx),
+  story_core: (ctx) => buildStoryCorePrompt(ctx),
+  world_rules: (ctx) => buildWorldRulesPrompt(ctx),
+  timeline_events: (ctx) => buildTimelineEventsPrompt(ctx),
+  setup_payoffs: (ctx) => buildSetupPayoffsPrompt(ctx)
+};
+
+export function buildPromptForStep(step, projectContext, options) {
+  const builder = PROMPT_BUILDERS[step];
+  if (!builder) throw new Error(`未知的生成步骤: ${step}`);
+  const beatData = options?.template ? getBeatData(options.template) : null;
+  const { system, user } = builder(projectContext, options, null, beatData);
+  return `${system}\n\n---\n\n${user}`;
+}
+
+export function formatStepResult(step, parsed) {
+  const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);
+  return {
+    choices: formatter(parsed),
+    reasoning: parsed.reasoning ?? '',
+    warnings: parsed.warnings ?? []
+  };
+}
+
+export async function generateContent(step, projectContext, options, apiKey) {
+  const builder = PROMPT_BUILDERS[step];
+  if (!builder) throw new Error(`未知的生成步骤: ${step}`);
+
+  const beatData = options?.template ? getBeatData(options.template) : null;
+
+  const { system, user } = builder(projectContext, options, null, beatData);
+  const parsed = await callClaude(system, user, STEP_TIMEOUT_OVERRIDES_MS[step]);
+
+  const formatter = FORMATTERS[step] ?? ((p) => [{ id: makeId(), label: '方案A', content: JSON.stringify(p), data: p }]);
+  const choices = formatter(parsed);
+
+  return {
+    choices,
+    reasoning: parsed.reasoning ?? '',
+    warnings: parsed.warnings ?? []
+  };
+}
+
+const EVALUATE_BUILDERS = {
+  concepts:      (content, ctx) => buildEvaluateConceptsPrompt(content, ctx),
+  synopsis:      (content, ctx) => buildEvaluateSynopsisPrompt(content, ctx),
+  characters:    (content, ctx) => buildEvaluateCharactersPrompt(content, ctx),
+  key_scenes:    (content, ctx) => buildEvaluateKeyScenesPrompt(content, ctx),
+  act_structure: (content, ctx) => buildEvaluateActStructurePrompt(content, ctx),
+};
+
+export function buildEvaluatePromptForStep(step, content, context) {
+  const builder = EVALUATE_BUILDERS[step];
+  if (!builder) throw new Error(`未知评估步骤: ${step}`);
+  const { system, user } = builder(content, context ?? {});
+  return `${system}\n\n---\n\n${user}`;
+}

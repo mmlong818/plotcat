@@ -1,0 +1,176 @@
+import { escapeHtml } from "../utils.js";
+import { GENRE_LIBRARY } from "../data/genreLibrary.js";
+
+// 与快速创建共用同一套类型知识库标签，否则精品创作选的类型
+// 进不了类型契约引擎（resolveGenre 解析不出「剧情」「惊悚」这类旧标签）
+const GENRE_OPTIONS = GENRE_LIBRARY.filter((g) => g.kind !== "format").map((g) => g.label);
+
+function renderActiveWorkbench(appState) {
+  const activeWb = appState.proCreation.activeWb;
+  const wb = appState.proCreation.workbenches[activeWb];
+  const wbLabel = { theme: "主题", character: "人物", scene: "场景" }[activeWb] || activeWb;
+  if (wb.loading) {
+    return `
+      <div class="pro-wb-panel">
+        <div class="pro-wb-loading">
+          <span class="pro-wb-loading__spinner"></span>
+          AI 正在根据你的起点，生成${escapeHtml(wbLabel)}相关的挖掘问题…
+          <span class="pro-wb-loading__hint">通常 10–20 秒</span>
+        </div>
+      </div>
+    `;
+  }
+  if (wb.questions.length === 0) {
+    return `
+      <div class="pro-wb-panel">
+        <div class="pro-wb-empty">
+          <p class="pro-wb-empty__hint">点击下方按钮，让 AI 根据你的起点生成 4–5 个${escapeHtml(wbLabel)}层面的关键问题。</p>
+          <button class="button button--primary" type="button"
+            data-action="pro-gen-questions" data-wb="${escapeHtml(activeWb)}">
+            ✦ 生成${escapeHtml(wbLabel)}问题
+          </button>
+        </div>
+      </div>
+    `;
+  }
+  return `
+    <div class="pro-wb-panel">
+      <div class="pro-qa-list">
+        ${wb.questions.map((q) => `
+          <div class="pro-qa-item">
+            <p class="pro-qa-question">${escapeHtml(q.question)}</p>
+            <textarea class="pro-qa-answer"
+              data-action="pro-set-answer"
+              data-wb="${escapeHtml(activeWb)}"
+              data-qid="${escapeHtml(q.id)}"
+              rows="3"
+            >${escapeHtml(q.answer)}</textarea>
+          </div>
+        `).join("")}
+        <div class="pro-wb-actions">
+          <button class="button button--ghost button--small" type="button"
+            data-action="pro-gen-questions" data-wb="${escapeHtml(activeWb)}">重新生成问题</button>
+          <button class="button button--ghost button--small ${wb.done ? "is-active" : ""}" type="button"
+            data-action="pro-mark-wb-done" data-wb="${escapeHtml(activeWb)}">
+            ${wb.done ? "✓ 已完成" : "标记完成"}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAnchorStep(appState) {
+  const { anchor, genres, loading, error } = appState.proCreation;
+  return `
+    <section class="pro-creation pro-creation--anchor">
+      <div class="pro-creation__header">
+        <button class="cf-back-btn" data-action="back-to-projects" title="放弃当前输入，返回项目中心">← 项目中心</button>
+        <h2 class="pro-creation__title">精品创作 · 写下起点</h2>
+        <p class="pro-creation__subtitle">一个人物、一幅画面、一句台词，或一种感受 — 在下方输入框写下来，AI 会陪你深挖。</p>
+      </div>
+
+      <div class="pro-anchor-card">
+        <div class="pro-anchor-genres">
+          <p class="section-label">类型（可选）</p>
+          <div class="chip-wrap">
+            ${GENRE_OPTIONS.map((g) => `
+              <button class="genre-chip ${genres.includes(g) ? "is-active" : ""}"
+                type="button" data-action="pro-toggle-genre" data-value="${escapeHtml(g)}">
+                ${escapeHtml(g)}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="pro-anchor-input-wrap">
+          <textarea
+            class="pro-anchor-textarea"
+            data-action="pro-anchor-input"
+            placeholder="你想写什么？可以是一个人、一个场景、一句台词、一种情感，或者什么都行……"
+            rows="5"
+          >${escapeHtml(anchor)}</textarea>
+        </div>
+
+        ${error ? `<p class="pro-error">${escapeHtml(error)}</p>` : ""}
+
+        <div class="pro-anchor-actions">
+          <button class="button button--primary" type="button" data-action="pro-analyze-anchor"
+            ${loading ? "disabled" : ""}>
+            ${loading ? "分析中…" : "开始创作"}
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+function renderWorkbenchesStep(appState) {
+  const { anchor, activeWb, workbenches, loading } = appState.proCreation;
+  const wbLabels = { theme: "主题台", character: "人物台", scene: "场景台" };
+  // 文案承诺「至少标记一个」，此前代码却要求三个台全部完成才解锁——按文案意图放行
+  const anyDone = ["theme", "character", "scene"].some((k) => workbenches[k].done);
+  const assembleBtnLabel = loading
+    ? "AI 正在整合（约 30-60 秒）…"
+    : anyDone ? "组装并进入创作 →" : "至少标记一个工作台完成";
+  return `
+    <section class="pro-creation pro-creation--workbenches">
+      <div class="pro-creation__header">
+        <button class="cf-back-btn" data-action="pro-back-to-anchor" title="返回起点修改输入（已有的 AI 提问会保留）">← 修改起点</button>
+        <h2 class="pro-creation__title">精品创作 · 深度开发</h2>
+        <div class="pro-header-actions">
+          <button class="button button--primary" type="button" data-action="pro-assemble"
+            ${loading || !anyDone ? "disabled" : ""}>
+            ${escapeHtml(assembleBtnLabel)}
+          </button>
+        </div>
+      </div>
+
+      <div class="pro-anchor-summary">
+        <p class="pro-anchor-summary__label">你的起点</p>
+        <p class="pro-anchor-summary__text">${escapeHtml(anchor)}</p>
+      </div>
+
+      <div class="pro-wb-tabs">
+        ${["theme", "character", "scene"].map((wb) => {
+          const wbState = workbenches[wb];
+          const isActive = activeWb === wb;
+          const isDone = wbState.done;
+          const hasQuestions = (wbState.questions || []).length > 0;
+          const status = isDone ? "done" : (hasQuestions ? "ongoing" : "empty");
+          const prefix = isDone ? "✓ " : (hasQuestions ? "● " : "○ ");
+          return `<button class="pro-wb-tab pro-wb-tab--${status} ${isActive ? "is-active" : ""}"
+            type="button" data-action="pro-switch-wb" data-wb="${wb}">
+            ${prefix}${wbLabels[wb]}
+          </button>`;
+        }).join("")}
+      </div>
+
+      ${renderActiveWorkbench(appState)}
+    </section>
+  `;
+}
+
+function renderAssemblingStep() {
+  return `
+    <section class="pro-creation pro-creation--assembling">
+      <div class="pro-assembling-state">
+        <p class="pro-assembling-title">AI 正在整合创作材料…</p>
+        <p class="pro-assembling-sub">即将进入创作工作台</p>
+      </div>
+    </section>
+  `;
+}
+
+export function renderProCreationPage(dom, appState) {
+  const step = appState.proCreation.step;
+  let html = "";
+  if (step === "anchor") {
+    html = renderAnchorStep(appState);
+  } else if (step === "workbenches") {
+    html = renderWorkbenchesStep(appState);
+  } else {
+    html = renderAssemblingStep();
+  }
+  dom.creationContent.innerHTML = html;
+}
