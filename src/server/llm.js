@@ -1,11 +1,12 @@
 // 统一 LLM 完成层：所有服务端生成请求的唯一出口。
-// 支持五种 provider：
-//   claude_cli — 本地 claude CLI（订阅计费，默认；无需 key）
+// 支持六种 provider：
+//   zhipu      — 智谱 GLM（bigmodel.cn，OpenAI 兼容，默认；ZHIPU_API_KEY）
+//   claude_cli — 本地 claude CLI（订阅计费，无需 key）
 //   anthropic  — Anthropic API（ANTHROPIC_API_KEY）
 //   openai     — OpenAI API（OPENAI_API_KEY）
 //   gemini     — Google Gemini API（GEMINI_API_KEY）
-//   custom     — 任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/GLM/Ollama/Grok…，LLM_BASE_URL + LLM_API_KEY）
-// 模型默认值依据 E:\CC\ai-models.md（2026-06-14）。
+//   custom     — 任意 OpenAI 兼容端点（DeepSeek/Kimi/Qwen/Ollama/Grok…，LLM_BASE_URL + LLM_API_KEY）
+// 模型默认值核对于 2026-06-27，各厂商发新模型后可在设置面板直接改。
 import { spawnClaude } from "./spawnClaude.js";
 import { getDb } from "./db.js";
 import { Agent, EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
@@ -30,17 +31,19 @@ try {
   console.warn("[llm] dispatcher 初始化失败：", err.message);
 }
 
-export const LLM_PROVIDERS = ["claude_cli", "anthropic", "openai", "gemini", "custom"];
+export const LLM_PROVIDERS = ["zhipu", "claude_cli", "anthropic", "openai", "gemini", "custom"];
 
 const DEFAULT_MODELS = {
+  zhipu: process.env.ZHIPU_MODEL || "glm-5.2",
   claude_cli: "",
   anthropic: process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6",
-  openai: process.env.OPENAI_MODEL || "gpt-5.4-mini",
+  openai: process.env.OPENAI_MODEL || "gpt-5.4",
   gemini: process.env.GEMINI_MODEL || "gemini-3.5-flash",
   custom: process.env.LLM_MODEL || "deepseek-v4-flash"
 };
 
 const ENV_KEYS = {
+  zhipu: process.env.ZHIPU_API_KEY || "",
   anthropic: process.env.ANTHROPIC_API_KEY || "",
   openai: process.env.OPENAI_API_KEY || "",
   gemini: process.env.GEMINI_API_KEY || "",
@@ -48,6 +51,7 @@ const ENV_KEYS = {
 };
 
 const DEFAULT_BASE_URLS = {
+  zhipu: process.env.ZHIPU_BASE_URL || "https://open.bigmodel.cn/api/paas/v4",
   openai: "https://api.openai.com/v1",
   anthropic: "https://api.anthropic.com",
   gemini: "https://generativelanguage.googleapis.com",
@@ -65,7 +69,7 @@ function fetchSignal(signal, timeoutMs = TIMEOUT_MS) {
   return signal ? AbortSignal.any([timeout, signal]) : timeout;
 }
 
-const initialProvider = LLM_PROVIDERS.includes(process.env.LLM_PROVIDER) ? process.env.LLM_PROVIDER : "claude_cli";
+const initialProvider = LLM_PROVIDERS.includes(process.env.LLM_PROVIDER) ? process.env.LLM_PROVIDER : "zhipu";
 
 const llmConfig = {
   provider: initialProvider,
@@ -98,6 +102,8 @@ function restoreLlmConfig() {
     const row = db.prepare("SELECT value FROM app_meta WHERE key = ?").get(LLM_CONFIG_META_KEY);
     if (!row?.value) return;
     const saved = JSON.parse(row.value);
+    // 旧版智谱走 custom + bigmodel baseUrl，升级为一等 zhipu provider（key 原样保留）
+    if (saved.provider === "custom" && /bigmodel\.cn/.test(saved.baseUrl || "")) saved.provider = "zhipu";
     if (!LLM_PROVIDERS.includes(saved.provider)) return;
     llmConfig.provider = saved.provider;
     llmConfig.model = saved.model || DEFAULT_MODELS[saved.provider] || "";
@@ -154,7 +160,11 @@ function persistProfiles() {
 function restoreProfiles() {
   try {
     const row = getDb().prepare("SELECT value FROM app_meta WHERE key = ?").get(PROFILES_META_KEY);
-    if (row?.value) llmProfiles = JSON.parse(row.value).filter((p) => LLM_PROVIDERS.includes(p.provider));
+    if (row?.value) {
+      llmProfiles = JSON.parse(row.value)
+        .map((p) => (p.provider === "custom" && /bigmodel\.cn/.test(p.baseUrl || "") ? { ...p, provider: "zhipu", name: p.name?.startsWith("bigmodel") ? `智谱 · ${p.model}` : p.name } : p))
+        .filter((p) => LLM_PROVIDERS.includes(p.provider));
+    }
   } catch (err) {
     console.warn("[llm] 档案恢复失败：", err.message);
   }
@@ -189,7 +199,7 @@ export function upsertLlmProfile({ name, provider, apiKey, model, baseUrl } = {}
   } else {
     llmProfiles.push({
       id: `prof_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 6)}`,
-      name: name || (provider === "claude_cli" ? "Claude CLI" : `${provider === "custom" ? new URL(baseUrl || "https://x").hostname.split(".").slice(-2, -1)[0] : provider} · ${model}`),
+      name: name || (provider === "claude_cli" ? "Claude CLI" : `${provider === "custom" ? new URL(baseUrl || "https://x").hostname.split(".").slice(-2, -1)[0] : provider === "zhipu" ? "智谱" : provider} · ${model}`),
       provider,
       apiKey: apiKey ?? "",
       model: model ?? "",
@@ -309,7 +319,7 @@ async function openAiCompatComplete(prompt, { onChunk = null, signal = null, tim
     }),
     signal: fetchSignal(signal, timeoutMs)
   });
-  if (!response.ok) throw new Error(`${llmConfig.provider === "openai" ? "OpenAI" : "兼容端点"} 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
+  if (!response.ok) throw new Error(`${llmConfig.provider === "openai" ? "OpenAI" : llmConfig.provider === "zhipu" ? "智谱 GLM" : "兼容端点"} 请求失败：${response.status} ${(await response.text()).slice(0, 300)}`);
   let full = "";
   for await (const data of sseEvents(response.body)) {
     if (data === "[DONE]") break;
@@ -357,6 +367,7 @@ async function* sseEvents(body) {
 async function dispatch(prompt, opts) {
   switch (llmConfig.provider) {
     case "anthropic": return anthropicComplete(prompt, opts);
+    case "zhipu":
     case "openai":
     case "custom": return openAiCompatComplete(prompt, opts);
     case "gemini": return geminiComplete(prompt, opts);

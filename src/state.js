@@ -450,14 +450,14 @@ export const appState = {
   },
   ai: {
     configured: false,
-    provider: "openai",
-    model: "",
+    provider: "zhipu",
+    model: "glm-5.2",
     source: "none"
   },
   aiConfigDraft: {
-    provider: "openai",
+    provider: "zhipu",
     apiKey: "",
-    model: "",
+    model: "glm-5.2",
     baseUrl: ""
   },
   aiModelCatalog: {
