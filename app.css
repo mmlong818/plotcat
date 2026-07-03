@@ -9719,3 +9719,21 @@ body[data-active-step] .char-card:hover {
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm, 6px);
 }
+
+/* 全局页脚：作者署名 + 非商用声明 + 仓库地址 */
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 24px 22px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid var(--border-soft, rgba(0, 0, 0, 0.06));
+  margin-top: 24px;
+}
+.app-footer strong { color: var(--ink-2); font-weight: 600; }
+.app-footer a { color: var(--accent); }
+.app-footer a:hover { text-decoration: underline; }
+.app-footer__sep { color: var(--muted-2); }

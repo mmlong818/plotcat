@@ -74,6 +74,10 @@ npm run smoke     # API 冒烟测试（需服务未启动，脚本自起）
 npm run gates     # 三道架构门禁：形态条件 / 形态边界 / action 基线
 ```
 
-## 许可证
+## 作者与许可证
 
-[PolyForm Noncommercial 1.0.0](./LICENSE)：允许个人使用、学习、修改和非商业分发；**不允许任何商业用途**。
+本系统由**猫叔**独立开发。仓库地址：https://github.com/mmlong818/yuandian-screenwriting-system
+
+许可证：[PolyForm Noncommercial 1.0.0](./LICENSE)——允许个人使用、学习、修改和非商业分发；**不允许任何商业用途，包括商业性的二次创作与分发**。
+
+> Required Notice: Copyright © 2026 猫叔 (https://github.com/mmlong818/yuandian-screenwriting-system)
