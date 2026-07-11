@@ -115,6 +115,23 @@ export function createCreationAI(deps) {
 
   // ── Async AI handlers ─────────────────────────────────────────────────────────
 
+  function cleanGeneratedNodeText(value) {
+    return String(value ?? "")
+      .trim()
+      .replace(/^["“]+\s*/, "")
+      .replace(/\s*["”]+$/, "")
+      .trim();
+  }
+
+  function cleanGeneratedNodes(nodes) {
+    return Object.fromEntries(Object.entries(nodes ?? {}).map(([key, node]) => [key, {
+      ...node,
+      story_title: cleanGeneratedNodeText(node?.story_title),
+      summary: cleanGeneratedNodeText(node?.summary),
+      value_shift: cleanGeneratedNodeText(node?.value_shift)
+    }]));
+  }
+
   async function handleRefineCharacter(characterId) {
     const character = list(appState.project.character_hub?.characters).find((c) => c.id === characterId);
     if (!character) return;
@@ -232,7 +249,7 @@ export function createCreationAI(deps) {
       const json = await res.json();
       if (json.ok && json.data?.nodes) {
         if (!c.actResults) c.actResults = {};
-        c.actResults[actKey] = { nodes: json.data.nodes };
+        c.actResults[actKey] = { nodes: cleanGeneratedNodes(json.data.nodes) };
       } else {
         c.aiError = json.error ?? "生成失败，请重试";
       }

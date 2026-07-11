@@ -247,16 +247,25 @@ export function createSceneGeneration({ render, markDirty, normalizeProject }) {
   // ── Creation API call ─────────────────────────────────────────────────────────
 
   async function callGenerateAPI(step, projectContext, options) {
+    const controller = new AbortController();
+    const timeoutMs = step === "title" ? 60000 : step === "scene_expansion" ? 240000 : 180000;
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ step, projectContext, options })
+        body: JSON.stringify({ step, projectContext, options }),
+        signal: controller.signal
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return await response.json();
     } catch (error) {
-      return { choices: [], reasoning: "", warnings: [], error: error.message };
+      const message = error.name === "AbortError"
+        ? `AI 响应超时（${Math.round(timeoutMs / 1000)} 秒内未完成）`
+        : error.message;
+      return { choices: [], reasoning: "", warnings: [], error: message };
+    } finally {
+      clearTimeout(timer);
     }
   }
 

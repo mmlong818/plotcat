@@ -373,7 +373,17 @@ export function createCreationFlow(deps) {
     }
 
     if (action === "cf-finalize-new") {
-      handleFinalizeNewCreation();
+      if (c.finalizing) return true;
+      c.finalizing = true;
+      c.aiError = "";
+      renderCreationPage();
+      handleFinalizeNewCreation().catch((err) => {
+        if (appState.creation === c) {
+          c.finalizing = false;
+          c.aiError = `创建失败：${err.message}`;
+          renderCreationPage();
+        }
+      });
       return true;
     }
 

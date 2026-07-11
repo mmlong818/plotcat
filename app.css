@@ -1200,6 +1200,67 @@ a { color: var(--accent); text-decoration: none; }
 .project-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .project-list--wide { grid-template-columns: repeat(3, 1fr); }
 
+/* 项目中心在手机上必须保持正常阅读顺序，不能让 hero 的双栏最小宽度把中文挤成竖排。 */
+@media (max-width: 700px) {
+  .hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    padding: 0 10px;
+  }
+  .hero__copy {
+    flex: 1 0 100%;
+    padding: 10px 0 6px;
+  }
+  #hero-eyebrow.eyebrow {
+    max-width: calc(100vw - 44px);
+    font-size: 1rem;
+  }
+  .hero__side {
+    order: 2;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    scrollbar-width: none;
+  }
+  .hero__side::-webkit-scrollbar { display: none; }
+  .hero__actions { flex-shrink: 0; }
+  .stepper-nav {
+    order: 3;
+    flex: 1 0 100%;
+    justify-content: flex-start;
+    border-top: 1px solid var(--border-soft);
+    padding: 6px 0;
+  }
+
+  .panel--projects { padding: 14px 12px; }
+  .project-group__head--row { align-items: flex-start; gap: 12px; }
+  .project-create-btn { padding: 7px 11px; }
+  .project-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+    padding: 20px 18px;
+  }
+  .project-hero__title { font-size: 1.8rem; }
+  .project-hero__right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 16px 0 0;
+    border-top: 1px solid var(--border);
+    border-left: 0;
+  }
+  .project-hero__progress,
+  .project-hero__progress-label { grid-column: 1 / -1; }
+  .project-hero .button--primary { margin-top: 0; }
+  .project-hero__right .project-card__actions { justify-content: flex-start !important; }
+  .project-list,
+  .project-list--wide { grid-template-columns: minmax(0, 1fr); }
+  .project-card__actions > .button--primary { opacity: 1; }
+}
+
 .project-hub,
 .version-layout {
   display: grid;
@@ -9321,6 +9382,16 @@ body[data-active-step] .char-card:hover {
 @media (max-width: 1100px) {
   .screenplay-page__body { grid-template-columns: 1fr; }
   .screenplay-page__list { max-height: 320px; }
+}
+
+@media (max-width: 700px) {
+  .screenplay-page__metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    flex-basis: 100%;
+    gap: 8px;
+  }
+  .screenplay-page__actions { gap: 6px; }
+  .screenplay-page__actions .button { flex: 1 1 auto; }
 }
 
 /* ========================================================================== */

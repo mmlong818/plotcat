@@ -639,8 +639,8 @@ function renderStep5New(creation) {
       ${creation.aiError ? `<p class="cf-error">${escapeHtml(creation.aiError)}</p>` : ""}
 
       <div class="cf-actions">
-        <button class="cf-deco-btn" type="button" data-action="cf-finalize-new">
-          完成创建，进入工作台 <span class="cf-arrow">→</span>
+        <button class="cf-deco-btn" type="button" data-action="cf-finalize-new" ${creation.finalizing ? "disabled" : ""}>
+          ${creation.finalizing ? "正在命名并创建…" : "完成创建，进入工作台"} <span class="cf-arrow">→</span>
         </button>
       </div>
     </div>

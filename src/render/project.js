@@ -82,12 +82,12 @@ export function renderProjectList(dom, appState, { isBrokenPlaceholderText, getS
         </div>
         <div class="project-hero__right">
           <div class="project-hero__metric"><span class="project-hero__metric-num">${charCount}</span><span class="project-hero__metric-label">人物</span></div>
-          <div class="project-hero__metric"><span class="project-hero__metric-num">${writtenCount}/${sceneCount || "—"}</span><span class="project-hero__metric-label">已写/总场景</span></div>
+          <div class="project-hero__metric"><span class="project-hero__metric-num">${writtenCount}/${sceneCount || "—"}</span><span class="project-hero__metric-label">有稿/当前场景</span></div>
           ${sceneCount > 0 ? `
             <div class="project-hero__progress" role="progressbar" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
               <div class="project-hero__progress-bar" style="width: ${progress}%"></div>
             </div>
-            <span class="project-hero__progress-label">进度 ${progress}%</span>
+            <span class="project-hero__progress-label">当前场景有稿率 ${progress}%</span>
           ` : ""}
           <button class="button button--primary" type="button" data-action="open-project" data-id="${escapeHtml(item.id)}">继续创作 →</button>
           <div class="project-card__actions" style="justify-content:flex-end">${heroMenu}</div>
