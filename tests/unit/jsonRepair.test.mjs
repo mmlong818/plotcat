@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import {
   extractJsonCandidate,
   repairUnescapedQuotes,
+  repairUnquotedStringValues,
   parseJsonFromClaude
 } from "../../src/server/ai/jsonRepair.js";
 
@@ -44,6 +45,21 @@ describe("jsonRepair: repairUnescapedQuotes", () => {
   });
 });
 
+describe("jsonRepair: repairUnquotedStringValues", () => {
+  test("修复字符串值缺少起始引号", () => {
+    const broken = '{"value_shift":从沉默/被忽视→到专业能力的确认"}';
+    assert.throws(() => JSON.parse(broken), /JSON/);
+    assert.deepEqual(JSON.parse(repairUnquotedStringValues(broken)), {
+      value_shift: "从沉默/被忽视→到专业能力的确认"
+    });
+  });
+
+  test("数字、布尔值、null、对象和数组不受影响", () => {
+    const clean = '{"n":2,"ok":true,"empty":null,"obj":{"a":1},"items":[1,2]}';
+    assert.deepEqual(JSON.parse(repairUnquotedStringValues(clean)), JSON.parse(clean));
+  });
+});
+
 describe("jsonRepair: parseJsonFromClaude", () => {
   test("完整 fence 块直接解析成功", () => {
     const text = "```json\n{\"ok\":true}\n```";
@@ -53,6 +69,18 @@ describe("jsonRepair: parseJsonFromClaude", () => {
   test("裸 JSON + 未转义引号：两层修复叠加也能救回", () => {
     const text = '说明文字 {"desc":"他说"你好"啊","n":2} 结尾文字';
     assert.deepEqual(parseJsonFromClaude(text), { desc: '他说"你好"啊', n: 2 });
+  });
+
+  test("代码块中的字符串值漏掉起始引号：可修复", () => {
+    const text = '```json\n{"nodes":{"opening":{"story_title":"林音修复磁带","value_shift":从沉默→到信任"}}}\n```';
+    assert.deepEqual(parseJsonFromClaude(text), {
+      nodes: {
+        opening: {
+          story_title: "林音修复磁带",
+          value_shift: "从沉默→到信任"
+        }
+      }
+    });
   });
 
   test("截断且不可救：应 throw", () => {

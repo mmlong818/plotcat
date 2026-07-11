@@ -77,14 +77,28 @@ function repairUnescapedQuotes(text) {
   return result;
 }
 
+/**
+ * Repair a string value whose opening quote is missing, for example:
+ *   {"value_shift":从沉默到信任"}
+ * Models occasionally omit only this quote while still emitting the closing
+ * quote. Limit the repair to scalar object values ending before `,`, `}` or
+ * `]` so valid numbers, booleans, objects and arrays remain untouched.
+ */
+function repairUnquotedStringValues(text) {
+  return text.replace(
+    /(:\s*)(?!["{\[]|[-\d]|true\b|false\b|null\b)([^,\r\n}\]]*?)"(?=\s*[,}\]])/g,
+    (_match, prefix, value) => `${prefix}"${value}"`
+  );
+}
+
 function parseJsonFromClaude(text) {
   const raw = extractJsonCandidate(text).trim();
   try {
     return JSON.parse(raw);
   } catch {
-    // 修复：字符串值内的未转义双引号（常见于中文内容）
+    // 修复：漏掉字符串起始引号，或字符串内部双引号未转义。
     try {
-      const fixed = repairUnescapedQuotes(raw);
+      const fixed = repairUnescapedQuotes(repairUnquotedStringValues(raw));
       return JSON.parse(fixed);
     } catch {
       throw new Error(`JSON parse failed: ${text.slice(0, 300)}`);
@@ -92,4 +106,4 @@ function parseJsonFromClaude(text) {
   }
 }
 
-export { extractJsonCandidate, repairUnescapedQuotes, parseJsonFromClaude };
+export { extractJsonCandidate, repairUnescapedQuotes, repairUnquotedStringValues, parseJsonFromClaude };
